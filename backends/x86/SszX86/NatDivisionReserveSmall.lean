@@ -1,0 +1,182 @@
+import SszX86.NatDivisionReserveSmallCommit
+
+namespace SszX86.NatDivision.Reservation.Small
+open SszX86.NatDivision
+open SszX86.Delimited
+
+set_option maxRecDepth 16384
+set_option maxHeartbeats 1000000
+
+structure Header (s : MachineData) (address capacity used : BitVec 64) : Prop where
+  address_load : Mem.loadInt s.dmem s.regs.r12.toBitVec 8 = some (address.toNat : Int)
+  capacity_load : Mem.loadInt s.dmem (s.regs.r12.toBitVec + 8#64) 8 = some (capacity.toNat : Int)
+  used_load : Mem.loadInt s.dmem (s.regs.r12.toBitVec + 16#64) 8 = some (used.toNat : Int)
+
+def Frame (s t : MachineData) : Prop :=
+  t.zmms = s.zmms ∧
+  ∀ reg, reg ≠ .rcx → reg ≠ .rsi → reg ≠ .rdi → reg ≠ .r8 →
+    t.regs.get64 reg = s.regs.get64 reg
+
+def reservedState (s : MachineData) (address used : BitVec 64) (flags : StatusFlags) : MachineData :=
+  let start := SszNative.Arena.start address.toNat used.toNat
+  let pointer := BitVec.ofNat 64 (address.toNat + start)
+  let finish := BitVec.ofNat 64 (start + 16)
+  let m := Mem.storeInt s.dmem (s.regs.r12.toBitVec + 16#64) 8 finish.toInt
+  let m := Mem.storeInt m pointer 8 s.regs.rax.toBitVec.toInt
+  let m := Mem.storeInt m (pointer + 8#64) 8 s.regs.rdx.toBitVec.toInt
+  {s with
+    dmem := m
+    regs := {s.regs with
+      rdi := UInt64.ofBitVec pointer
+      rsi := UInt64.ofNat start
+      r8 := UInt64.ofBitVec (used + address)
+      rcx := 2}
+    status := flags}
+
+def Post (s : MachineData) (base : Int64) (address capacity used : BitVec 64)
+    (t : MachineState) : Prop :=
+  Frame s t.1 ∧
+  ((SszNative.Arena.reserve address.toNat capacity.toNat used.toNat 2 = none ∧
+      t.2 = base + 379 ∧ t.1.dmem = s.dmem) ∨
+    ∃ r, SszNative.Arena.reserve address.toNat capacity.toNat used.toNat 2 = some r ∧
+      t.2 = base + 358 ∧ ∃ flags, t.1 = reservedState s address used flags)
+
+macro "natdiv_small_reservation_frame" : tactic => `(tactic|
+  (refine ⟨rfl, ?_⟩
+   intro reg h1 h2 h3 h4
+   cases reg <;>
+     simp_all [committed, flagged, ended, alignedState, addressed, Reg64s.get64]))
+
+private theorem word_eq (value : BitVec 64) (n : Nat) (h : value.toNat = n) :
+    value = BitVec.ofNat 64 n := by
+  rw [← h, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+
+theorem mapped_subrange (m : DataMem) (base : BitVec 64) (capacity start count : Nat)
+    (hm : UintCodec.Large.Mapped m base capacity) (within : start + count ≤ capacity) :
+    UintCodec.Large.Mapped m (base + BitVec.ofNat 64 start) count := by
+  intro i hi
+  rw [memmove_addr_add]
+  exact hm (start+i) (by omega)
+
+/-- Every native guard contributes to the exact reserve outcome. There is no
+successful-reservation premise, signed capacity restriction, or relocated code. -/
+theorem runs (e : Executable) (base : Int64) (hc : CodeAt e base)
+    (s : MachineData) (address capacity used : BitVec 64)
+    (header : Header s address capacity used)
+    (hm : UintCodec.Large.Mapped s.dmem address capacity.toNat) :
+    Eventually (step e) (Post s base address capacity used) (s, base + 279) := by
+  have failure (h : ¬ SszNative.Arena.Checks address.toNat capacity.toNat used.toNat 2) :
+      SszNative.Arena.reserve address.toNat capacity.toNat used.toNat 2 = none :=
+    (SszNative.Arena.reserve_eq_none_iff_checks _ _ _ 2 (by decide)).2 h
+  have sixteen : (16 : BitVec 64).toNat = 16 := by decide
+  apply address_cps e base hc s address used header.address_load header.used_load
+  intro f0
+  by_cases ha : address.toNat + used.toNat < 2^64
+  · have ha' : used.toNat + address.toNat < 2^64 := by omega
+    rw [ite_eq_left ha']
+    have sum : (used + address).toNat = address.toNat + used.toNat := by
+      rw [UintCodec.Arena.add_nat used address ha']
+      omega
+    apply rounding_cps e base hc
+    intro f1
+    simp only [flagged, addressed, sum]
+    by_cases rounding : address.toNat + used.toNat + 7 < 2^64
+    · rw [ite_eq_left rounding]
+      have pad : (paddingWord (used + address)).toNat =
+          SszNative.Arena.padding (address.toNat + used.toNat) := by
+        rw [UintCodec.Arena.padding_nat _ (by rw [sum]; exact rounding), sum]
+      apply alignment_cps e base hc
+      intro f2
+      simp only [pad]
+      by_cases hs : SszNative.Arena.start address.toNat used.toNat < 2^64
+      · have hs' : SszNative.Arena.padding (address.toNat + used.toNat) + used.toNat < 2^64 := by
+          simpa [SszNative.Arena.start, Nat.add_comm] using hs
+        rw [ite_eq_left hs']
+        have start : (paddingWord (used + address) + used).toNat =
+            SszNative.Arena.start address.toNat used.toNat := by
+          rw [UintCodec.Arena.add_nat _ _ (by rw [pad]; exact hs'), pad]
+          simp [SszNative.Arena.start, Nat.add_comm]
+        have startWord := word_eq _ _ start
+        apply end_guard_cps e base hc
+        intro f3
+        simp only [flagged, alignedState, start]
+        by_cases finish : SszNative.Arena.start address.toNat used.toNat + 16 < 2^64
+        · rw [ite_eq_left finish]
+          apply end_cps e base hc
+          have endNat : ((paddingWord (used + address) + used) + (16 : BitVec 64)).toNat =
+              SszNative.Arena.start address.toNat used.toNat + 16 := by
+            rw [UintCodec.Arena.add_nat _ _ (by simpa only [start, sixteen] using finish),
+              start, sixteen]
+          have endWord := word_eq _ _ endNat
+          apply capacity_cps e base hc (capacity := capacity)
+          · exact header.capacity_load
+          intro f4
+          simp only [flagged, ended, endNat]
+          by_cases fits : SszNative.Arena.start address.toNat used.toNat + 16 ≤ capacity.toNat
+          · rw [ite_eq_left fits]
+            have checks : SszNative.Arena.Checks address.toNat capacity.toNat used.toNat 2 :=
+              ⟨by decide, ha, rounding, hs, finish, fits⟩
+            have successful := (SszNative.Arena.reserve_eq_some_iff_checks _ _ _ 2 (by decide)
+              ⟨address.toNat + SszNative.Arena.start address.toNat used.toNat,
+                SszNative.Arena.start address.toNat used.toNat + 16⟩).2 ⟨checks, rfl⟩
+            have pointerBound : address.toNat + SszNative.Arena.start address.toNat used.toNat < 2^64 := by
+              rw [SszNative.Arena.start_pointer]
+              have bounds := SszNative.Arena.aligned_bounds (address.toNat + used.toNat)
+              omega
+            have pointerNat : (address + (paddingWord (used + address) + used)).toNat =
+                address.toNat + SszNative.Arena.start address.toNat used.toNat := by
+              rw [UintCodec.Arena.add_nat _ _ (by rw [start]; exact pointerBound), start]
+            have pointerWord := word_eq _ _ pointerNat
+            have endWord' :
+                BitVec.ofNat 64 (SszNative.Arena.start address.toNat used.toNat) + (16 : BitVec 64) =
+                  BitVec.ofNat 64 (SszNative.Arena.start address.toNat used.toNat + 16) := by
+              simpa only [startWord] using endWord
+            have pointerWord' :
+                address + BitVec.ofNat 64 (SszNative.Arena.start address.toNat used.toNat) =
+                  BitVec.ofNat 64 (address.toNat + SszNative.Arena.start address.toNat used.toNat) := by
+              simpa only [startWord] using pointerWord
+            apply commit_cps e base hc
+            · exact ⟨_, header.used_load⟩
+            · simpa only [flagged, ended, alignedState, addressed, startWord] using
+                mapped_subrange s.dmem address capacity.toNat _ 16 hm fits
+            apply Eventually.done
+            refine ⟨?_, Or.inr ⟨_, successful, rfl, f4, ?_⟩⟩
+            · natdiv_small_reservation_frame
+            · simp only [committed, committedMem, reservedState, startWord,
+                endWord', pointerWord', UInt64.ofBitVec_ofNat, uint64_literal]
+          · rw [ite_eq_right fits]
+            apply Eventually.done
+            refine ⟨?_, Or.inl ⟨failure (fun h => fits h.2.2.2.2.2), rfl, rfl⟩⟩
+            natdiv_small_reservation_frame
+        · rw [ite_eq_right finish]
+          apply Eventually.done
+          refine ⟨?_, Or.inl ⟨failure (fun h => finish h.2.2.2.2.1), rfl, rfl⟩⟩
+          natdiv_small_reservation_frame
+      · have hs' : ¬ SszNative.Arena.padding (address.toNat + used.toNat) + used.toNat < 2^64 := by
+          simpa [SszNative.Arena.start, Nat.add_comm] using hs
+        rw [ite_eq_right hs']
+        apply Eventually.done
+        refine ⟨?_, Or.inl ⟨failure (fun h => hs h.2.2.2.1), rfl, rfl⟩⟩
+        natdiv_small_reservation_frame
+    · rw [ite_eq_right rounding]
+      apply Eventually.done
+      refine ⟨?_, Or.inl ⟨failure (fun h => rounding h.2.2.1), rfl, rfl⟩⟩
+      natdiv_small_reservation_frame
+  · have ha' : ¬ used.toNat + address.toNat < 2^64 := by omega
+    rw [ite_eq_right ha']
+    apply Eventually.done
+    refine ⟨?_, Or.inl ⟨failure (fun h => ha h.2.1), rfl, rfl⟩⟩
+    natdiv_small_reservation_frame
+
+/-- CPS form exposes both exact resource outcomes to the enclosing division. -/
+theorem reservation_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
+    (s : MachineData) (address capacity used : BitVec 64)
+    (header : Header s address capacity used)
+    (hm : UintCodec.Large.Mapped s.dmem address capacity.toNat)
+    (P : MachineState → Prop)
+    (hp : ∀ st, Post s base address capacity used st → Eventually (step e) P st) :
+    Eventually (step e) P (s, base + 279) := by
+  exact eventually_trans (step e) (Post s base address capacity used) P _
+    (runs e base hc s address capacity used header hm) hp
+
+end SszX86.NatDivision.Reservation.Small

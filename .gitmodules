@@ -1,0 +1,3 @@
+[submodule "vendor/ssz-specs"]
+	path = vendor/ssz-specs
+	url = https://github.com/ethereum/ssz-specs.git

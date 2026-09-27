@@ -1,0 +1,22 @@
+{
+  "ssz-specs": {
+    "url": "https://github.com/ethereum/ssz-specs.git",
+    "rev": "608fa1b7d056021c66210e56454475b176c95914",
+    "path": "vendor/ssz-specs"
+  },
+  "x86-model": {
+    "url": "https://github.com/AeneasVerif/kraken",
+    "rev": "30f5a5f9f668283a294bf5ec5859e75b47b3a61a"
+  },
+  "arm-model": {
+    "url": "https://github.com/leanprover/LNSym",
+    "rev": "df80e2f600dc7f2976809829198a1d9fd07cb379",
+    "patch": {
+      "path": "patches/lnsym-logical-immediate-rn31.patch",
+      "sha256": "0586e9185877634896931dcbed0d55f03ccc5c8c22f33da77a7b9b10f885ab3c",
+      "target": "Arm/Insts/DPI/Logical_imm.lean",
+      "before_sha256": "0af536494e13a2e7aa291d7ef88842adc201de933a265e5e476eea533ba7f78b",
+      "after_sha256": "f2d726f6b64b0acc070372ba8bbd8abff68b0b4199b0c7376c3950d5a2f55b44"
+    }
+  }
+}

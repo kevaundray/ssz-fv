@@ -1,0 +1,150 @@
+name = "SszArm"
+version = "0.1.0"
+defaultTargets = ["SszArm"]
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[require]]
+name = "lnsym"
+git = "https://github.com/leanprover/LNSym"
+rev = "df80e2f600dc7f2976809829198a1d9fd07cb379"
+
+# Compile the pinned source in this backend's own build directory. Sharing the
+# upstream package's artifacts would mix the ARM and x86 Lean toolchains.
+[[lean_lib]]
+name = "Ssz"
+srcDir = "../../vendor/ssz-specs/lean"
+
+
+[[lean_lib]]
+name = "ProofAudit"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszUInt64"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszDivision"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszDivisionBits"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszBytes"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszLimbs"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszPackedBits"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszPacking"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszFixed"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszWordDecode"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCursor"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszLimbOrder"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszLimbAdd"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszLimbDivision"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszBool"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatMemory"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatABI"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatOperand"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatArithmetic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatArithmeticMemory"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatAdd"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatOperandNormalization"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatAddMemory"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatDivision"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatDivisionMemory"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszBitView"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszDelimited"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszDelimitedProofs"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszUint"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszArena"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszWidth"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszByteView"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszArm"

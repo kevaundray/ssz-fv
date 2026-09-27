@@ -1,0 +1,21 @@
+[package]
+name = "ssz-fv-ffi"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.94"
+
+[lib]
+name = "ssz_fv"
+crate-type = ["staticlib"]
+
+[dependencies]
+ssz-fv-native = { path = "../native" }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+opt-level = 3
+panic = "abort"
+codegen-units = 1
+lto = "fat"

@@ -1,0 +1,8 @@
+*.o
+**/.lake/
+**/__pycache__/
+**/.venv*/
+**/.pytest_cache/
+**/.hypothesis/
+/native/target/
+/native-ffi/target/
