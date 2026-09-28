@@ -1,4 +1,5 @@
 import SszSerializeCore
+import SszWidth
 
 set_option autoImplicit false
 
@@ -243,5 +244,193 @@ theorem measure_refines (desc : Desc) (value : Value) (arena : Delimited.ArenaSt
         simp only [bind, exhausted]
   · exact list_measures _ _ _
   · exact list_measures _ _ _
+
+open SszNative.Limbs
+/-- The rounding used by the native ADD/SHRD pair, including the zero case. -/
+theorem requiredBytes_round (number : Nat) :
+    requiredBytes number = (bitLength number + 7) / 8 := by
+  unfold requiredBytes
+  split <;> omega
+
+/-- A low radix digit cannot change the leading bit of a positive higher digit. -/
+theorem log2_radix (low high bits : Nat) (lowBound : low < 2 ^ bits)
+    (positive : 0 < high) :
+    (low + 2 ^ bits * high).log2 = bits + high.log2 := by
+  have highNonzero : high ≠ 0 := by omega
+  have lo := Nat.log2_self_le highNonzero
+  have hi := Nat.lt_log2_self (n := high)
+  have radixPositive := Nat.two_pow_pos bits
+  have numberPositive : 0 < low + 2 ^ bits * high := by
+    have := Nat.mul_pos radixPositive positive
+    omega
+  apply (Nat.log2_eq_iff (by omega : low + 2 ^ bits * high ≠ 0)).mpr
+  constructor
+  · rw [Nat.pow_add]
+    exact Nat.le_trans (Nat.mul_le_mul_left _ lo) (Nat.le_add_left _ _)
+  · have upper : low + 2 ^ bits * high < 2 ^ bits * (high + 1) := by
+      rw [Nat.mul_succ]
+      omega
+    have bounded := Nat.mul_le_mul_left (2 ^ bits) (show high + 1 ≤ 2 ^ (high.log2 + 1) by omega)
+    have exponent : bits + high.log2 + 1 = bits + (high.log2 + 1) := by omega
+    rw [exponent, Nat.pow_add]
+    exact Nat.lt_of_lt_of_le upper bounded
+
+/-- The value of a prefix followed by one original physical limb. -/
+theorem prefix_value_succ : ∀ (words : List (BitVec 64)) (n : Nat),
+    Limbs.value (words.take (n + 1)) = Limbs.value (words.take n) +
+      2 ^ (64 * n) * (words[n]?.getD 0).toNat
+  | [], n => by simp [Limbs.value]
+  | word :: words, 0 => by simp [Limbs.value]
+  | word :: words, n + 1 => by
+    have ih := prefix_value_succ words n
+    have power : 2 ^ (64 * (n + 1)) = 2 ^ 64 * 2 ^ (64 * n) := by
+      rw [← Nat.pow_add]
+      congr 1
+      omega
+    rw [power]
+    simp [Limbs.value, ih, Nat.mul_add, Nat.mul_assoc, Nat.add_assoc]
+
+/-- The literal countdown removes only high zeros, not active low limbs. -/
+theorem significant_prefix_value (words : List (BitVec 64)) (n : Nat) :
+    Limbs.value (words.take (significantCount words n)) = Limbs.value (words.take n) := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+    by_cases zero : words[n]?.getD 0 = 0
+    · simp only [significantCount, zero, ↓reduceIte]
+      rw [ih, prefix_value_succ, zero]
+      simp
+    · simp only [significantCount, zero, ↓reduceIte]
+
+/-- The selected highest physical limb is nonzero even in a padded representation. -/
+theorem significant_top_nonzero (words : List (BitVec 64)) (n : Nat)
+    (positive : 0 < significantCount words n) :
+    words[significantCount words n - 1]?.getD 0 ≠ 0 := by
+  induction n with
+  | zero => simp [significantCount] at positive
+  | succ n ih =>
+    by_cases zero : words[n]?.getD 0 = 0
+    · simp only [significantCount, zero, ↓reduceIte] at positive ⊢
+      exact ih positive
+    · simp only [significantCount, zero, ↓reduceIte, Nat.add_sub_cancel]
+      exact zero
+
+/-- This is the pure semantic bridge for both ISA scans. It neither assumes a
+successful width check nor bounds the mathematical value by a host word. -/
+theorem bitLength_significant (words : List (BitVec 64))
+    (positive : 0 < sigWords words) :
+    bitLength (Limbs.value words) = 64 * (sigWords words - 1) +
+      (words[sigWords words - 1]?.getD 0).toNat.log2 + 1 := by
+  let count := sigWords words
+  let top := words[count - 1]?.getD 0
+  have topNonzero : top ≠ 0 := significant_top_nonzero words words.length positive
+  have topPositive : 0 < top.toNat := by
+    have : top.toNat ≠ 0 := by
+      intro zero
+      apply topNonzero
+      apply BitVec.eq_of_toNat_eq
+      simpa using zero
+    omega
+  have selectedPrefix : Limbs.value words = Limbs.value (words.take count) := by
+    have selected := significant_prefix_value words words.length
+    dsimp only [count, sigWords]
+    simpa only [List.take_length] using selected.symm
+  have predecessor : count - 1 + 1 = count := by dsimp [count]; omega
+  have decomposition : Limbs.value words = Limbs.value (words.take (count - 1)) +
+      2 ^ (64 * (count - 1)) * top.toNat := by
+    calc
+      Limbs.value words = Limbs.value (words.take count) := selectedPrefix
+      _ = Limbs.value (words.take (count - 1 + 1)) := by rw [predecessor]
+      _ = _ := prefix_value_succ words (count - 1)
+  have lowBound : Limbs.value (words.take (count - 1)) < 2 ^ (64 * (count - 1)) := by
+    apply Nat.lt_of_lt_of_le (value_lt _)
+    apply Nat.pow_le_pow_right (by decide)
+    simp only [List.length_take]
+    omega
+  have logarithm := log2_radix _ top.toNat (64 * (count - 1)) lowBound topPositive
+  have valuePositive : 0 < Limbs.value words := by
+    rw [decomposition]
+    have := Nat.mul_pos (Nat.two_pow_pos (64 * (count - 1))) topPositive
+    omega
+  unfold bitLength
+  have nonzero : Limbs.value words ≠ 0 := by omega
+  simp only [nonzero, ↓reduceIte]
+  rw [decomposition, logarithm]
+
+/-- Rounded native size formula, preserving the selected limb's full 64 bits. -/
+theorem requiredBytes_significant (words : List (BitVec 64))
+    (positive : 0 < sigWords words) :
+    requiredBytes (Limbs.value words) =
+      (64 * (sigWords words - 1) + (words[sigWords words - 1]?.getD 0).toNat.log2 + 8) / 8 := by
+  rw [requiredBytes_round, bitLength_significant words positive]
+
+theorem requiredBytes_zero_significant (words : List (BitVec 64))
+    (zero : sigWords words = 0) : requiredBytes (Limbs.value words) = 0 := by
+  have valueZero : Limbs.value words = 0 := by
+    have selected := significant_prefix_value words words.length
+    change Limbs.value (words.take (sigWords words)) = _ at selected
+    simpa [zero, Limbs.value] using selected.symm
+  simp [valueZero, requiredBytes, bitLength]
+
+/-- A physical list bounds the computed size, not the input's logical magnitude. -/
+theorem requiredBytes_length (words : List (BitVec 64)) :
+    requiredBytes (Limbs.value words) ≤ 8 * words.length := by
+  apply (requiredBytes_fits _ _).mpr
+  have bound := value_lt words
+  simpa only [show 8 * (8 * words.length) = 64 * words.length by omega] using bound
+
+/-- The actual sixteen-byte arithmetic cannot overflow, even before using the
+stronger mapped-allocation bound on physical limb storage. -/
+theorem requiredBytes_u128 (words : List (BitVec 64))
+    (physical : words.length < 2 ^ 64) :
+    requiredBytes (Limbs.value words) < 2 ^ 128 := by
+  have := requiredBytes_length words
+  omega
+
+/-- Three significant width limbs dominate every native 128-bit byte requirement. -/
+theorem wide_width_bound (words : List (BitVec 64)) (wide : 2 < sigWords words) :
+    2 ^ 128 ≤ Limbs.value words := by
+  have nonempty : trim words ≠ [] := by
+    intro empty
+    have count := trim_length words
+    rw [empty] at count
+    simp only [List.length_nil] at count
+    omega
+  have lower := canonical_ge_pow _ (trim_canonical words) nonempty
+  have power : 2 ^ 128 ≤ 2 ^ (64 * ((trim words).length - 1)) := by
+    apply Nat.pow_le_pow_right (by decide)
+    rw [trim_length]
+    omega
+  rw [trim_value] at lower
+  exact Nat.le_trans power lower
+
+/-- Exact stopping certificate for the real repeated SHR64 lowering. -/
+theorem bsr_certificate (word : BitVec 64) (nonzero : word ≠ 0) :
+    word >>> (word.toNat.log2 + 1) = 0 ∧
+      ∀ i, i ≤ word.toNat.log2 → word >>> i ≠ 0 := by
+  have positive : word.toNat ≠ 0 := by
+    intro zero
+    apply nonzero
+    apply BitVec.eq_of_toNat_eq
+    simpa using zero
+  constructor
+  · apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+    exact Nat.div_eq_of_lt (Nat.lt_log2_self (n := word.toNat))
+  · intro i within zero
+    have lower := (Nat.le_log2 positive).mp within
+    have quotient : 0 < word.toNat / 2 ^ i := Nat.div_pos lower (Nat.two_pow_pos i)
+    have valueZero := congrArg BitVec.toNat zero
+    simp only [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow] at valueZero
+    change word.toNat / 2 ^ i = 0 at valueZero
+    omega
+
+theorem bsr_bound (word : BitVec 64) (nonzero : word ≠ 0) : word.toNat.log2 < 64 := by
+  have positive : word.toNat ≠ 0 := by
+    intro zero
+    apply nonzero
+    apply BitVec.eq_of_toNat_eq
+    simpa using zero
+  exact (Nat.log2_lt positive).mpr word.isLt
 
 end SszNative.Serialize

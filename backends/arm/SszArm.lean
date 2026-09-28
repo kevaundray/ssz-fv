@@ -279,4 +279,11 @@ import SszArm.UintTails
 #print axioms SszArm.NatFromU128.Post.result_owned
 #print axioms SszArm.NatFromU128.correct_model
 
+#print axioms SszNative.Serialize.bitLength_significant
+#print axioms SszNative.Serialize.requiredBytes_significant
+#print axioms SszNative.Serialize.requiredBytes_zero_significant
+#print axioms SszNative.Serialize.requiredBytes_u128
+#print axioms SszNative.Serialize.wide_width_bound
+#print axioms SszNative.Serialize.bsr_certificate
+
 audit_native
