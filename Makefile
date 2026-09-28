@@ -32,6 +32,7 @@ binding: models
 	python3 scripts/check-delimited-binding.py
 	python3 scripts/check-bitlist-binding.py
 	python3 scripts/check-dispatch-binding.py
+	python3 scripts/check-emit-binding.py
 
 smoke:
 	python3 scripts/check-uint64.py

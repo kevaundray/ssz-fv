@@ -278,6 +278,8 @@ $lean e2_prof.lean 2>&1 | grep took   # simp ~125 s of 127 s wall
 
 **Shared padded-limb measurement arithmetic:** moved the pure size/scan facts into `SszSerializeMeasure`, removing the backend-specific `MeasureUintMath` module and migrating its callers without aliases. Both strict roots now audit the significant-limb bit length, rounded byte size, zero case, physical-length-derived 128-bit size bound, wide-width comparison bound, and BSR stopping certificate. The permanent shared module checked in **768 ms on x86 Lean / 828 ms on ARM Lean**; both strict roots rebuilt successfully. An executable smoke passed **4,680 padded-limb size/minimal-width cases per toolchain**, including zero lists, high-zero padding, both zero/all-one low limbs, and values beyond 128 bits. These are shared arithmetic results, not measurement execution closure. Preserve the distinction between `0#64` and ordinary overloaded zero when using syntactic `simp` matching; normalize deliberately. Reserved `prefix` identifiers and `simpa` rewriting its own hypothesis were additional cross-toolchain proof failures resolved without changing statements or limits.
 
+**Emitter-binding checkpoint boundary:** the joint binding check passed again in **91.44 seconds**, with the same actual caller/helper instruction counts and x86 table bytes. Its dependency closure and structural caller/helper code-ownership lemmas are now imported by the strict roots; the execution-proof modules remain separate and unfinished. Checkpoint this verified image-binding milestone independently rather than including partially compiling emitter bodies.
+
 ## 2. What has helped
 
 ### Opaque block summaries instead of repeated symbolic execution

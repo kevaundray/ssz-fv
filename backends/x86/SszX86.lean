@@ -25,6 +25,7 @@ import SszNatNarrow
 import SszBitVector
 import SszBitVectorMemory
 import SszSerializeResources
+import SszX86.EmitMemcpyEmbedded
 import SszX86.NatFromU128Corollaries
 import SszX86.DispatchProofs
 import SszX86.Impl
@@ -244,5 +245,7 @@ import SszX86.BitListResources
 #print axioms SszNative.Serialize.requiredBytes_u128
 #print axioms SszNative.Serialize.wide_width_bound
 #print axioms SszNative.Serialize.bsr_certificate
+
+#print axioms SszX86.Emit.MemcpyCodeAt.of_rows
 
 audit_native

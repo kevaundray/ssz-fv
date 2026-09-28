@@ -24,6 +24,7 @@ import SszNatNarrow
 import SszBitVector
 import SszBitVectorMemory
 import SszSerializeResources
+import SszArm.EmitImpl
 import SszArm.NatFromU128Model
 import SszArm.LogicalImmediateRegression
 import SszArm.Impl
@@ -285,5 +286,8 @@ import SszArm.UintTails
 #print axioms SszNative.Serialize.requiredBytes_u128
 #print axioms SszNative.Serialize.wide_width_bound
 #print axioms SszNative.Serialize.bsr_certificate
+
+#print axioms SszArm.Emit.body_codeAt
+#print axioms SszArm.Emit.memcpy_codeAt
 
 audit_native
