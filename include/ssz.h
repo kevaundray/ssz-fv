@@ -152,16 +152,21 @@ extern "C" {
  * size, serialization, and allocating serialization against pinned SSZ,
  * including exact resource failures, ordered scratch effects/no rollback,
  * output prefix initialization, untouched tails, and no output-content reads.
- * Both roots audit these logical contracts; complete serializer-wrapper ISA
- * execution, concrete memory/provenance, and ABI refinement remain open.
+ * Both roots audit these logical contracts.
  * Both private primitive emitters now have root-audited entry-through-RET
  * refinement for all seven primitive kinds under original successful-input
  * and caller-memory ownership preconditions. They include actual linked memcpy,
  * exact encoded bytes and success fields, initialized output prefixes,
  * untouched capacity tails/result padding, original borrowed inputs, and
  * restored stack and callee-saved scalar/vector register state. They assume
- * neither a readable Plan nor future execution. Primitive measurement and
- * complete serializer-wrapper execution remain open.
+ * neither a readable Plan nor future execution.
+ * The x86 root additionally audits complete primitive measurement and serializer
+ * wrapper execution, from original entry through caller RET in one linked
+ * image. These proofs include ordered scratch failures, exact result/error
+ * storage, borrowed-memory and output-tail frames, and restored ABI state;
+ * no Plan or output contents are assumed initialized. The corresponding ARM
+ * measurement and serializer-wrapper proofs remain under integration.
+ * Composite codecs and external C/schema wrappers remain outside this coverage.
  *
  * Executing this ABI on both targets is runtime evidence, not an ISA proof.
  */
