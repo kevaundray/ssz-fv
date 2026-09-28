@@ -26,6 +26,8 @@ import SszBitVectorMemory
 import SszSerializeResources
 import SszNatMul
 import SszCodecTypesProofs
+import SszFixedSizeProofs
+import SszFixedSizeOrder
 import SszArm.EmitImpl
 import SszArm.EmitProgram
 import SszArm.MeasureProgram
@@ -324,5 +326,14 @@ import SszArm.UintTails
 #print axioms SszNative.Codec.Desc.eraseVariants_zip
 #print axioms SszNative.Codec.Desc.inductionOnChildren
 #print axioms SszNative.Codec.Value.inductionOnChildren
+
+#print axioms SszNative.FixedSize.isFixed_eq
+#print axioms SszNative.FixedSize.fixedSize_refines
+#print axioms SszNative.FixedSize.fixedSize_none_no_effects
+#print axioms SszNative.FixedSize.fixedSize_error
+#print axioms SszNative.FixedSize.fixedSize_used_mono
+#print axioms SszNative.FixedSize.bitWidth_rounded
+#print axioms SszNative.FixedSize.measureFields_add_error
+#print axioms SszNative.FixedSize.measureFixed_mul_error
 
 audit_native

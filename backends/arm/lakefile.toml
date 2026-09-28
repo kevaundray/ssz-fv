@@ -195,4 +195,28 @@ name = "SszCodecTypesProofs"
 srcDir = "../../proofs"
 
 [[lean_lib]]
+name = "SszFixedSize"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszFixedSizeClassification"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszFixedSizeArithmetic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszFixedSizeProofs"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszFixedSizeResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszFixedSizeOrder"
+srcDir = "../../proofs"
+
+[[lean_lib]]
 name = "SszArm"
