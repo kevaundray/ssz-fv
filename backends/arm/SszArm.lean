@@ -28,8 +28,8 @@ import SszNatMul
 import SszCodecTypesProofs
 import SszArm.EmitImpl
 import SszArm.EmitProgram
-import SszArm.MeasureImpl
-import SszArm.SerializeImpl
+import SszArm.MeasureProgram
+import SszArm.SerializeProgram
 import SszArm.NatFromU128Model
 import SszArm.LogicalImmediateRegression
 import SszArm.Impl
@@ -301,6 +301,8 @@ import SszArm.UintTails
 #print axioms SszArm.Measure.compare_codeAt
 #print axioms SszArm.Measure.fromU128_codeAt
 #print axioms SszArm.Measure.memcpy_codeAt
+#print axioms SszArm.Measure.program_correct
+#print axioms SszArm.Measure.program_refines
 
 #print axioms SszArm.Serialize.body_codeAt
 #print axioms SszArm.Serialize.measure_codeAt
@@ -308,6 +310,8 @@ import SszArm.UintTails
 #print axioms SszArm.Serialize.compare_codeAt
 #print axioms SszArm.Serialize.fromU128_codeAt
 #print axioms SszArm.Serialize.memcpy_codeAt
+#print axioms SszArm.Serialize.program_correct
+#print axioms SszArm.Serialize.program_refines
 
 #print axioms SszNative.LimbMul.mul_value
 #print axioms SszNative.NatMul.writtenWords_native_loop

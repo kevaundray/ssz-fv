@@ -338,6 +338,8 @@ The serializer image certificate independently rechecked both shipped closures: 
 
 Model runtime smokes on both toolchains exercised nested fixed/variable container serialization, union selection, >64-bit recursive metadata, multiply carries, redundant limbs, borrowing, alignment and capacity boundaries. Separate freestanding probes exercised the shipped private multiplication helpers on both ISAs, including scratch/tail frames and failure preservation. The first ARM probe incorrectly used C's hidden X8 structure-return convention and faulted; inspecting the shipped entry showed the Rust internal result pointer in **X0**. An explicit first output-pointer argument passed. Only temporary ELF symbol visibility was changed to call the private helpers; assembly instructions and native sources were unchanged, and temporary binaries were removed.
 
+**Checked ARM primitive serializer milestone:** complete measurement checked in **652 jobs** and serializer-wrapper composition in **769 jobs**; their public program modules checked in **946 ms / 899 ms**. The strict ARM root now imports and audits both original-entry-through-return refinements and passed **936 jobs**. A fresh shipped-assembly smoke again passed **571 pinned fixtures plus direct ABI checks on each ISA**. Both ISAs now cover complete private primitive measurement and serialization; recursive composite codec execution, external C/schema wrappers and hashing/Merkle/proof ISA refinement remain open. No SHA trust or proof limits changed.
+
 ## 2. What has helped
 
 ### Opaque block summaries instead of repeated symbolic execution
