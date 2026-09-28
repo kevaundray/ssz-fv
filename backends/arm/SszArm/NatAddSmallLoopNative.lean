@@ -31,6 +31,6 @@ theorem native_suffix_carry_zero (small pointer : BitVec 64) (right : List (BitV
       LimbAdd.loop (SszNative.NatAdd.count (.small small) (.large pointer right) + 1)
         [small] right 0 by simpa only [List.drop_zero] using same] at native
   simpa only [LimbAdd.loop, List.head?_cons, Option.getD_some, List.tail_cons,
-    List.drop_one] using native
+    List.drop_one, BitVec.ofNat_eq_ofNat] using native
 
 end SszArm.NatAdd.SmallLoop

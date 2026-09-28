@@ -42,16 +42,18 @@ theorem right_run (s : ArmState) (base : BitVec 64) (kind : GateKind)
   have gf : LoopFrame writes s g := gate_frame s base within small writes hs slot
   have greg : ∀ reg : BitVec 5, reg ≠ 17#5 → r (.GPR reg) g = r (.GPR reg) s := by
     intro reg hr
-    simp (disch := simp_all) [g, gateResult, saved, Udivti3.compare,
-      Udivti3.next, state_simp_rules]
+    simp [g, gateResult, saved, Udivti3.compare,
+      Udivti3.next, state_simp_rules, hr]
   have gp : read_pc g = base + if within && !small then 1572#64 else 1860#64 := by
     simp [g, gateResult, state_simp_rules]
-  by_cases load : within && !small = true
-  · have large : r (.GPR 3#5) s ≠ 0#64 := by simpa [small] using (Bool.and_eq_true.mp load).2
+  by_cases load : (within && !small) = true
+  · have bits : within = true ∧ small = false := by
+      cases hwithin : within <;> cases hsmall : small <;>
+        simp [hwithin, hsmall] at load ⊢
+    have large : r (.GPR 3#5) s ≠ 0#64 := by simpa [small] using bits.2
     obtain ⟨count, source, limbs⟩ := input.large large
     have inbounds : index < right.length := by
-      have := (Bool.and_eq_true.mp load).1
-      simpa [within, h15, count] using this
+      simpa [within, h15, count] using bits.1
     have gs := gf.source _ _ source
     have gm := gf.words _ _ source limbs (owned large)
     have g15 : r (.GPR 15#5) g = BitVec.ofNat 64 index := by
@@ -64,7 +66,7 @@ theorem right_run (s : ArmState) (base : BitVec 64) (kind : GateKind)
       exact NatCompare.limb_load g (r (.GPR 3#5) s) right index _ inbounds gs gm
     let t := loadResult g base .loopRight (right[index]?.getD 0)
     have trun : run 8 g = t := NatAdd.load_run g base _ .loopRight (gf.code hc)
-      (gf.error.trans he) (gf.aligned ha) (by simpa only [load, ↓reduceIte] using gp)
+      (gf.error.trans he) (gf.aligned ha) (by simpa [load, LoadKind.start] using gp)
       gs.1 loadword
     have tf := load_frame g base (right[index]?.getD 0) .loopRight writes gs.1
       (by simpa only [gf.sp] using slot) (by decide)
@@ -73,9 +75,9 @@ theorem right_run (s : ArmState) (base : BitVec 64) (kind : GateKind)
     · simp [t, loadResult, LoadKind.start, state_simp_rules]
     · simp [t, loadResult, LoadKind.dst, state_simp_rules]
     · intro reg hr
-      simpa (disch := simp_all) [t, loadResult, LoadKind.dst, saved, state_simp_rules]
+      simpa [t, loadResult, LoadKind.dst, saved, state_simp_rules, hr]
         using greg reg hr
-  · have zero : right[index]?.getD 0 = 0 := by
+  · have zero : right[index]?.getD 0#64 = 0#64 := by
       by_cases smallPointer : r (.GPR 3#5) s = 0#64
       · rw [input.small smallPointer, List.getElem?_eq_none (by simp; omega)]
         rfl
@@ -84,7 +86,11 @@ theorem right_run (s : ArmState) (base : BitVec 64) (kind : GateKind)
           simpa [within, small, h15, count, smallPointer] using load
         rw [List.getElem?_eq_none (by omega)]
         rfl
-    have gp' : read_pc g = base + 1860#64 := by simpa [load] using gp
+    have skip : (within && !small) = false := by
+      cases branch : (within && !small) with
+      | false => rfl
+      | true => exact False.elim (load branch)
+    have gp' : read_pc g = base + 1860#64 := by simpa [skip] using gp
     let t := block base [.p1860, .p1864] g
     have follows : Follows base [.p1860, .p1864] g := by
       have gpc : r .PC g = base + 1860#64 := gp'
@@ -96,9 +102,9 @@ theorem right_run (s : ArmState) (base : BitVec 64) (kind : GateKind)
     refine ⟨(gateOps kind within small).length + 2, t, ?_, gf.trans tf, ?_, ?_, ?_⟩
     · rw [run_plus, grun, trun]
     · simp [t, block, Op.effect, put, next, state_simp_rules]
-    · simp [t, block, Op.effect, put, next, state_simp_rules, zero]
+    · simpa [t, block, Op.effect, put, next, state_simp_rules] using zero.symm
     · intro reg hr
-      simpa (disch := simp_all) [t, block, Op.effect, put, next, state_simp_rules]
+      simpa [t, block, Op.effect, put, next, state_simp_rules, hr]
         using greg reg hr
 
 /-- Complete actual operand-selection slice, from PC1692 to the first ADDS at
@@ -125,6 +131,7 @@ theorem operands_run (s : ArmState) (base : BitVec 64)
   obtain ⟨urun, uf, up, ul, ureg⟩ := left_run s base (r (.GPR 1#5) s) left index
     writes hc he ha hp rfl h2 h15 source limbs slot
   let u := leftState s base left index
+  change LoopFrame writes s u at uf
   have input' : Operand u (r (.GPR 3#5) u) (r (.GPR 4#5) u) right := by
     rw [ureg 3#5 (by decide), ureg 4#5 (by decide)]
     exact operand_frame uf _ _ _ input owned

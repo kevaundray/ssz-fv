@@ -26,13 +26,18 @@ theorem fast_small_post (original s : ArmState) (base : BitVec 64) (site : FastS
   have executed := fast_run site s base hc he ha hp (by omega)
   have arithmetic := fast_arithmetic site s base operand count domain input
   rw [divisor] at arithmetic
-  have highZero : r (.GPR 1#5) t = 0#64 := by
+  have highZero : r (.GPR 1#5) (fastResult site s base) = 0#64 := by
     apply (high_zero_iff (r (.GPR 0#5) t) (r (.GPR 1#5) t)).2
+    change Udivti3.numerator (fastResult site s base) < 2^64
     rw [arithmetic.1]
     exact small
   have quotient : Udivti3.join (r (.GPR 0#5) t) 0#64 =
       operand.value / (r (.GPR 3#5) original).toNat := by
-    simpa only [Udivti3.numerator, highZero] using arithmetic.1
+    have joined : Udivti3.join (r (.GPR 0#5) (fastResult site s base))
+        (r (.GPR 1#5) (fastResult site s base)) =
+        operand.value / (r (.GPR 3#5) original).toNat := arithmetic.1
+    rw [highZero] at joined
+    exact joined
   let remainder := SszNative.NatDivision.wideRemainder operand (r (.GPR 3#5) original)
   have source : outcome original operand = SszNative.NatArithmetic.unchanged
       (arenaOf original).used (.ok (.small (r (.GPR 0#5) t), remainder)) :=
@@ -47,7 +52,7 @@ theorem fast_small_post (original s : ArmState) (base : BitVec 64) (site : FastS
   have code : CodeAt t base := by simpa only [t, CodeAt, fast_program] using hc.1
   have error : read_err t = .None := (fast_error site s base).trans he
   have aligned : CheckSPAlignment t := by
-    simpa only [CheckSPAlignment, t, fast_sp] using ha
+    simpa only [CheckSPAlignment, state_simp_rules, t, fast_sp] using ha
   have output : r (.GPR 19#5) t = r (.GPR 0#5) original :=
     (fast_gpr site s base 19#5 (by decide) (by decide) (by decide)).trans out
   have post := small_result_post original t base operand remainder owned

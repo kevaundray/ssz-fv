@@ -10,11 +10,11 @@ set_option maxHeartbeats 4000000
 /-- After the prologue only the bottom lowering slot is writable. Keeping the
 saved 64-byte activation out of this footprint makes LR restoration compositional. -/
 def bodyWrites (original : ArmState) (operand : SszNative.NatOperand) : List Span :=
-  let local := [((r (.GPR 0#5) original).toNat, 68),
+  let localSpans := [((r (.GPR 0#5) original).toNat, 68),
     ((r (.GPR 31#5) original).toNat - 80, 16)]
   match (outcome original operand).allocation with
-  | none => local
-  | some reservation => local ++ [((r (.GPR 4#5) original).toNat + 16, 8),
+  | none => localSpans
+  | some reservation => localSpans ++ [((r (.GPR 4#5) original).toNat + 16, 8),
       (reservation.pointer, 8 * (outcome original operand).written.length)]
 
 /-- Embedding a tight physical frame in larger allowed intervals. -/
@@ -37,13 +37,13 @@ theorem body_frame_full {original s t : ArmState} (operand : SszNative.NatOperan
   intro span member
   cases allocated : (outcome original operand).allocation with
   | none =>
-    simp only [bodyWrites, allocated, List.mem_cons, List.mem_singleton] at member
+    simp only [bodyWrites, allocated, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
     · exact ⟨_, by simp [writesFor, allocated, localWrites], Nat.le_refl _, Nat.le_refl _⟩
     · exact ⟨((r (.GPR 31#5) original).toNat - 80, 80),
         by simp [writesFor, allocated, localWrites], Nat.le_refl _, by omega⟩
   | some reservation =>
-    simp only [bodyWrites, allocated, List.mem_append, List.mem_cons, List.mem_singleton] at member
+    simp only [bodyWrites, allocated, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with (rfl | rfl) | (rfl | rfl)
     · exact ⟨_, by simp [writesFor, allocated, localWrites], Nat.le_refl _, Nat.le_refl _⟩
     · exact ⟨((r (.GPR 31#5) original).toNat - 80, 80),
@@ -73,7 +73,7 @@ theorem Owned.body_activation {original : ArmState} {operand : SszNative.NatOper
   intro span member
   cases allocated : (outcome original operand).allocation with
   | none =>
-    simp only [bodyWrites, allocated, List.mem_cons, List.mem_singleton] at member
+    simp only [bodyWrites, allocated, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl <;> simp only [Prod.fst, Prod.snd] <;> omega
   | some reservation =>
     have fresh := owned.fresh reservation allocated
@@ -91,7 +91,7 @@ theorem Owned.body_activation {original : ArmState} {operand : SszNative.NatOper
       · have h := apart ((r (.GPR 31#5) original).toNat - 80, 80) (by simp [localWrites])
         simp only [Prod.fst, Prod.snd] at h
         omega
-    simp only [bodyWrites, allocated, List.mem_append, List.mem_cons, List.mem_singleton] at member
+    simp only [bodyWrites, allocated, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with (rfl | rfl) | (rfl | rfl) <;> simp only [Prod.fst, Prod.snd] <;> omega
 
 theorem Saved.body_preserved {original s t : ArmState} {operand : SszNative.NatOperand}

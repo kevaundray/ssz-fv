@@ -56,6 +56,7 @@ theorem model_overflow (s : ArmState) (left right : NatOperand)
   unfold outcome
   rw [SszNative.NatAdd.run_small_overflow left right _ _ _ (by omega) (by omega)
     ⟨by omega, by omega⟩ (by omega), wide_low, wide_high left right overflow]
+  cases Arena.reserve (arenaOf s).base (arenaOf s).capacity (arenaOf s).used 2 <;> rfl
 
 theorem committed_pair (reservation : Arena.Reservation) (word : BitVec 64) :
     NatOperand.fromWords (BitVec.ofNat 64 reservation.pointer) [word, 1#64] =

@@ -9,6 +9,16 @@ open UintCodec (widthLoad)
 set_option maxRecDepth 32768
 set_option maxHeartbeats 4000000
 
+/-- Frame weakening depends on the original footprint, not on whether the
+body state's registers still equal the original call arguments. -/
+theorem local_frame_for {original s t : ArmState}
+    (result : SszNative.NatArithmetic.Outcome (SszNative.NatOperand × BitVec 64))
+    (frame : MemoryFrame (localWrites original) s t) :
+    MemoryFrame (writesFor original result) s t := by
+  apply frame.weaken
+  intro span member
+  cases allocated : result.allocation <;> simp_all [writesFor]
+
 /-- The common suffix uses only the original output and the bottom 16-byte
 lowering slot, so its frame embeds in the caller's exact local footprint. -/
 theorem return_local_frame {original s : ArmState} (base : BitVec 64)
@@ -21,7 +31,7 @@ theorem return_local_frame {original s : ArmState} (base : BitVec 64)
   intro a outside
   apply frame a
   intro span member
-  simp only [returnWrites, List.mem_cons, List.mem_singleton] at member
+  simp only [returnWrites, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl
   · simpa only [out] using outside ((r (.GPR 0#5) original).toNat, 68) (by simp [localWrites])
   · have h := outside ((r (.GPR 31#5) original).toNat - 80, 80) (by simp [localWrites])
@@ -39,7 +49,7 @@ theorem written_local_preserved {original s t : ArmState} {operand : SszNative.N
   have resources := SszNative.NatDivision.allocation_resources operand (r (.GPR 3#5) original)
     (arenaOf original).base (arenaOf original).capacity (arenaOf original).used reservation allocated
   have separate := owned.fresh reservation allocated
-  have local : Protected (localWrites original) reservation.pointer
+  have localOwned : Protected (localWrites original) reservation.pointer
       (8 * (outcome original operand).written.length) := by
     rcases separate with empty | separated
     · exact Or.inl empty
@@ -47,7 +57,8 @@ theorem written_local_preserved {original s t : ArmState} {operand : SszNative.N
   have geometry := resources.2.2.1
   have pointer := resources.2.2.2.1
   have cursor := resources.2.2.2.2.1
-  have length := resources.2.1
+  have length : (outcome original operand).written.length =
+      (if operand.wordCount ≤ 2 then 2 else operand.wordCount) := resources.2.1
   have extent : reservation.pointer + 8 * (outcome original operand).written.length ≤ 2^64 := by
     have storage := owned.arenaStorage
     have cap := geometry.2.2.2.2.2
@@ -55,7 +66,7 @@ theorem written_local_preserved {original s t : ArmState} {operand : SszNative.N
     unfold SszNative.Arena.finish at cap
     omega
   have bound := i.isLt
-  rw [frame.load _ _ (by omega) (local.subspan (8 * i.val) 8 (by omega))]
+  rw [frame.load _ _ (by omega) (localOwned.subspan (8 * i.val) 8 (by omega))]
   exact written reservation allocated i
 
 /-- Close the callee contract after the proved source/ISA body has prepared the
@@ -93,6 +104,6 @@ theorem finish_post (original s : ArmState) (base : BitVec 64)
     · exact cursor
     · rw [arenaAddress]
       exact owned.arenaLocal.subspan 16 8 (by decide)
-  · exact before.trans (local_frame (outcome original operand) after)
+  · exact before.trans (local_frame_for (outcome original operand) after)
 
 end SszArm.NatDivision

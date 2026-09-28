@@ -82,13 +82,14 @@ theorem round_run (s : ArmState) (base pointer sp output : BitVec 64)
     (read_register s base right index _ (by decide)).trans h14
   change read_pc v = base + 1912#64 at vp
   change r (.GPR 15#5) v = right[index]?.getD 0#64 at v15
+  have vpc : r .PC v = base + 1912#64 := vp
   let u := block base [.p1912, .p1916] v
-  have runAdd : run 2 v = u := block_run base _ v (vf.code hc) (vf.error.trans he)
+  have runAdd : run 2 v = u := block_run base [.p1912, .p1916] v (vf.code hc) (vf.error.trans he)
     (vf.aligned ha) (by
-      simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, vp, BitVec.add_assoc])
+      simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, vpc, BitVec.add_assoc])
   have uf : LoopFrame regions v u := readonly_frame base _ v regions (by decide)
   have up : read_pc u = base + 1920#64 := by
-    simp [u, block, Op.effect, put, next, state_simp_rules, vp, BitVec.add_assoc]
+    simp [u, block, Op.effect, put, next, state_simp_rules, vpc, BitVec.add_assoc]
   have u9 : r (.GPR 9#5) u = output := (uf.registers _ (by decide)).trans v9
   have u14 : r (.GPR 14#5) u = BitVec.ofNat 64 index := by
     simp [u, block, Op.effect, put, next, state_simp_rules, v14]
@@ -145,10 +146,17 @@ theorem round_run (s : ArmState) (base pointer sp output : BitVec 64)
     rw [BoolCodec.read_mem_bytes_write_mem_bytes_same _ _ _ _ physical, u15]
   refine ⟨?_, preFrame.trans (tail_frame w base regions), ?_, t13,
     t14.trans w16, tp, (tmem _ _).trans stored⟩
-  · change run (readFuel right index + 2 + 8 + _) s = tailState w base
-    rw [run_plus, run_plus, run_plus, runRead, runAdd, runStore, runTail]
-  · rw [t12, wCarry]
+  · change run (readFuel right index + 2 + 8 +
+        (tailOps (decide (r (.FLAG .C) w = 1#1))).length) s = tailState w base
+    rw [run_plus, run_plus, run_plus, runRead, runAdd, runStore]
+    exact runTail
+  · change r (.GPR 12#5) (tailState w base) =
+      BitVec.ofNat 64 (LimbAdd.step 0#64 (right[index]?.getD 0#64) carry).2
+    simp only [t12, wCarry]
     have h := add_carry (right[index]?.getD 0#64) carry carryBound
-    simpa only [← h, apply_ite, BitVec.ofNat_eq_ofNat]
+    have cast := congrArg (BitVec.ofNat 64) h
+    by_cases flag : (AddWithCarry (BitVec.ofNat 64 carry) (right[index]?.getD 0#64) 0#1).2.c = 1#1
+    · simpa only [flag, ↓reduceIte, BitVec.ofNat_eq_ofNat] using cast
+    · simpa only [flag, ↓reduceIte, BitVec.ofNat_eq_ofNat] using cast
 
 end SszArm.NatAdd.SmallLoop

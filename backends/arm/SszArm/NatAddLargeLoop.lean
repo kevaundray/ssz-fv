@@ -41,7 +41,7 @@ theorem loop_run (base stack output : BitVec 64) (left right : List (BitVec 64))
     · subst remaining
       refine ⟨roundFuel, u, urun, uf, ?_, ?_, ?_, u15, u13, ?_⟩
       · simpa using up
-      · simpa only [LimbAdd.loop_indexed_succ, LimbAdd.loop] using u12
+      · simpa only [LimbAdd.loop_indexed_succ, LimbAdd.loop, List.head?_drop] using u12
       · simpa using u14
       · rw [LimbAdd.loop_indexed_succ]
         apply suffix_words_cons u output next.1 index [] stored
@@ -105,7 +105,7 @@ theorem entry_run (s : ArmState) (base stack output first : BitVec 64)
     · omega
     · right
       intro span member
-      simp only [suffixWrites, List.mem_cons, List.mem_singleton] at member
+      simp only [suffixWrites, List.mem_cons, List.not_mem_nil, or_false] at member
       rcases member with rfl | rfl
       · simpa using apart (stack.toNat - 16, 16) (by simp)
       · simp only [Prod.fst, Prod.snd]

@@ -62,12 +62,15 @@ theorem scan_operand {original s : ArmState} (operand : SszNative.NatOperand)
   rw [pointer, payload]
   cases operand with
   | small word => exact Or.inl ⟨rfl, rfl⟩
-  | large pointer words =>
+  | large heapPointer words =>
     have positive := input.1
     have physical := input.2.2.1
     have count : words.length < 2^64 := by omega
-    refine Or.inr ⟨?_, ?_, owned.large_source pointer words sp, large_words s pointer words input⟩
-    · intro zero; simp [zero] at positive
+    refine Or.inr ⟨?_, ?_, owned.large_source heapPointer words sp, large_words s heapPointer words input⟩
+    · change heapPointer ≠ 0#64
+      intro zero
+      have pos : 0 < heapPointer.toNat := positive
+      simp [zero] at pos
     · exact Nat.mod_eq_of_lt count
 
 structure Classified (original current : ArmState) (base : BitVec 64)
@@ -107,7 +110,7 @@ theorem classify_run (s : ArmState) (base : BitVec 64) (operand : SszNative.NatO
   have ui := prologue_input s base operand owned
   have input := scan_operand operand owned saved.sp upointer upayload ui
   obtain ⟨fuel, t, ht, frame, branch⟩ := classify_operand u base operand.words uc ue ua up input
-  have local := (prologue_local_frame s base owned.stackBound).trans
+  have prefixFrame := (prologue_local_frame s base owned.stackBound).trans
     (frame.local_frame saved.sp owned.stackBound)
   refine ⟨8 + fuel, t, ?_, ?_⟩
   · rw [run_plus, hu, ht]
@@ -117,8 +120,8 @@ theorem classify_run (s : ArmState) (base : BitVec 64) (operand : SszNative.NatO
       (frame.registers 20#5 (by decide)).trans args.2.2.1,
       (frame.registers 21#5 (by decide)).trans args.2.2.2,
       (frame.registers 1#5 (by decide)).trans upointer,
-      (frame.registers 2#5 (by decide)).trans upayload, local,
-      operand_at_preserved (local_frame (outcome s operand) local) operand
+      (frame.registers 2#5 (by decide)).trans upayload, prefixFrame,
+      operand_at_preserved (local_frame (outcome s operand) prefixFrame) operand
         owned.operandAt owned.operandOwned, ?_⟩
     simpa only [upointer] using branch
 

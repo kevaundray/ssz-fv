@@ -1,4 +1,4 @@
-import SszArm.NatAddLargeLoopAdds
+import SszArm.NatAddLargeLoopBodyState
 
 namespace SszArm.NatAdd.LargeLoop
 
@@ -40,32 +40,34 @@ theorem body_run (s : ArmState) (base left right : BitVec 64)
   let u := addsResult s base left right carry
   have urun : run (addsOps right carry).length s = u :=
     adds_run s base left right carry hc he ha hp h12 h16 h17
-  have uf := adds_frame s base left right carry writes
-  have address : storeAddress u .large = storeAddress s .large := by
-    simp [u, storeAddress, StoreKind.index, addsResult, state_simp_rules]
-  have up : read_pc u = base + 1628#64 := by simp [u, addsResult, state_simp_rules]
-  have u16 : r (.GPR 16#5) u = (LimbAdd.step left right carry).1 := by
-    simpa [u, addsResult, state_simp_rules] using add_low left right carry
+  have uf : LoopFrame writes s u := adds_frame s base left right carry writes
+  have address : storeAddress u .large = storeAddress s .large :=
+    adds_address s base left right carry
+  have up : read_pc u = base + 1628#64 := adds_pc s base left right carry
+  have u16 : r (.GPR 16#5) u = (LimbAdd.step left right carry).1 :=
+    adds_word s base left right carry
   have restore := store_restore u .large (by rw [uf.sp]; exact hs)
     (by rw [address]; exact physical) (by rw [address, uf.sp]; exact apart)
   let v := storeResult u base .large
   have vrun : run 8 u = v := store_run u base .large (uf.code hc)
     (uf.error.trans he) (uf.aligned ha) up restore
-  have vf := NatAdd.store_frame u base .large writes (by rw [uf.sp]; exact hs)
-    (by rw [address]; exact physical) (by simpa only [uf.sp] using slot)
+  have vf : LoopFrame writes u v := NatAdd.store_frame u base .large writes
+    (by rw [uf.sp]; exact hs)
+    (by rw [address]; exact physical) (by rw [uf.sp]; exact slot)
     (by simpa only [address] using word)
-  have vp : read_pc v = base + 1660#64 := by
-    simp [v, storeResult, StoreKind.start, state_simp_rules]
+  have vp : read_pc v = base + 1660#64 := stored_pc u base
   have vcarry : (if r (.FLAG .C) v = 1#1 then r (.GPR 17#5) v + 1#64
-      else r (.GPR 17#5) v) = BitVec.ofNat 64 (LimbAdd.step left right carry).2 := by
-    have math := add_carry left right carry hcarr
-    by_cases overflow : (AddWithCarry (BitVec.ofNat 64 carry + right) left 0#1).2.c = 1#1 <;>
-      simpa [v, storeResult, storeMemory, saved, u, addsResult, state_simp_rules,
-        carryWord, overflow] using math
-  have v14 : r (.GPR 14#5) v = BitVec.ofNat 64 remaining := by
-    simpa [v, storeResult, storeMemory, saved, u, addsResult, state_simp_rules] using h14
-  have v15 : r (.GPR 15#5) v = BitVec.ofNat 64 index := by
-    simpa [v, storeResult, storeMemory, saved, u, addsResult, state_simp_rules] using h15
+      else r (.GPR 17#5) v) = BitVec.ofNat 64 (LimbAdd.step left right carry).2 :=
+    stored_adds_carry s base left right carry hcarr
+  have v13 : r (.GPR 13#5) v = r (.GPR 13#5) s :=
+    (stored_register u base .large 13#5).trans
+      (adds_register s base left right carry 13#5 (by decide) (by decide) (by decide))
+  have v14 : r (.GPR 14#5) v = BitVec.ofNat 64 remaining :=
+    (stored_register u base .large 14#5).trans
+      ((adds_register s base left right carry 14#5 (by decide) (by decide) (by decide)).trans h14)
+  have v15 : r (.GPR 15#5) v = BitVec.ofNat 64 index :=
+    (stored_register u base .large 15#5).trans
+      ((adds_register s base left right carry 15#5 (by decide) (by decide) (by decide)).trans h15)
   obtain ⟨trun, tf, tp, t12, t14, t15, t13, tm⟩ := tail_run v base index remaining
     (LimbAdd.step left right carry).2 ((uf.trans vf).code hc)
     ((uf.trans vf).error.trans he) ((uf.trans vf).aligned ha) vp hi hn hb v14 v15 vcarry writes
@@ -74,13 +76,11 @@ theorem body_run (s : ArmState) (base left right : BitVec 64)
   refine ⟨(addsOps right carry).length + 8 + ops.length, t, ?_,
     uf.trans (vf.trans tf), tp, t12, t14, t15, ?_, ?_⟩
   · rw [run_plus, run_plus, urun, vrun, trun]
-  · simpa [v, storeResult, storeMemory, saved, u, addsResult, state_simp_rules] using t13
+  · exact t13.trans v13
   · have readtail := (Memory.mem_eq_iff_read_mem_bytes_eq.mp tm) 8 (storeAddress s .large)
-    rw [readtail]
-    change read_mem_bytes 8 (storeAddress s .large) (storeResult u base .large) = _
-    simp only [storeResult, state_simp_rules, storeMemory, ← address]
-    rw [BoolCodec.read_mem_bytes_write_mem_bytes_same _ 8 _ _
-      (by rw [address]; exact physical)]
-    exact u16
+    have written : read_mem_bytes 8 (storeAddress u .large) v = r (.GPR 16#5) u :=
+      stored_word u base (by rw [address]; exact physical)
+    rw [address] at written
+    exact readtail.trans (written.trans u16)
 
 end SszArm.NatAdd.LargeLoop

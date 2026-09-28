@@ -41,7 +41,8 @@ theorem small_correct (s : ArmState) (base word : BitVec 64)
   have tp : read_pc t = base + 644#64 := by
     simpa only [t, dividedHigh, ↓reduceIte] using fast_pc .small c base
   have lowOriginal : r (.GPR 22#5) t = word := by
-    rw [t, fastResult, fast_finish_register]
+    change r (.GPR 22#5) (fastResult .small c base) = word
+    rw [fastResult, fast_finish_register]
     change r (.GPR 22#5) (callResult CallSite.small (fastPrepared .small c base) base) = word
     rw [call_gpr _ _ _ 22#5 (by decide) (by decide)]
     simp [fastPrepared, FastSite.setup, block, Op.effect, put, next, state_simp_rules, c2]
@@ -52,12 +53,16 @@ theorem small_correct (s : ArmState) (base word : BitVec 64)
   have count : (SszNative.NatOperand.small word).wordCount ≤ 2 := by
     have h := SszNative.Limbs.sigWords_le_length [word]
     change SszNative.Limbs.sigWords [word] ≤ 2
-    simpa only [List.length_cons, List.length_nil] using Nat.le_trans h (by decide)
+    simp only [List.length_cons, List.length_nil] at h
+    omega
   have value : (SszNative.NatOperand.small word).value = word.toNat := by
     simp [SszNative.NatOperand.value, SszNative.NatOperand.words, SszNative.Limbs.value]
   have mathematical : Udivti3.join (r (.GPR 0#5) t) 0#64 =
       (SszNative.NatOperand.small word).value / (r (.GPR 3#5) s).toNat := by
-    simpa only [Udivti3.numerator, highZero, value] using quotient
+    change Udivti3.join (r (.GPR 0#5) t) (r (.GPR 1#5) t) =
+      word.toNat / (r (.GPR 3#5) s).toNat at quotient
+    rw [highZero] at quotient
+    simpa only [value] using quotient
   let remainder := SszNative.NatDivision.wideRemainder (.small word) (r (.GPR 3#5) s)
   have source : outcome s (.small word) = SszNative.NatArithmetic.unchanged
       (arenaOf s).used (.ok (.small (r (.GPR 0#5) t), remainder)) :=
@@ -74,7 +79,7 @@ theorem small_correct (s : ArmState) (base word : BitVec 64)
   have tc : CodeAt t base := by simpa only [t, CodeAt, fast_program] using cc.1
   have te : read_err t = .None := (fast_error .small c base).trans classified.error
   have ta : CheckSPAlignment t := by
-    simpa only [CheckSPAlignment, t, fast_sp] using classified.aligned
+    simpa only [CheckSPAlignment, state_simp_rules, t, fast_sp] using classified.aligned
   have post := small_result_post s t base (.small word) remainder owned
     (fast_saved .small s c base classified.saved) out tc te ta tp source rem
     (classified.frame.trans after)

@@ -75,7 +75,7 @@ extern "C" {
  * they do not establish native control-flow or arena-resource refinement.
  * Bit-view algorithm contracts include every scope, padding, delimiter, and
  * capacity rejection, retained packed prefixes, and physical bit-count bounds.
- * Native bit-vector and public bit-decoder dispatch refinement remain open.
+ * External C ABI/schema-wrapper refinement remains open.
  * Arena arithmetic separately proves exact checked-reservation success/failure
  * conditions, alignment, cursor bounds, and zero-length behavior. Integer
  * allocation on both ISAs additionally has native size-check, reservation,
@@ -123,6 +123,37 @@ extern "C" {
  * original inputs, and ABI/memory frames. Their execution theorems and
  * BitList/ProgressiveBitList SSZ corollaries are root-imported and axiom-audited.
  * Public dispatch wrappers remain open.
+ * Both private Nat.div_rem_small helpers have complete entry-through-RET
+ * refinement, including their actual __udivti3 calls, for divisors >= 2.
+ * Their contracts retain exact quotient/remainder, all scratch writes,
+ * cursor effects, original operand representations, and ABI/memory frames.
+ * Nat.add, Nat.to_u128, and codec::exact are also proved on both ISAs.
+ * These helper theorems are root-imported and axiom-audited.
+ * Both private Nat.from_u128 constructors have root-audited actual
+ * entry-through-RET refinement against the checked fromWide model, including
+ * allocation guards, both complete limbs, exact cursor/result writes, and
+ * ABI/memory frames. Their Small-path theorems require no arena ownership.
+ * The ARM frame includes its actual SP-16 lowering scratch. Both actual
+ * constructor images have instruction-binding witnesses.
+ * BitVector has root-audited postdispatch-through-RET refinement on both ISAs:
+ * all helper calls and branches, both complete scratch allocations retained
+ * on failure, exact cursor effects, zero-copy results, original inputs, and
+ * ABI frames. The external C ABI/schema wrapper remains outside this coverage.
+ * Both ISAs' BitList and ProgressiveBitList wrappers have root-audited
+ * postdispatch-through-RET refinement, including the actual progressive
+ * tail call and arbitrary optional-cap representations.
+ * Both ISAs' Bool, UInt, ByteVector, ByteList, BitVector, BitList, and
+ * ProgressiveBitList additionally have root-audited refinement from the
+ * actual private decoder entry, including its prologue and tag dispatch,
+ * through the original caller return. These are the seven primitive tags;
+ * composite decoders, serialization, and the external C/schema wrapper
+ * are not covered by these entry proofs.
+ * Separate executable-model proofs now cover primitive measurement, encoded
+ * size, serialization, and allocating serialization against pinned SSZ,
+ * including exact resource failures, ordered scratch effects/no rollback,
+ * output prefix initialization, untouched tails, and no output-content reads.
+ * Both roots audit these logical contracts; serializer ISA execution,
+ * concrete memory/provenance, and ABI refinement remain open.
  *
  * Executing this ABI on both targets is runtime evidence, not an ISA proof.
  */

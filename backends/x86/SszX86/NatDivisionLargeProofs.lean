@@ -26,17 +26,20 @@ theorem large_reserved_ready (s : MachineData) (operand : NatOperand)
   have phase := SszNative.NatDivision.phase_reserved operand divisor address.toNat
     capacity.toNat used.toNat owned.divisor_nonzero owned.divisor_ne_one count r reserved
   constructor
-  · simp [Copy.get, largeReservedState, Reservation.Large.reservedState, largeCountedState]
+  · simp [Copy.get, Reg64s.get64, largeReservedState, Reservation.Large.reservedState,
+      largeCountedState, UInt64.toBitVec_ofNat']
   · exact lengths.2.2
   · exact owned.operand_pointer
-  · simp [Copy.get, largeReservedState, Reservation.Large.reservedState, largeCountedState]
+  · simp [Copy.get, Reg64s.get64, largeReservedState, Reservation.Large.reservedState,
+      largeCountedState, UInt64.toBitVec_ofNat']
   · rfl
-  · simp [Copy.get, largeReservedState, Reservation.Large.reservedState, pointer]
-  · simp [Copy.get, largeReservedState, Reservation.Large.reservedState, pointer,
-      BitVec.ofNat_add, BitVec.ofNat_toNat]
-  · simp [Copy.get, largeReservedState, Reservation.Large.reservedState, largeCountedState]
+  · simp [Copy.get, Reg64s.get64, largeReservedState, Reservation.Large.reservedState, pointer]
+  · simp [Copy.get, Reg64s.get64, largeReservedState, Reservation.Large.reservedState, pointer,
+      UInt64.toBitVec_ofNat', BitVec.ofNat_add, BitVec.ofNat_toNat]
+  · simp [Copy.get, Reg64s.get64, largeReservedState, Reservation.Large.reservedState, largeCountedState]
   · exact owned.divisor_register
-  · simp [Copy.get, largeReservedState, Reservation.Large.reservedState, largeCountedState]
+  · simp [Copy.get, Reg64s.get64, largeReservedState, Reservation.Large.reservedState,
+      largeCountedState, UInt64.toBitVec_ofNat', BitVec.ofNat_add]
   · rfl
   · rfl
   · exact large_reserved_destination_mapped owned count r reserved before after
@@ -63,7 +66,7 @@ theorem large_phase (e : Executable) (base : Int64) (hc : CodeAt e base)
   intro countedFlags
   have lengths := large_operand_length owned count
   have countReg : (largeCountedState s operand countedFlags).regs.rax.toNat = operand.wordCount := by
-    simp [largeCountedState, UInt64.toNat_ofNat, Nat.mod_eq_of_lt (by omega : operand.wordCount < 2^64)]
+    simp [largeCountedState, Nat.mod_eq_of_lt (by omega : operand.wordCount < 2^64)]
   apply Reservation.Large.reservation_cps e base hc
     (largeCountedState s operand countedFlags) address capacity used
     (large_counted_header owned countedFlags) (by rw [countReg]; omega)

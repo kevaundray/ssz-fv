@@ -110,6 +110,8 @@ theorem nonzero_entry (s : ArmState) (base : BitVec 64) (left right : SszNative.
         simpa only [pointer, ↓reduceIte] using tag
   · obtain ⟨fuel, u, executed, frame, out, leftCount, leftCopy, pc⟩ :=
       left_large_count s base left.words hc he ha hp leftInput leftSmall
+    change sigWords left.words ≠ 0 at leftNonzero
+    change sigWords left.words < 2^64 at leftBound
     have copyNonzero : r (.GPR 9#5) u ≠ 0#64 := by
       rw [leftCopy]
       bv_omega
@@ -118,14 +120,14 @@ theorem nonzero_entry (s : ArmState) (base : BitVec 64) (left right : SszNative.
       simpa only [frame.registers 4#5 (by decide)] using rightPayload
     obtain ⟨routed, routeFrame, routeOut, routeLeft, routePc⟩ :=
       large_left_route u base (scan_code frame hc) (frame.error.trans he) (frame.aligned ha)
-        (by simpa only [SszNative.NatOperand.wordCount] using
-          (show read_pc u = base + 64#64 from by simpa only [leftNonzero, ↓reduceIte] using pc))
+        (by simpa only [leftNonzero, ↓reduceIte] using pc)
         copyNonzero rightPayloadU
     let v := block base (largeLeftRoute (r (.GPR 3#5) u)) u
+    change read_pc v = base + (if r (.GPR 3#5) u = 0#64 then 108#64 else 300#64) at routePc
     have combined : NatCompare.Frame s v := frame.trans routeFrame
     have combinedOut : r (.GPR 0#5) v = r (.GPR 0#5) s := routeOut.trans out
     have combinedLeft : r (.GPR 8#5) v = BitVec.ofNat 64 left.wordCount := routeLeft.trans leftCount
-    have prefix : run (fuel + (largeLeftRoute (r (.GPR 3#5) u)).length) s = v := by
+    have entryRun : run (fuel + (largeLeftRoute (r (.GPR 3#5) u)).length) s = v := by
       rw [run_plus, executed, routed]
     by_cases rightSmall : r (.GPR 3#5) s = 0#64
     · have countOne : right.wordCount = 1 := small_count rightInput rightSmall rightNonzero
@@ -138,9 +140,9 @@ theorem nonzero_entry (s : ArmState) (base : BitVec 64) (left right : SszNative.
       refine ⟨fuel + (largeLeftRoute (r (.GPR 3#5) u)).length + WidthPath.smallRight.ops.length,
         block base WidthPath.smallRight.ops v, ?_, ⟨combined.trans selectionFrame,
           selectionOut.trans combinedOut, Or.inr ⟨selectedPc, selectedLeft, selectedRight, ?_⟩⟩⟩
-      · rw [run_plus, prefix, selected]
+      · rw [run_plus, entryRun, selected]
       · have pointer : right.pointer = 0#64 := owned.rightPointer.symm.trans rightSmall
-        simpa only [pointer, ↓reduceIte] using tag
+        simpa only [pointer, reduceCtorEq, ↓reduceIte] using tag
     · have pcV : read_pc v = base + 300#64 := by
         simpa only [frame.registers 3#5 (by decide), rightSmall, ↓reduceIte] using routePc
       have input : NatCompare.Operand v (r (.GPR 3#5) v) (r (.GPR 4#5) v) right.words := by
@@ -153,7 +155,7 @@ theorem nonzero_entry (s : ArmState) (base : BitVec 64) (left right : SszNative.
           (by simpa only [combined.registers 3#5 (by decide)] using rightSmall)
       refine ⟨fuel + (largeLeftRoute (r (.GPR 3#5) u)).length + steps, t, ?_,
         ⟨combined.trans tailFrame, tailOut.trans combinedOut, Or.inr ⟨tailPc, hleft, hright, ?_⟩⟩⟩
-      · rw [run_plus, prefix, tailRun]
+      · rw [run_plus, entryRun, tailRun]
       · have pointer : right.pointer ≠ 0#64 := by simpa only [owned.rightPointer] using rightSmall
         simpa only [pointer, ↓reduceIte] using tag
 

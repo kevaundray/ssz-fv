@@ -67,7 +67,7 @@ theorem wide_commit_body_frame {original s t : ArmState} {operand : SszNative.Na
     bv_omega
   apply frame.weaken
   intro span member
-  simp only [List.mem_cons, List.mem_singleton] at member
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl <;> simp [bodyWrites, allocated, length, address]
 
 end SszArm.NatDivision

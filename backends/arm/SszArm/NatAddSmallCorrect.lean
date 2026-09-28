@@ -40,12 +40,12 @@ theorem one_word_correct (s : ArmState) (base : BitVec 64) (left right : NatOper
   let v := block base (SumPath.normalized.ops (sumOverflow a b)) u
   have sumPrefix : ZeroFrame u v := ZeroFrame.of_scan sumFrame sumOut
     (by rw [loadFrame.sp]; exact owned.stackBound)
-  have prefix := SmallCorrect.prefix_trans loadFrame sumPrefix
+  have prefixFrame := SmallCorrect.prefix_trans loadFrame sumPrefix
   apply SmallCorrect.finish_sum s v base left right owned hc he ha hl hr
     ((oneWordLoadOps (r (.GPR 1#5) s) (r (.GPR 3#5) s)).length +
       (SumPath.normalized.ops (sumOverflow a b)).length)
   · rw [run_plus, runLoad, runSum]
-  · exact prefix
+  · exact prefixFrame
   · exact (sumFrame.registers 5#5 (by decide)).trans
       (SmallCorrect.load_arena_register s base a b)
   · exact sum9
@@ -81,9 +81,9 @@ theorem immediate_correct (s : ArmState) (base : BitVec 64) (left right : NatOpe
     one_word_sum s base .immediate a b hc he ha hp owned.leftPayload owned.rightPayload
       (by intro impossible; cases impossible)
   let t := block base (SumPath.immediate.ops (sumOverflow a b)) s
-  have prefix : ZeroFrame s t := ZeroFrame.of_scan sumFrame sumOut owned.stackBound
+  have prefixFrame : ZeroFrame s t := ZeroFrame.of_scan sumFrame sumOut owned.stackBound
   apply SmallCorrect.finish_sum s t base (.small a) (.small b) owned hc he ha hl hr
-    (SumPath.immediate.ops (sumOverflow a b)).length runSum prefix
+    (SumPath.immediate.ops (sumOverflow a b)).length runSum prefixFrame
     (sumFrame.registers 5#5 (by decide))
   · simpa [SmallCorrect.low, SszNative.NatAdd.lowWord, NatOperand.words] using sum9
   · simpa [SszNative.NatAdd.lowWord, NatOperand.words] using sumPC

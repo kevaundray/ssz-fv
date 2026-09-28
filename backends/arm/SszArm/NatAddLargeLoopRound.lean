@@ -56,7 +56,7 @@ theorem round_run (s : ArmState) (base stack output : BitVec 64)
   have indexBound : index < 2^64 := by omega
   have h15 : (r (.GPR 15#5) s).toNat = index := by
     rw [inv.indexRegister]
-    exact BitVec.toNat_ofNat_of_lt indexBound
+    simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt indexBound]
   obtain ⟨preFuel, u, urun, uf, up, ul, ur, ureg⟩ := operands_run s base left right index
     (suffixWrites stack output index remaining) hc he ha hp inv.leftCount
     inv.indexPositive h15 inv.rightSmall inv.leftSource inv.leftWords inv.rightInput

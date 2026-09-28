@@ -29,7 +29,7 @@ theorem large_failure_correct (s : ArmState) (base pointer : BitVec 64)
     (r (.GPR 3#5) s) (arenaOf s).base (arenaOf s).capacity (arenaOf s).used
     owned.divisor_nonzero owned.divisor_ne_one count reserve
   have failed : (outcome s (.large pointer words)).result = .error .scratchExhausted := by
-    rw [source]
+    rw [outcome, source]
     rfl
   obtain ⟨fuel, post⟩ := large_exhausted_post s current base (.large pointer words) owned
     classified.saved classified.out classified.arena cc classified.error classified.aligned

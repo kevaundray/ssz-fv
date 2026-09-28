@@ -48,8 +48,7 @@ private theorem large_first (s : ArmState) (pointer : BitVec 64) (words : List (
     omega
   refine ⟨by bv_omega, ?_⟩
   have word := words_of_at s pointer words input ⟨0, positive⟩
-  simpa only [Nat.mul_zero, BitVec.ofNat_zero, BitVec.add_zero,
-    List.getElem?_eq_getElem positive, Option.getD_some] using word
+  simpa [BitVec.ofNat_eq_ofNat, List.getElem?_eq_getElem positive] using word
 
 /-- Reconcile the original tagged operands with the real first-word dispatch.
 The forbidden Small/Small branch is excluded by the significant-count premise. -/
@@ -114,20 +113,21 @@ theorem first_run (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
     | small word => simp [firstKind, NatOperand.words, NatOperand.payload]
     | large pointer words =>
       have data := large_first u pointer words lu leftNonzero
-      cases right <;> simpa [firstKind, NatOperand.words, NatOperand.payload] using data
+      cases right <;> simpa [firstKind, NatOperand.words, NatOperand.payload, NatOperand.pointer] using data
   have rightRead : if firstKind left right = .largeSmall then
       r (.GPR 4#5) u = right.words[0]?.getD 0 else
       r (.GPR 4#5) u ≠ 0#64 ∧ read_mem_bytes 8 (r (.GPR 3#5) u) u = right.words[0]?.getD 0 := by
     rw [r3, r4]
     cases right with
     | small word =>
-      have same : firstKind left (.small word) = .largeSmall := rightKind.mp (by simpa [r3])
+      have same : firstKind left (.small word) = .largeSmall :=
+        rightKind.mp (by simpa [r3, NatOperand.pointer])
       simp [same, NatOperand.words, NatOperand.payload]
     | large pointer words =>
       have data := large_first u pointer words ru rightNonzero
-      cases left <;> simpa [firstKind, NatOperand.words, NatOperand.payload] using data
-  have pointerNat : (BitVec.ofNat 64 reservation.pointer).toNat = reservation.pointer :=
-    BitVec.toNat_ofNat_of_lt allocated.pointer_bound
+      cases left <;> simpa [firstKind, NatOperand.words, NatOperand.payload, NatOperand.pointer] using data
+  have pointerNat : (BitVec.ofNat 64 reservation.pointer).toNat = reservation.pointer := by
+    simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt allocated.pointer_bound]
   obtain ⟨runFirst, first⟩ := first_word_run u base (left.words[0]?.getD 0)
     (right.words[0]?.getD 0) (firstKind left right) hc he ha hp
       (by rw [h9, pointerNat]; have := allocated.physical; omega)

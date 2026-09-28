@@ -17,9 +17,10 @@ theorem output_local_frame {original s t : ArmState} {operand : SszNative.NatOpe
     MemoryFrame (localWrites original) s t := by
   apply frame_cover frame
   intro span member
-  simp only [returnWrites, List.mem_cons, List.mem_singleton] at member
+  simp only [returnWrites, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl
-  · exact ⟨_, by simp [localWrites], by simp [out], by simp [out]⟩
+  · exact ⟨((r (.GPR 0#5) original).toNat, 68),
+      by simp [localWrites], by simp [out], by simp [out]⟩
   · refine ⟨((r (.GPR 31#5) original).toNat - 80, 80), by simp [localWrites], ?_, ?_⟩
     all_goals
       have stack := owned.stackBound

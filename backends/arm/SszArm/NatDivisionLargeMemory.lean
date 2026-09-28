@@ -36,7 +36,7 @@ theorem payload_body_frame {original s t : ArmState} {operand : SszNative.NatOpe
     bv_omega
   apply frame.weaken
   intro span member
-  simp only [loopWrites, List.mem_cons, List.mem_singleton] at member
+  simp only [loopWrites, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl <;>
     simp [bodyWrites, allocated, slot, BitVec.toNat_ofNat, Nat.mod_eq_of_lt bounded]
 
@@ -84,7 +84,7 @@ theorem Owned.payload_cursor {original current : ArmState} {operand : SszNative.
     · exact separate ((r (.GPR 4#5) original).toNat, 24) (by simp)
   right
   intro span member
-  simp only [loopWrites, List.mem_cons, List.mem_singleton] at member
+  simp only [loopWrites, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl
   · simp only [Prod.fst, Prod.snd]
     rw [sp]

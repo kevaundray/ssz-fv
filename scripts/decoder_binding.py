@@ -32,6 +32,31 @@ FUNCTIONS = {
         "x86": "_ZN13ssz_fv_native3nat3Nat13div_rem_small17h502d1ce340c4e801E",
         "arm": "_ZN13ssz_fv_native3nat3Nat13div_rem_small17he8c5c3bc7904fc5eE",
     },
+    "nat_exact": {
+        "x86": "_ZN13ssz_fv_native5codec5exact17h76158baa639106f6E",
+        "arm": "_ZN13ssz_fv_native5codec5exact17hfce8663ef07a8e63E",
+    },
+    "nat_to_u128": {
+        "x86": "_ZN13ssz_fv_native3nat3Nat7to_u12817h3fd207ea42c40ccfE",
+        "arm": "_ZN13ssz_fv_native3nat3Nat7to_u12817h7b219376ab6746a8E",
+    },
+    "nat_from_u128": {
+        "x86": "_ZN13ssz_fv_native3nat3Nat9from_u12817h8b0aeba422536ff0E",
+        "arm": "_ZN13ssz_fv_native3nat3Nat9from_u12817h73292f97725c3b7dE",
+    },
+    "measure": {
+        "x86": "_ZN13ssz_fv_native5codec7measure17hee937c471e44009dE",
+        "arm": "_ZN13ssz_fv_native5codec7measure17h6f170d30c3984362E",
+    },
+    "emit": {
+        "x86": "_ZN13ssz_fv_native5codec4emit17h6ae700472ba785eaE",
+        "arm": "_ZN13ssz_fv_native5codec4emit17h0c79599762be27eaE",
+    },
+    "serialize": {
+        "x86": "_ZN13ssz_fv_native5codec9serialize17h73686b9835ba9d12E",
+        "arm": "_ZN13ssz_fv_native5codec9serialize17h0d728b7a742b35d3E",
+    },
+    "memcpy": {"x86": "memcpy", "arm": "memcpy"},
 }
 
 
@@ -47,7 +72,9 @@ def extract(temp, arch, root, entries, terminals=(), calls=()):
     """Select reachable (local label, byte displacement) entries in a FUNCTIONS root.
 
     Return rows, entry offsets, linked function bytes, reached terminal offsets,
-    and reached callee images. Only explicitly named direct callees are allowed.
+    and reached callee images. Only explicitly named direct callees are allowed,
+    including unconditional tail calls.
+    Terminals accept either labels or (label, byte displacement) pairs.
     Every requested entry and terminal must be an actual instruction boundary.
     """
     symbol = FUNCTIONS[root][arch]
@@ -78,7 +105,9 @@ def extract(temp, arch, root, entries, terminals=(), calls=()):
         raise ValueError(f"{arch}: empty decoder function")
     entry_offsets = [int(unique_symbol(label)[0], 16) - start + displacement
                      for label, displacement in entries]
-    terminal_offsets = {int(unique_symbol(label)[0], 16) - start for label in terminals}
+    terminal_entries = [(item, 0) if isinstance(item, str) else item for item in terminals]
+    terminal_offsets = {int(unique_symbol(label)[0], 16) - start + displacement
+                        for label, displacement in terminal_entries}
     extent = [f"--start-address={start}", f"--stop-address={start + size}"]
     if arch == "x86":
         text = output("objdump", "-d", "-M", "att,suffix", "--insn-width=15",
@@ -168,6 +197,11 @@ def extract(temp, arch, root, entries, terminals=(), calls=()):
             if match is None:
                 raise ValueError(f"{arch}: indirect/unparsed decoder branch: {row}")
             row["target"] = int(match[1], 16) - start
+            if mnemonic in ("jmp", "jmpq", "b") and row["target"] in call_targets:
+                row["callee"] = call_targets[row["target"]]
+                row["tail_call"] = True
+                reached_calls.add(row["callee"])
+                continue
             pending.append(row["target"])
             if mnemonic in ("jmp", "jmpq", "b"):
                 continue

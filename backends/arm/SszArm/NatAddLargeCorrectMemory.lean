@@ -74,14 +74,16 @@ theorem compare_frame {s t : ArmState} (frame : NatCompare.Frame s t)
   · subst reg; exact out
   · apply frame.registers
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at outside ⊢
-    tauto
+    rcases outside with ⟨h8, h9, h10, h11, h12, _⟩
+    exact ⟨zero, h8, h9, h10, h11, h12⟩
 
 theorem arena_frame {s t : ArmState} (frame : ArenaFrame s t) : Frame s t := by
   refine ⟨frame.program, frame.error, ?_, frame.vectors⟩
   intro reg outside
   apply frame.registers
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at outside ⊢
-  tauto
+  rcases outside with ⟨h8, h9, h10, h11, h12, h13, _⟩
+  exact ⟨h8, h9, h10, h11, h12, h13⟩
 
 theorem first_frame {s t : ArmState} {kind : FirstKind} {base a b : BitVec 64}
     (frame : FirstWordPost kind s t base a b) : Frame s t := by
@@ -89,7 +91,8 @@ theorem first_frame {s t : ArmState} {kind : FirstKind} {base a b : BitVec 64}
   intro reg outside
   apply frame.registers
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at outside ⊢
-  tauto
+  rcases outside with ⟨_, _, _, h11, h12, h13, h14, h15, _⟩
+  exact ⟨h11, h12, h13, h14, h15⟩
 
 theorem loop_frame {writes : List Span} {s t : ArmState}
     (frame : LoopFrame writes s t) : Frame s t := by
@@ -97,7 +100,8 @@ theorem loop_frame {writes : List Span} {s t : ArmState}
   intro reg outside
   apply frame.registers
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at outside ⊢
-  tauto
+  rcases outside with ⟨_, _, _, _, h12, h13, h14, h15, h16, h17⟩
+  exact ⟨h12, h13, h14, h15, h16, h17⟩
 
 /-- Span containment, rather than span identity, is the needed frame rule for
 first-word stores and the two loops' progressively smaller writable suffixes. -/

@@ -43,11 +43,11 @@ theorem fetch_word (m : DataMem) (operand : NatOperand) (index : Nat)
       NatOperand.payload, NatOperand.pointer, NatOperand.words,
       BitVec.toNat_ofNat, Nat.mod_eq_of_lt hb, Nat.mod_eq_of_lt hlength]
     by_cases present : index < words.length
-    · simp only [present, if_true]
-      have load := widthLoad_eq m _ _ _ (stored ⟨index, present⟩)
+    · simp only [present, ite_true]
+      have loadedWord := widthLoad_eq m _ _ _ (stored ⟨index, present⟩)
       simpa [width_address, limbAt, List.getElem?_eq_getElem present,
-        BitVec.ofNat_mul, Nat.mul_comm] using load
-    · simp [present, limbAt, List.getElem?_eq_none (by omega)]
+        BitVec.ofNat_mul, Nat.mul_comm] using loadedWord
+    · simp [present, limbAt]
 
 /-- Every scalar iteration, including the redundant final zero, is executed.
 The induction ranges over the arbitrary remaining physical limb count. -/
@@ -76,7 +76,9 @@ theorem scalar_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   induction remaining : count + 1 - index using Nat.strongRecOn generalizing index with
   | ind remaining ih =>
     intro positive within s carry carryBound rsi rdx rcx r8 rax r10 r11 rbx r14 bpl
-      leftOwned rightOwned mapped hp
+      leftOwned rightOwned hmapped hp
+    rw [← remaining] at hp
+    simp only [get, Reg64s.get64] at rsi rdx rcx r8 rax r10 r11 rbx r14 bpl
     let l := limbAt left index
     let r := limbAt right.words index
     let next := LimbAdd.step l r carry
@@ -84,27 +86,27 @@ theorem scalar_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     have leftLoad := fetch_word s.dmem (.large leftPointer left) index leftOwned positive indexBound
     have rightLoad := fetch_word s.dmem right index rightOwned positive indexBound
     apply fetch_cps e base hc s l r (isSmall right) bpl
-    · simpa [get, rbx, rdx, rsi, isSmall, NatOperand.payload, NatOperand.pointer,
+    · simpa [get, Reg64s.get64, rbx, rdx, rsi, isSmall, NatOperand.payload, NatOperand.pointer,
         NatOperand.words, l] using leftLoad
-    · simpa [get, rbx, r8, rcx, r] using rightLoad
+    · simpa [get, Reg64s.get64, rbx, r8, rcx, r] using rightLoad
     intro loadFlags
     let loaded := fetchState s l r loadFlags
     apply body_cps e base hc loaded
-    · have hm := Large.mapped_load s.dmem dst (8*(count+1)) (8*index) 8 mapped (by omega)
-      simpa [loaded, fetchState, get, r10, rbx, BitVec.ofNat_mul, Nat.mul_comm] using hm
+    · have hm := Large.mapped_load s.dmem dst (8*(count+1)) (8*index) 8 hmapped (by omega)
+      simpa [loaded, fetchState, get, Reg64s.get64, r10, rbx, BitVec.ofNat_mul, Nat.mul_comm] using hm
     intro addFlags flags
     let t := advanced (stored (addState loaded addFlags)) flags
     have arithmetic := two_adds l r carry carryBound
     have memory : t.dmem = Mem.storeInt s.dmem (dst + BitVec.ofNat 64 (8*index)) 8 next.1.toInt := by
       simp only [t, advanced, stored, addState, loaded, fetchState, get,
-        Reg64s.get64, added, r10, rbx, r14] at *
+        Reg64s.get64, added, r10, rbx, r14]
       rw [arithmetic.1]
       simp [next, BitVec.ofNat_mul, Nat.mul_comm]
     have stable : Stable s t := by simp [Stable, t, advanced, stored, addState, loaded, fetchState]
     have nextIndex : get t .rbx = BitVec.ofNat 64 (index+1) := by
-      simp [t, advanced, stored, addState, loaded, fetchState, get, rbx, BitVec.ofNat_add]
+      simp [t, advanced, stored, addState, loaded, fetchState, get, Reg64s.get64, rbx, BitVec.ofNat_add]
     have nextCarry : get t .r14 = BitVec.ofNat 64 next.2 := by
-      simpa [t, advanced, stored, addState, loaded, fetchState, get, carried, r14,
+      simpa [t, advanced, stored, addState, loaded, fetchState, get, Reg64s.get64, carried, r14,
         next] using arithmetic.2
     have terminate : get loaded .r11 + get loaded .rbx + 1#64 = 1#64 ↔ index = count := by
       simp only [loaded, fetchState, get, Reg64s.get64, r11, rbx]
@@ -115,14 +117,13 @@ theorem scalar_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
             (right.words.drop (index+1)) next.2).1 := by
       rw [show count+1-index = (count-index)+1 by omega,
         LimbAdd.loop_indexed_succ]
-      rfl
     by_cases last : index = count
-    · simp only [terminate.mpr last, if_true]
+    · simp only [terminate.mpr last, ite_true]
       apply hp t stable
       rw [recurrence, show count-index = 0 by omega]
       simpa [LimbAdd.loop, Large.fillMem] using memory
     · simp only [show ¬ get loaded .r11 + get loaded .rbx + 1#64 = 1#64
-        from fun h => last (terminate.mp h), if_false]
+        from fun h => last (terminate.mp h), ite_false]
       apply ih (count+1-(index+1)) (by omega) (index+1) rfl (by omega) (by omega) t next.2
         (LimbAdd.step_carry_le l r carry carryBound)
       · simpa only [get, Reg64s.get64, stable.2.1] using rsi
@@ -134,7 +135,7 @@ theorem scalar_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       · simpa only [get, Reg64s.get64, stable.2.2.2.2.2.2.2.1] using r11
       · exact nextIndex
       · exact nextCarry
-      · simpa [get, stable.2.2.2.2.2.2.2.2.1] using bpl
+      · simpa only [get, Reg64s.get64, stable.2.2.2.2.2.2.2.2.1] using bpl
       · rw [memory]
         exact fill_preserves s.dmem (.large leftPointer left) dst index (8*(count+1))
           [next.1] leftOwned leftApart (by simp; omega)
@@ -142,11 +143,12 @@ theorem scalar_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
         exact fill_preserves s.dmem right dst index (8*(count+1)) [next.1]
           rightOwned rightApart (by simp; omega)
       · rw [memory]
-        exact Large.mapped_store _ _ _ _ _ _ mapped
+        exact Large.mapped_store _ _ _ _ _ _ hmapped
       intro final preserved finalMemory
       apply hp final (stable_trans stable preserved)
       rw [recurrence, Large.fillMem, finalMemory, memory]
       congr 2
-      omega
+      have fuel : count + 1 - (index + 1) = count - index := by omega
+      rw [fuel]
 
 end SszX86.NatAdd.Carry

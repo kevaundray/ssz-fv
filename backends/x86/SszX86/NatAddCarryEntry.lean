@@ -1,4 +1,5 @@
 import SszX86.NatAddCarryLoop
+import SszX86.NatAddCarryEntryState
 
 namespace SszX86.NatAdd.Carry
 open Kraken.X64.Parser
@@ -8,16 +9,39 @@ open UintCodec
 set_option maxRecDepth 32768
 set_option maxHeartbeats 16000000
 
-def lowState (s : MachineData) (low : BitVec 64) (carry : Nat)
-    (small : Bool) (flags : StatusFlags) : MachineData :=
-  {s with dmem := Mem.storeInt s.dmem (get s .r10) 8 low.toInt
-    regs := {s.regs with
-      rbx := 1
-      rbp := if small then 1 else UInt64.ofBitVec ((get s .rbp).extractLsb' 8 56 ++ 0#8)
-      r9 := UInt64.ofBitVec low
-      r11 := UInt64.ofBitVec (-get s .rax)
-      r14 := UInt64.ofBitVec (BitVec.ofNat 64 carry)}
-    status := flags}
+private theorem large_rhs_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
+    (s : MachineData) (left right : BitVec 64)
+    (leftFlags clearFlags loadFlags : StatusFlags)
+    (hleftPointer : get s .rsi ≠ 0)
+    (hm : ∃ old, Mem.loadInt s.dmem (get s .r10) 8 = some old)
+    (P : MachineState → Prop)
+    (hp : ∀ r15 flags, Eventually (step e) P
+      ({lowState s (LimbAdd.step left right 0).1 (LimbAdd.step left right 0).2 false flags with
+        regs := {(lowState s (LimbAdd.step left right 0).1
+          (LimbAdd.step left right 0).2 false flags).regs with r15 := r15}}, base + 1008)) :
+    Eventually (step e) P
+      (Entry.rightState (Entry.clearedState (Entry.leftState s left leftFlags) clearFlags)
+        right loadFlags, base + 917) := by
+  apply Entry.large_sum_store_cps e base hc _ (by rfl)
+  · exact hm
+  intro addFlags
+  change Eventually (step e) P
+    (Entry.sumStoredState
+      (Entry.rightState (Entry.clearedState (Entry.leftState s left leftFlags) clearFlags)
+        right loadFlags) right addFlags, base + 927)
+  apply Entry.large_mark_cps e base hc _ P
+  intro markFlags
+  change Eventually (step e) P
+    (Entry.largeMarkedState
+      (Entry.sumStoredState
+        (Entry.rightState (Entry.clearedState (Entry.leftState s left leftFlags) clearFlags)
+          right loadFlags) right addFlags) markFlags,
+      if get s .rsi = 0 then base + 1060 else base + 935)
+  simp only [hleftPointer, ↓reduceIte]
+  apply Entry.setup_cps e base hc _ P
+  intro flags
+  rw [Entry.large_finish_bridge]
+  exact hp (UInt64.ofBitVec right) flags
 
 /-- The initial limb and scalar-loop setup, for a nonempty physical Large LHS.
 The residual R15 is immaterial at the next actual indexed-load dispatch. -/
@@ -36,63 +60,54 @@ theorem large_entry_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
         regs := {(lowState s (LimbAdd.step left right 0).1
           (LimbAdd.step left right 0).2 small flags).regs with r15 := r15}}, base + 1008)) :
     Eventually (step e) P (s, base + 536) := by
-  have t862 := hc.targets ("natAdd_u862", 862) (by decide)
-  have t879 := hc.targets ("natAdd_u879", 879) (by decide)
-  have t900 := hc.targets ("natAdd_u900", 900) (by decide)
-  have t914 := hc.targets ("natAdd_u914", 914) (by decide)
-  have t1060 := hc.targets ("natAdd_u1060", 1060) (by decide)
-  have arithmetic := two_adds left right 0 (by omega)
-  have hword : left + right = (LimbAdd.step left right 0).1 := by
-    simpa [BitVec.add_comm] using arithmetic.1
-  have hcarry : BitVec.ofNat 64 (Udivti3.addFlags left right).cf.toNat =
-      BitVec.ofNat 64 (LimbAdd.step left right 0).2 := by
-    simpa [Udivti3.addFlags, StatusFlags.from_result, BitVec.add_comm] using arithmetic.2
-  cases small
-  all_goals by_cases empty : get s .r8 = 0
-  all_goals simp only [Bool.false_eq_true, Bool.true_eq, if_true, if_false,
-    empty] at hright hsmall
-  all_goals try subst right
-  all_goals
-    repeat' ((first
-      | solve | simpa [lowState, get, Udivti3.addFlags, StatusFlags.from_result,
-          LimbAdd.step, hword, hcarry, BitVec.ofInt_toInt, BitVec.ofInt_neg,
-          BitVec.add_assoc] using hp _ _
-      | solve | simpa [get] using hm
-      | apply And.intro
-      | apply Delimited.store_cps
-      | natadd_step 138 using hc
-      | natadd_step 139 using hc
-      | natadd_step 140 using hc
-      | natadd_step 141 using hc
-      | natadd_step 142 using hc
-      | natadd_step 143 using hc
-      | natadd_step 225 using hc
-      | natadd_step 226 using hc
-      | natadd_step 227 using hc
-      | natadd_step 228 using hc
-      | natadd_step 229 using hc
-      | natadd_step 230 using hc
-      | natadd_step 231 using hc
-      | natadd_step 232 using hc
-      | natadd_step 233 using hc
-      | natadd_step 234 using hc
-      | natadd_step 235 using hc
-      | natadd_step 236 using hc
-      | natadd_step 237 using hc
-      | natadd_step 238 using hc
-      | natadd_step 239 using hc
-      | natadd_step 240 using hc
-      | natadd_step 241 using hc
-      | natadd_step 242 using hc
-      | natadd_step 243 using hc
-      | natadd_step 244 using hc
-      | natadd_step 245 using hc
-      | natadd_step 246 using hc
-      | natadd_step 247 using hc
-      | natadd_step 248 using hc) <;>
-      try simp (config := {instances := true}) [StatusFlags.from_result,
-        get, hleftPointer, hleftLength, hsmall, empty, t862, t879, t900,
-        t914, t1060, Effects.All, MachineData.load, Width.bytes, Width.bits,
-        hleft, hright, Delimited.word_cast, BitVec.ofInt_add, BitVec.ofInt_toInt])
+  apply Entry.left_cps e base hc s left hleftPointer hleftLength hleft P
+  intro leftFlags
+  apply Entry.dispatch_cps e base hc (Entry.leftState s left leftFlags) P
+  intro clearFlags
+  change Eventually (step e) P
+    (Entry.clearedState (Entry.leftState s left leftFlags) clearFlags,
+      if get s .rcx = 0 then base + 900 else if get s .r8 = 0 then base + 914 else base + 895)
+  cases small with
+  | true =>
+    have pointerZero : get s .rcx = 0 := hsmall.mpr rfl
+    have rightWord : right = get s .r8 := by simpa only [↓reduceIte] using hright
+    simp only [pointerZero, ↓reduceIte]
+    apply Entry.small_add_cps e base hc _ (by rfl) P
+    intro addFlags
+    change Eventually (step e) P
+      (Entry.addedState (Entry.clearedState (Entry.leftState s left leftFlags) clearFlags)
+        (get s .r8) addFlags, base + 907)
+    rw [← rightWord]
+    apply Entry.small_store_cps e base hc _
+    · exact hm
+    change Eventually (step e) P
+      (Entry.sumStoredState (Entry.clearedState (Entry.leftState s left leftFlags) clearFlags)
+        right addFlags, base + 910)
+    apply Entry.small_mark_cps e base hc _ P
+    intro markFlags
+    apply Entry.setup_cps e base hc _ P
+    intro flags
+    rw [Entry.small_finish_bridge]
+    exact hp s.regs.r15 flags
+  | false =>
+    have pointerNonzero : get s .rcx ≠ 0 := by
+      intro zero
+      have bad : false = true := hsmall.mp zero
+      cases bad
+    simp only [pointerNonzero, ↓reduceIte]
+    by_cases empty : get s .r8 = 0
+    · have zeroRight : right = 0 := by simpa only [Bool.false_eq_true, empty, ↓reduceIte] using hright
+      simp only [empty, ↓reduceIte]
+      apply Entry.zero_right_cps e base hc _ P
+      intro loadFlags
+      simpa only [zeroRight] using large_rhs_cps e base hc s left right
+        leftFlags clearFlags loadFlags hleftPointer hm P hp
+    · have loaded : Mem.loadInt s.dmem (get s .rcx) 8 = some (right.toNat : Int) := by
+        simpa only [Bool.false_eq_true, empty, ↓reduceIte] using hright
+      simp only [empty, ↓reduceIte]
+      apply Entry.right_cps e base hc _ right
+      · simpa only [Entry.clearedState, Entry.leftState, get, Reg64s.get64] using loaded
+      · exact large_rhs_cps e base hc s left right leftFlags clearFlags clearFlags
+          hleftPointer hm P hp
 
 end SszX86.NatAdd.Carry

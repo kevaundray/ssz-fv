@@ -26,7 +26,7 @@ theorem classified_large_fast (original s : ArmState) (base pointer : BitVec 64)
   have small : SszNative.Limbs.sigWords words < 3 := by
     change SszNative.Limbs.sigWords words ≤ 2 at count
     omega
-  simp only [LargeClassified, small, ↓reduceIte] at branch
+  simp only [SszNative.NatOperand.words, LargeClassified, small, ↓reduceIte] at branch
   have h1 : r (.GPR 1#5) s = pointer := classified.pointer
   have hwords := large_words s pointer words classified.input
   have join := operand_wide_join (.large pointer words) count

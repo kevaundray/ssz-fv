@@ -36,7 +36,7 @@ theorem carry_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     cases right with
     | small b =>
       exfalso
-      simpa [NatOperand.pointer] using notBothSmall
+      simp [NatOperand.pointer] at notBothSmall
     | large pointer words =>
       exact Carry.small_cps e base hc s a pointer dst words rightOwned wide hm
         rightApart bound rsi rdx rcx r8 rax r10 rbx (mask rfl) P hp

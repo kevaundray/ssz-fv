@@ -1,4 +1,5 @@
 import SszArm.NatAddOneWord
+import SszArm.NatAddFirstWordState
 import SszArm.NatAddContract
 
 namespace SszArm.NatAdd
@@ -8,23 +9,6 @@ open Delimited (MemoryFrame)
 
 set_option maxRecDepth 32768
 set_option maxHeartbeats 8000000
-
-inductive FirstKind where
-  | largeLarge | largeSmall | smallLarge
-  deriving DecidableEq
-
-def FirstKind.ops (kind : FirstKind) (overflow : Bool) : List Op :=
-  [.p276] ++
-    (if kind = .smallLarge then [.p1448, .p1452, .p1456, .p1460]
-     else [.p280, .p284, .p288, .p1468]) ++
-    (if kind = .largeSmall then
-      [.p1488, .p1492, .p1496] ++
-        (if overflow then [.p1508] else [.p1500, .p1504]) ++ [.p1512, .p1516]
-     else (if kind = .largeLarge then [.p1472] else []) ++
-      [.p1476, .p1480, .p1484, .p1524, .p1528] ++
-        (if overflow then [.p1540] else [.p1532, .p1536]) ++ [.p1544, .p1548] ++
-        (if kind = .largeLarge then [.p1552] else [])) ++
-    (if kind = .smallLarge then [] else [.p1556, .p1560, .p1564, .p1568])
 
 /-- The first word is stored before either general carry loop is entered. -/
 structure FirstWordPost (kind : FirstKind) (s t : ArmState) (base a b : BitVec 64) : Prop where
@@ -57,46 +41,14 @@ theorem first_word_run (s : ArmState) (base a b : BitVec 64) (kind : FirstKind)
     let ops := kind.ops (sumOverflow a b)
     let t := block base ops s
     run ops.length s = t ∧ FirstWordPost kind s t base a b := by
-  have carry : (AddWithCarry a b 0#1).2.c = 1#1 ↔ 2^64 ≤ a.toNat + b.toNat := by
-    simpa only [Udivti3.radix, BitVec.toNat_ofNat, Nat.add_zero] using Udivti3.adc_carry a b 0#1
-  have hpc : r .PC s = base + 276#64 := hp
-  have follow : Follows base (kind.ops (sumOverflow a b)) s := by
-    cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp_all (config := {decide := true, instances := true})
-        [FirstKind.ops, sumOverflow, Follows, Op.row, Op.effect, put, next,
-          state_simp_rules, BitVec.add_assoc]
-  refine ⟨block_run base _ s hc he ha follow, ?_⟩
-  have memory : (block base (kind.ops (sumOverflow a b)) s).mem =
-      (write_mem_bytes 8 (r (.GPR 9#5) s) (a+b) s).mem := by
-    cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp_all (config := {decide := true, instances := true})
-        [FirstKind.ops, sumOverflow, block, Op.effect, put, next,
-          state_simp_rules, NatCompare.spill_mem_w, ArmState.mem_w_eq_mem]
-  constructor
-  · cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp [FirstKind.ops, sumOverflow, overflow, block, Op.effect, put, next, state_simp_rules]
-  · cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp [FirstKind.ops, sumOverflow, overflow, block, Op.effect, put, next, state_simp_rules]
-  · intro reg outside
-    simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at outside
-    cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp (disch := simp_all) [FirstKind.ops, sumOverflow, overflow, block,
-        Op.effect, put, next, state_simp_rules]
-  · intro reg
-    cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp [FirstKind.ops, sumOverflow, overflow, block, Op.effect, put, next, state_simp_rules]
-  · cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp_all [FirstKind.ops, sumOverflow, block, Op.effect, put, next, state_simp_rules]
-  · cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp_all [FirstKind.ops, sumOverflow, block, Op.effect, put, next, state_simp_rules]
-  · cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp [FirstKind.ops, sumOverflow, overflow, block, Op.effect, put, next, state_simp_rules]
-  · cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp [FirstKind.ops, sumOverflow, overflow, block, Op.effect, put, next, state_simp_rules]
-  · cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp [FirstKind.ops, sumOverflow, overflow, block, Op.effect, put, next, state_simp_rules]
-  · cases kind <;> by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp_all [FirstKind.ops, sumOverflow, block, Op.effect, put, next, state_simp_rules]
+  have memory := first_word_memory s base a b kind left right
+  obtain ⟨first, carry, flag, remaining, index, pc⟩ :=
+    first_word_fields s base a b kind leftKind left right
+  refine ⟨block_run base _ s hc he ha
+    (first_word_follows s base a b kind hp leftKind rightKind left right),
+    ⟨block_program _ _ _, block_error _ _ _,
+      first_word_registers s base kind _, first_word_vectors s base kind _,
+      first, carry, flag, remaining, index, pc, ?_, ?_⟩⟩
   · rw [(Memory.mem_eq_iff_read_mem_bytes_eq.mp memory) 8 (r (.GPR 9#5) s)]
     exact BoolCodec.read_mem_bytes_write_mem_bytes_same s 8 _ _ physical
   · intro address outside

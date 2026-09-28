@@ -20,20 +20,14 @@ def addsResult (s : ArmState) (base left right : BitVec 64) (carry : Nat) : ArmS
         (w (.GPR 17#5) (carryWord (BitVec.ofNat 64 carry) right)
           (w (.GPR 12#5) (BitVec.ofNat 64 carry + right) s))))
 
-/-- Both actual ADDS instructions and the intervening carry materialization.
-The carry flag used by the later store tail is the second addition's flag. -/
-theorem adds_run (s : ArmState) (base left right : BitVec 64) (carry : Nat)
-    (hc : CodeAt s base) (he : read_err s = .None) (ha : CheckSPAlignment s)
+/-- Opaque state algebra for both ADDS instructions and carry materialization.
+No code image or execution equation is present in its simplifier context. -/
+private theorem adds_effect (s : ArmState) (base left right : BitVec 64) (carry : Nat)
     (hp : read_pc s = base + 1604#64)
     (h12 : r (.GPR 12#5) s = BitVec.ofNat 64 carry)
     (h16 : r (.GPR 16#5) s = left) (h17 : r (.GPR 17#5) s = right) :
-    run (addsOps right carry).length s = addsResult s base left right carry := by
+    block base (addsOps right carry) s = addsResult s base left right carry := by
   have hpc : r .PC s = base + 1604#64 := hp
-  have follows : Follows base (addsOps right carry) s := by
-    by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
-      simp [addsOps, first, Follows, Op.row, Op.effect, put, next,
-        state_simp_rules, hpc, h12, h16, h17, BitVec.add_assoc]
-  rw [block_run base _ s hc he ha follows]
   apply state_eq_iff_components_eq.mpr
   refine ⟨?_, ?_, ?_⟩
   · intro f
@@ -53,8 +47,9 @@ theorem adds_run (s : ArmState) (base left right : BitVec 64) (carry : Nat)
       by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
         simp_all [addsOps, addsResult, block, Op.effect, put, next, state_simp_rules]
     | FLAG flag =>
-      by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
-        simp_all [addsOps, addsResult, block, Op.effect, put, next, state_simp_rules]
+      cases flag <;>
+        by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
+          simp_all [addsOps, addsResult, block, Op.effect, put, next, state_simp_rules]
     | ERR =>
       by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
         simp_all [addsOps, addsResult, block, Op.effect, put, next, state_simp_rules]
@@ -63,6 +58,21 @@ theorem adds_run (s : ArmState) (base left right : BitVec 64) (carry : Nat)
   · intro n addr
     by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
       simp_all [addsOps, addsResult, block, Op.effect, put, next, state_simp_rules]
+
+/-- Execute both real ADDS instructions and the intervening carry branch. -/
+theorem adds_run (s : ArmState) (base left right : BitVec 64) (carry : Nat)
+    (hc : CodeAt s base) (he : read_err s = .None) (ha : CheckSPAlignment s)
+    (hp : read_pc s = base + 1604#64)
+    (h12 : r (.GPR 12#5) s = BitVec.ofNat 64 carry)
+    (h16 : r (.GPR 16#5) s = left) (h17 : r (.GPR 17#5) s = right) :
+    run (addsOps right carry).length s = addsResult s base left right carry := by
+  have hpc : r .PC s = base + 1604#64 := hp
+  have follows : Follows base (addsOps right carry) s := by
+    by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
+      simp [addsOps, first, Follows, Op.row, Op.effect, put, next,
+        state_simp_rules, hpc, h12, h17, BitVec.add_assoc]
+  rw [block_run base _ s hc he ha follows]
+  exact adds_effect s base left right carry hp h12 h16 h17
 
 theorem adds_frame (s : ArmState) (base left right : BitVec 64) (carry : Nat)
     (writes : List Span) : LoopFrame writes s (addsResult s base left right carry) := by
@@ -78,6 +88,16 @@ theorem adds_frame (s : ArmState) (base left right : BitVec 64) (carry : Nat)
 def tailOps (overflow : Bool) : List Op :=
   [.p1660] ++ (if overflow then [.p1672] else [.p1664, .p1668]) ++
     [.p1676, .p1680, .p1684, .p1688]
+
+private theorem tail_ops_pure (overflow : Bool) (op : Op)
+    (member : op ∈ tailOps overflow) : op ∈ pureOps := by
+  cases overflow with
+  | false =>
+    simp [tailOps] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp [pureOps]
+  | true =>
+    simp [tailOps] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;> simp [pureOps]
 
 /-- The actual tail aggregates carry, advances the index, decrements the
 unsigned remaining count, and branches to PC2044 only after the last write. -/
@@ -103,15 +123,13 @@ theorem tail_run (s : ArmState) (base : BitVec 64) (index remaining carry : Nat)
       simp [tailOps, overflow, Follows, Op.row, Op.effect, put, next,
         state_simp_rules, hpc, BitVec.add_assoc]
   refine ⟨block_run base _ s hc he ha follows, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · apply pure_frame
-    intro op member
-    by_cases overflow : r (.FLAG .C) s = 1#1 <;>
-      simp_all [tailOps, pureOps]
+  · exact pure_frame base _ s writes (tail_ops_pure _)
   · have eqone : BitVec.ofNat 64 remaining = 1#64 ↔ remaining = 1 := by
       constructor <;> intro h <;> bv_omega
     by_cases overflow : r (.FLAG .C) s = 1#1 <;>
+      by_cases last : remaining = 1 <;>
       simp [tailOps, overflow, block, Op.effect, put, next, state_simp_rules,
-        h14, Udivti3.cmp_one_zero, eqone]
+        h14, Udivti3.cmp_one_zero, eqone, last]
   · by_cases overflow : r (.FLAG .C) s = 1#1 <;>
       simpa [tailOps, overflow, block, Op.effect, put, next, state_simp_rules] using hcarry
   · by_cases overflow : r (.FLAG .C) s = 1#1 <;>

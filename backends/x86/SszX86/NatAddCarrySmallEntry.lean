@@ -1,4 +1,6 @@
-import SszX86.NatAddCarryPair
+import SszX86.NatAddCarrySmallEntryCuts
+import SszX86.NatAddCarryEntryLoads
+import SszX86.NatAddCarryEntryStores
 
 namespace SszX86.NatAdd.Carry.Pair
 open Kraken.X64.Parser
@@ -8,7 +10,8 @@ set_option maxRecDepth 32768
 set_option maxHeartbeats 16000000
 
 def headState (s : MachineData) (right : BitVec 64) (flags : StatusFlags) : MachineData :=
-  {s with dmem := Mem.storeInt s.dmem (get s .r10) 8 (get s .rdx + right).toInt
+  {s with
+    dmem := Mem.storeInt s.dmem (get s .r10) 8 (get s .rdx + right).toInt
     regs := {s.regs with
       rsi := 1
       rbx := UInt64.ofBitVec (get s .rbx + 8#64)
@@ -18,6 +21,42 @@ def headState (s : MachineData) (right : BitVec 64) (flags : StatusFlags) : Mach
       r14 := UInt64.ofBitVec (BitVec.ofNat 64 (Udivti3.addFlags (get s .rdx) right).cf.toNat)
       r15 := UInt64.ofBitVec right}
     status := flags}
+
+private def headLoadedState (s : MachineData) (right : BitVec 64)
+    (flags : StatusFlags) : MachineData :=
+  {s with
+    regs := {s.regs with r9 := s.regs.rdx, r14 := 0, r15 := UInt64.ofBitVec right}
+    status := flags}
+
+private def headStoredState (s : MachineData) (right : BitVec 64)
+    (flags : StatusFlags) : MachineData :=
+  {s with
+    dmem := Mem.storeInt s.dmem (get s .r10) 8 (right + get s .rdx).toInt
+    regs := {s.regs with
+      r9 := UInt64.ofBitVec (right + get s .rdx)
+      r14 := UInt64.ofBitVec (BitVec.ofNat 64 (Udivti3.addFlags right (get s .rdx)).cf.toNat)
+      r15 := UInt64.ofBitVec right}
+    status := flags}
+
+private theorem head_loaded_eq (s : MachineData) (right : BitVec 64)
+    (seedFlags readFlags : StatusFlags) :
+    Entry.rightState (SmallEntry.seedState s seedFlags) right readFlags =
+      headLoadedState s right readFlags := by
+  rfl
+
+private theorem head_stored_eq (s : MachineData) (right : BitVec 64)
+    (readFlags addFlags : StatusFlags) :
+    Entry.sumStoredState (headLoadedState s right readFlags) right addFlags =
+      headStoredState s right addFlags := by
+  rfl
+
+private theorem head_state_eq (s : MachineData) (right : BitVec 64)
+    (addFlags markFlags countFlags setupFlags : StatusFlags) :
+    SmallEntry.setupState
+      {Entry.largeMarkedState (headStoredState s right addFlags) markFlags with status := countFlags}
+      setupFlags = headState s right setupFlags := by
+  simp [SmallEntry.setupState, Entry.largeMarkedState, headStoredState, headState,
+    get, Reg64s.get64, Udivti3.addFlags_cf, BitVec.add_comm, UInt64.add_comm, Nat.add_comm]
 
 /-- The real Small/Large dispatch reaches the paired body only after executing
 its first store, count check, even-count mask and output-pointer adjustment. -/
@@ -30,44 +69,44 @@ theorem small_entry_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     (P : MachineState → Prop)
     (hp : ∀ flags, Eventually (step e) P (headState s right flags, base+1252)) :
     Eventually (step e) P (s, base+536) := by
-  have t862 := hc.targets ("natAdd_u862", 862) (by decide)
-  have t1080 := hc.targets ("natAdd_u1080", 1080) (by decide)
-  have t914 := hc.targets ("natAdd_u914", 914) (by decide)
-  have t1060 := hc.targets ("natAdd_u1060", 1060) (by decide)
-  have t1207 := hc.targets ("natAdd_u1207", 1207) (by decide)
-  repeat' ((first
-    | solve | simpa [headState, get, Udivti3.addFlags, StatusFlags.from_result,
-        BitVec.ofInt_toInt, BitVec.ofInt_add, BitVec.add_assoc] using hp _
-    | solve | simpa [get] using hm
-    | apply And.intro
-    | apply Delimited.store_cps
-    | natadd_step 138 using hc
-    | natadd_step 139 using hc
-    | natadd_step 219 using hc
-    | natadd_step 220 using hc
-    | natadd_step 221 using hc
-    | natadd_step 222 using hc
-    | natadd_step 223 using hc
-    | natadd_step 228 using hc
-    | natadd_step 229 using hc
-    | natadd_step 230 using hc
-    | natadd_step 231 using hc
-    | natadd_step 238 using hc
-    | natadd_step 239 using hc
-    | natadd_step 240 using hc
-    | natadd_step 241 using hc
-    | natadd_step 242 using hc
-    | natadd_step 243 using hc
-    | natadd_step 277 using hc
-    | natadd_step 278 using hc
-    | natadd_step 315 using hc
-    | natadd_step 316 using hc
-    | natadd_step 317 using hc
-    | natadd_step 318 using hc) <;>
-    try simp (config := {instances := true}) [StatusFlags.from_result,
-      Udivti3.zf_sub, get, hleft, hpointer, hlength, hcount,
-      t862, t1080, t914, t1060, t1207, Effects.All, MachineData.load,
-      Width.bytes, Width.bits, hright, Delimited.word_cast,
-      BitVec.ofInt_add, BitVec.ofInt_toInt])
+  have finishStored (addFlags : StatusFlags) :
+      Eventually (step e) P (headStoredState s right addFlags, base + 927) := by
+    apply Entry.large_mark_cps e base hc
+    intro markFlags
+    have zero : get (headStoredState s right addFlags) .rsi = 0 := hleft
+    rw [ite_eq_left zero]
+    apply SmallEntry.count_cps e base hc
+    · exact hcount
+    intro countFlags
+    apply SmallEntry.setup_cps e base hc
+    intro setupFlags
+    rw [head_state_eq]
+    exact hp setupFlags
+  have finishLoaded (readFlags : StatusFlags) :
+      Eventually (step e) P (headLoadedState s right readFlags, base + 917) := by
+    apply Entry.large_sum_store_cps e base hc
+    · rfl
+    · exact hm
+    intro addFlags
+    change Eventually (step e) P
+      (Entry.sumStoredState (headLoadedState s right readFlags) right addFlags, base + 927)
+    rw [head_stored_eq]
+    exact finishStored addFlags
+  apply SmallEntry.left_cps e base hc s hleft P
+  intro leftFlags
+  apply SmallEntry.pointer_cps e base hc
+  · exact hpointer
+  intro pointerFlags
+  apply SmallEntry.seed_cps e base hc
+  intro seedFlags
+  change Eventually (step e) P (SmallEntry.seedState s seedFlags, base + 890)
+  apply SmallEntry.length_cps e base hc
+  · exact hlength
+  intro lengthFlags
+  change Eventually (step e) P (SmallEntry.seedState s lengthFlags, base + 895)
+  apply Entry.right_cps e base hc _ right
+  · exact hright
+  rw [head_loaded_eq]
+  exact finishLoaded lengthFlags
 
 end SszX86.NatAdd.Carry.Pair

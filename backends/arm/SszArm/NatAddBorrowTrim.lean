@@ -1,4 +1,5 @@
 import SszArm.NatAddRightTrim
+import SszArm.NatAddBorrowTrimState
 
 namespace SszArm.NatAdd
 
@@ -7,26 +8,6 @@ open NatCompare (Source Words saved)
 
 set_option maxRecDepth 32768
 set_option maxHeartbeats 8000000
-
-def borrowHead (right : Bool) : Nat := if right then 460 else 584
-
-def borrowGuard (right : Bool) : List Op :=
-  if right then [.p460, .p464] else [.p584, .p588]
-
-def borrowKind (right : Bool) : LoadKind :=
-  if right then .normalizeRight else .normalizeLeft
-
-def borrowTail (right : Bool) : List Op :=
-  if right then [.p448, .p452, .p456] else [.p624, .p628, .p632]
-
-def borrowPointer (right : Bool) : BitVec 5 := if right then 3#5 else 1#5
-
-def borrowExit (right : Bool) (count : Nat) : Nat :=
-  if count = 0 then (if right then 704 else 792) else (if right then 472 else 636)
-
-def borrowRoundState (s : ArmState) (base word : BitVec 64) (right : Bool) : ArmState :=
-  block base (borrowTail right)
-    (loadResult (block base (borrowGuard right) s) base (borrowKind right) word)
 
 /-- The zero-operand branches rescan the original borrowed representation. -/
 theorem borrow_round (s : ArmState) (base pointer : BitVec 64)
@@ -49,10 +30,10 @@ theorem borrow_round (s : ArmState) (base pointer : BitVec 64)
   have hpc : r .PC s = base + BitVec.ofNat 64 (borrowHead right) := hp
   have follow : Follows base (borrowGuard right) s := by
     cases right <;> simp [borrowGuard, borrowHead, Follows, Op.row, Op.effect,
-      next, state_simp_rules, hpc, h9, notLast, BitVec.add_assoc]
+      next, state_simp_rules, hpc, h9, BitVec.add_assoc]
   have hu : run 2 s = u := by
     have hx := block_run base (borrowGuard right) s hc he ha follow
-    simpa only [borrowGuard, Bool.cond, List.length_cons, List.length_nil] using hx
+    cases right <;> simpa [u, borrowGuard] using hx
   have huf : NatCompare.Frame s u := scan_frame base _ _ (by cases right <;> decide)
   have hup : read_pc u = base + BitVec.ofNat 64 (borrowKind right).start := by
     cases right <;> simp [u, borrowGuard, borrowKind, LoadKind.start, block,
@@ -62,9 +43,13 @@ theorem borrow_round (s : ArmState) (base pointer : BitVec 64)
   have hload : read_mem_bytes 8
       (r (.GPR (borrowKind right).ptr) u + (r (.GPR (borrowKind right).index) u <<< 3))
       (saved u (borrowKind right).tmp) = words[n]?.getD 0#64 := by
-    have hl := NatCompare.limb_load u pointer words n 11#5 hn hus hum
-    cases right <;> simpa [u, borrowGuard, borrowKind, borrowPointer, LoadKind.ptr,
-      LoadKind.index, LoadKind.tmp, block, Op.effect, next, state_simp_rules, hptr, h9] using hl
+    obtain ⟨pointerReg, indexReg⟩ := borrow_guard_inputs s base right
+    change r (.GPR (borrowKind right).ptr) u =
+      r (.GPR (borrowPointer right)) s at pointerReg
+    change r (.GPR (borrowKind right).index) u = r (.GPR 9#5) s at indexReg
+    have temporary : (borrowKind right).tmp = 11#5 := by cases right <;> rfl
+    rw [pointerReg, indexReg, hptr, h9, temporary]
+    exact NatCompare.limb_load u pointer words n 11#5 hn hus hum
   let v := loadResult u base (borrowKind right) (words[n]?.getD 0#64)
   have hv : run 8 u = v := load_run u base _ (borrowKind right) (scan_code huf hc)
     (huf.error.trans he) (huf.aligned ha) hup hus.1 hload
@@ -77,15 +62,9 @@ theorem borrow_round (s : ArmState) (base pointer : BitVec 64)
     (hvf.error.trans he) (hvf.aligned ha) tailFollow
   have htf : NatCompare.Frame v (block base (borrowTail right) v) :=
     scan_frame base _ _ (by cases right <;> decide)
-  refine ⟨?_, hvf.trans htf, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, hvf.trans htf, borrow_round_fields s base _ right n h9⟩
   · rw [show 13 = 2 + 8 + 3 by decide, run_plus, run_plus, hu, hv]
     cases right <;> exact ht
-  all_goals
-    by_cases zero : words[n]?.getD 0#64 = 0#64 <;> cases right <;>
-      simp_all (config := {decide := true, instances := true})
-        [borrowRoundState, borrowTail, borrowGuard, borrowKind, borrowHead,
-          borrowExit, u, v, loadResult, LoadKind.start, LoadKind.dst,
-          LoadKind.tmp, block, Op.effect, put, next, saved, state_simp_rules]
 
 theorem borrow_trim (base pointer : BitVec 64) (words : List (BitVec 64)) (right : Bool) :
     ∀ n (s : ArmState), n ≤ words.length →

@@ -61,7 +61,7 @@ theorem zero_left_large_small (s : ArmState) (base pointer word : BitVec 64)
       simp [path, empty, valuePointer, ownedT.rightPointer, SszNative.NatOperand.pointer]
   · by_cases empty : word = 0#64 <;>
       simp [path, empty, valuePayload, ownedT.rightPayload, SszNative.NatOperand.payload]
-  · simpa only [small_normalized] using SszNative.NatAdd.run_zero_left (.large pointer words)
+  · simpa only [outcome, small_normalized] using SszNative.NatAdd.run_zero_left (.large pointer words)
       (.small word) (arenaOf t).base (arenaOf t).capacity (arenaOf t).used zero
 
 /-- Immediate zero on the left takes the actual four-op entry path to STP+RET. -/
@@ -88,7 +88,7 @@ theorem zero_left_small_small (s : ArmState) (base word : BitVec 64)
   apply zero_small_post .right t base word (.small 0#64) (.small word) ownedT
     (scan_code frame hc) (frame.error.trans he) (frame.aligned ha) pc
     ownedT.rightPointer ownedT.rightPayload
-  simpa only [small_normalized] using SszNative.NatAdd.run_zero_left (.small 0#64)
+  simpa only [outcome, small_normalized, BitVec.ofNat_eq_ofNat] using SszNative.NatAdd.run_zero_left (.small 0#64)
     (.small word) (arenaOf t).base (arenaOf t).capacity (arenaOf t).used (by
       simp [SszNative.NatOperand.wordCount, SszNative.NatOperand.words,
         SszNative.Limbs.sigWords, SszNative.Limbs.significantCount])
@@ -141,7 +141,7 @@ theorem zero_right_small_small (s : ArmState) (base word : BitVec 64)
   apply zero_small_post .left t base word (.small word) (.small 0#64) ownedT
     (scan_code frame hc) (frame.error.trans he) (frame.aligned ha) pc
     ownedT.leftPointer ownedT.leftPayload
-  simpa only [small_normalized] using SszNative.NatAdd.run_zero_right (.small word)
+  simpa only [outcome, small_normalized, BitVec.ofNat_eq_ofNat] using SszNative.NatAdd.run_zero_right (.small word)
     (.small 0#64) (arenaOf t).base (arenaOf t).capacity (arenaOf t).used nonzero (by
       simp [SszNative.NatOperand.wordCount, SszNative.NatOperand.words,
         SszNative.Limbs.sigWords, SszNative.Limbs.significantCount])

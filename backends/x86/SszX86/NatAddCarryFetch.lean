@@ -34,7 +34,8 @@ private theorem fetch_right_cps (e : Executable) (base : Int64) (hc : CodeAt e b
   by_cases present : ¬small ∧ (get s .rbx).toNat < (get s .r8).toNat
   · simp only [Fetch.selectFlag, present]
     apply Fetch.load_right_cps e base hc (Fetch.selectState s scratch flags) right
-    · simpa only [present, ↓reduceIte] using hr
+    · rw [ite_eq_left present] at hr
+      simpa only [Fetch.selectState, get, Reg64s.get64] using hr
     · simpa only [Fetch.rightState, Fetch.selectState] using hp flags
   · have zero : right = 0 := by simpa only [present, ↓reduceIte] using hr
     have skipped : Eventually (step e) P (Fetch.selectState s scratch flags, base + 1055) := by

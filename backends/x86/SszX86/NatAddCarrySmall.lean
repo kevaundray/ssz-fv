@@ -15,7 +15,7 @@ theorem small_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     (s : MachineData) (left pointer dst : BitVec 64) (right : List (BitVec 64))
     (owned : (NatOperand.large pointer right).At (widthLoad s.dmem))
     (wide : 2 ≤ SszNative.NatAdd.count (.small left) (.large pointer right))
-    (mapped : Large.Mapped s.dmem dst
+    (hmapped : Large.Mapped s.dmem dst
       (8*(SszNative.NatAdd.count (.small left) (.large pointer right)+1)))
     (apart : Apart (.large pointer right) dst
       (8*(SszNative.NatAdd.count (.small left) (.large pointer right)+1)))
@@ -47,7 +47,7 @@ theorem small_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     simp [zero] at positive
   have nonzeroLength : get s .r8 ≠ 0 := by rw [r8]; bv_omega
   have countNeOne : get s .rax ≠ 1#64 := by rw [rax]; dsimp [count] at countBound; bv_omega
-  have load : Mem.loadInt s.dmem (get s .rcx) 8 = some (limb.toNat : Int) := by
+  have loadedWord : Mem.loadInt s.dmem (get s .rcx) 8 = some (limb.toNat : Int) := by
     have h := widthLoad_eq s.dmem _ _ _ (owned.2.2.2 ⟨0,lengthPositive⟩)
     simpa [rcx, width_address, limb, limbAt, List.getElem?_eq_getElem lengthPositive] using h
   have low : left+limb = next.1 := by
@@ -58,13 +58,14 @@ theorem small_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     have hl := left.isLt
     have hr := limb.isLt
     by_cases overflow : 2^64 ≤ left.toNat+limb.toNat <;> simp [overflow] <;> omega
-  apply Pair.small_entry_cps e base hc s limb rsi nonzeroPointer nonzeroLength countNeOne load
+  apply Pair.small_entry_cps e base hc s limb rsi nonzeroPointer nonzeroLength countNeOne loadedWord
   · rw [r10]
-    exact Delimited.mapped_load_zero _ _ _ 8 mapped (by omega)
+    exact Delimited.mapped_load_zero _ _ _ 8 hmapped (by omega)
   intro flags
+  simp only [get, Reg64s.get64] at rdx rcx r8 rax r10 rbx r11
   let head := Pair.headState s limb flags
   have headMemory : head.dmem = Large.fillMem s.dmem dst 0 [next.1] := by
-    simp [head, Pair.headState, Pair.get, r10, rdx, low, Large.fillMem]
+    simp [head, Pair.headState, get, Reg64s.get64, r10, rdx, low, Large.fillMem]
   apply small_loop_cps e base hc head pointer dst right count next.2 wide countPhysical
     (LimbAdd.step_carry_le left limb 0 (by omega))
   · rw [headMemory]
@@ -72,30 +73,40 @@ theorem small_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       [next.1] owned apart (by simp; omega)
   · exact apart
   · rw [headMemory]
-    exact Large.mapped_store _ _ _ _ _ _ mapped
-  · simpa [head, Pair.headState, Pair.get, get, count] using rax
-  · simpa [head, Pair.headState, Pair.get, get] using rcx
-  · simpa [head, Pair.headState, Pair.get, get] using r8
-  · simpa [head, Pair.headState, Pair.get, get] using r10
-  · simp [head, Pair.headState, Pair.get, get, rbx]
-  · simp [head, Pair.headState, Pair.get, get]
-  · simpa [head, Pair.headState, Pair.get, get, r11, rax, count] using even_mask count countBound
-  · simp [head, Pair.headState, Pair.get, get, rdx, high]
+    exact Large.mapped_store _ _ _ _ _ _ hmapped
+  · simpa [head, Pair.headState, get, Reg64s.get64, count] using rax
+  · simpa [head, Pair.headState, get, Reg64s.get64] using rcx
+  · simpa [head, Pair.headState, get, Reg64s.get64] using r8
+  · simpa [head, Pair.headState, get, Reg64s.get64] using r10
+  · simp [head, Pair.headState, get, Reg64s.get64, rbx]
+  · simp [head, Pair.headState, get, Reg64s.get64]
+  · simpa only [head, Pair.headState, get, Reg64s.get64, UInt64.toBitVec_ofBitVec,
+      r11, rax, count] using even_mask count countBound
+  · change BitVec.ofNat 64 (Udivti3.addFlags s.regs.rdx.toBitVec limb).cf.toNat =
+      BitVec.ofNat 64 next.2
+    rw [rdx, high]
   intro final retained finalMemory
   apply hp final
   apply post_of_fill s final (.small left) (.large pointer right) dst (by trivial)
     owned (by trivial) apart bound
   · simpa only [retained.1, head, Pair.headState] using rax
   · simpa only [retained.2.2.1, head, Pair.headState] using r10
-  · simp [retained.2.1, head, Pair.headState, Pair.get, rdx, low, next,
-      NatOperand.words, limbAt, limb]
+  · change final.regs.r9.toBitVec = next.1
+    rw [retained.2.1]
+    change s.regs.rdx.toBitVec + limb = next.1
+    rw [rdx]
+    exact low
   · exact retained.2.2.2.1
   · exact retained.2.2.2.2.1
   · exact retained.2.2.2.2.2
-  · rw [finalMemory, headMemory, SszNative.NatAdd.writtenWords_native_loop]
+  · have firstStep := LimbAdd.loop_indexed_succ count 0 [left] right 0
+    simp only [List.drop_zero] at firstStep
+    rw [finalMemory, headMemory, SszNative.NatAdd.writtenWords_native_loop]
     change Large.fillMem (Large.fillMem s.dmem dst 0 [next.1]) dst 1
       (LimbAdd.loop count [] (right.drop 1) next.2).1 =
         Large.fillMem s.dmem dst 0 (LimbAdd.loop (count+1) [left] right 0).1
-    simp [Large.fillMem, LimbAdd.loop, next, limb, limbAt, List.drop_succ]
+    rw [firstStep]
+    exact (fill_append s.dmem dst 0 [next.1]
+      (LimbAdd.loop count [] (right.drop 1) next.2).1).symm
 
 end SszX86.NatAdd.Carry

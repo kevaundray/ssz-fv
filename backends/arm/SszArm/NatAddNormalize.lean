@@ -13,7 +13,7 @@ theorem Frame.compare {s t : ArmState} (frame : Frame s t) : NatCompare.Frame s 
   · intro reg hr
     apply frame.registers reg
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr ⊢
-    tauto
+    exact ⟨hr.2.1, hr.2.2.2.1, hr.2.2.2.2.2⟩
   · intro a ha
     exact congrFun frame.memory a
 
@@ -33,9 +33,7 @@ theorem select_run (s : ArmState) (base pointer : BitVec 64) (words : List (BitV
       r (.GPR 9#5) t = (NatOperand.fromWords pointer words).pointer ∧
       r (.GPR 8#5) t = (NatOperand.fromWords pointer words).payload := by
   have countBound := sigWords_le_length words
-  have compare : (AddWithCarry (BitVec.ofNat 64 (sigWords words)) (~~~(1#64)) 1#1).2.z = 1#1 ↔
-      sigWords words ≤ 1 := by
-    rw [Udivti3.cmp_zero]
+  have compare : BitVec.ofNat 64 (sigWords words) = 1#64 ↔ sigWords words ≤ 1 := by
     bv_omega
   have hpc : r .PC s = base + 2068#64 := hp
   have follows : Follows base [.p2068, .p2072, .p2076] s := by
@@ -83,17 +81,25 @@ theorem normalize_run (s : ArmState) (base pointer : BitVec 64)
       Words t pointer words := by
   let v := block base [.p2044, .p2048] s
   have hpc : r .PC s = base + 2044#64 := hp
-  have runPrelude : run 2 s = v := block_run base _ s hc he ha (by
+  have runPrelude : run 2 s = v := block_run base [.p2044, .p2048] s hc he ha (by
     simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc])
   have vf : Frame s v := scan_frame base _ s (by decide)
   have vp : read_pc v = base + 2052#64 := by
     simp [v, block, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
   have v8 : r (.GPR 8#5) v = BitVec.ofNat 64 (words.length + 1) := by
-    simp [v, block, Op.effect, put, next, state_simp_rules, h8, length, BitVec.ofNat_add]
+    calc
+      r (.GPR 8#5) v = BitVec.ofNat 64 count + 2#64 := by
+        simp (config := {decide := true})
+          [v, block, Op.effect, put, next, state_simp_rules, h8]
+      _ = BitVec.ofNat 64 (words.length + 1) := by rw [length]; bv_omega
   have v10 : r (.GPR 10#5) v = pointer + BitVec.ofNat 64 (8 * words.length) - 8#64 := by
-    simp only [v, block, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
-      state_simp_rules, h8, h10, length]
-    bv_omega
+    calc
+      r (.GPR 10#5) v = pointer + (BitVec.ofNat 64 count <<< 3) := by
+        simp (config := {decide := true})
+          [v, block, Op.effect, put, next, state_simp_rules, h8, h10]
+      _ = pointer + BitVec.ofNat 64 (8 * words.length) - 8#64 := by
+        rw [length]
+        bv_omega
   obtain ⟨fuel, u, runScan, scanFrame, count8, scanPC⟩ := scan_run base pointer words bound
     words.length v (by omega) (vf.code hc) (vf.error.trans he) (vf.aligned ha)
     vp v8 v10 (vf.words _ _ hm)

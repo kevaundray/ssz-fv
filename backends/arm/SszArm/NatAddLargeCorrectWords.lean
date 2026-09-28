@@ -38,8 +38,8 @@ theorem words_run (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
   let pointer := BitVec.ofNat 64 reservation.pointer
   let stack := r (.GPR 31#5) s
   let count := SszNative.NatAdd.count left right
-  have pointerNat : pointer.toNat = reservation.pointer :=
-    BitVec.toNat_ofNat_of_lt allocated.pointer_bound
+  have pointerNat : pointer.toNat = reservation.pointer := by
+    simp only [pointer, BitVec.toNat_ofNat, Nat.mod_eq_of_lt allocated.pointer_bound]
   have vf := first_frame first
   have rootFrame := frame.trans vf
   have v8 : r (.GPR 8#5) v = BitVec.ofNat 64 count := (first.registers _ (by decide)).trans h8
@@ -63,11 +63,11 @@ theorem words_run (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
       rootFrame.registers 5#5 (by decide)]
   have leftInput : Operand v (r (.GPR 1#5) v) (r (.GPR 2#5) v) left.words := by
     rw [r1, r2]
-    exact operand_of_owned v _ left (by rw [vsp]; exact owned.stackBound) lu
+    exact operand_of_owned v (outcome s left right) left (by rw [vsp]; exact owned.stackBound) lu
       (by simpa only [writesEq] using owned.leftOwned)
   have rightInput : Operand v (r (.GPR 3#5) v) (r (.GPR 4#5) v) right.words := by
     rw [r3, r4]
-    exact operand_of_owned v _ right (by rw [vsp]; exact owned.stackBound) ru
+    exact operand_of_owned v (outcome s left right) right (by rw [vsp]; exact owned.stackBound) ru
       (by simpa only [writesEq] using owned.rightOwned)
   have rightOwned : r (.GPR 3#5) v ≠ 0#64 →
       Protected (LargeLoop.suffixWrites stack pointer 1 count)
@@ -84,12 +84,13 @@ theorem words_run (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
   have layout : SmallLoop.Layout stack pointer (count + 1) := by
     refine ⟨owned.stackBound, ?_, ?_⟩
     · simpa only [pointerNat] using allocated.physical
-    · have protected := allocated.output_stack
-      rcases protected with empty | apart
+    · have outputOwned := allocated.output_stack
+      rcases outputOwned with empty | apart
       · omega
-      · have separate := apart (stack.toNat - 16, 16) (by simp)
-        have hs := owned.stackBound
-        simp only [Prod.fst, Prod.snd] at separate
+      · have separate := apart (stack.toNat - 16, 16) (by simp [stack])
+        have hs : 16 ≤ stack.toNat := owned.stackBound
+        change reservation.pointer + 8 * (count + 1) ≤ stack.toNat - 16 ∨
+          stack.toNat - 16 + 16 ≤ reservation.pointer at separate
         rw [pointerNat]
         omega
   have firstMemory : MemoryFrame (LargeLoop.suffixWrites stack pointer 0 (count + 1)) u v := by
@@ -98,8 +99,10 @@ theorem words_run (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
     simp only [List.mem_singleton] at member
     subst inner
     rw [h9]
+    change ∃ outer ∈ LargeLoop.suffixWrites stack pointer 0 (count + 1),
+      outer.1 ≤ pointer.toNat ∧ pointer.toNat + 8 ≤ outer.1 + outer.2
     refine ⟨(pointer.toNat, 8 * (count + 1)), by simp [LargeLoop.suffixWrites], by omega, ?_⟩
-    simp only [Prod.fst, Prod.snd]; omega
+    omega
   have finish (loopFuel : Nat) (t : ArmState)
       (trun : run loopFuel v = t)
       (lf : LoopFrame (LargeLoop.suffixWrites stack pointer 1 count) v t)
@@ -132,8 +135,9 @@ theorem words_run (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
       · change Limbs.sigWords [rightWord] ≤ 1; simpa using hr
     | large address words =>
       have nonnull : address ≠ 0#64 := by have h := ru.1; intro hz; simp [hz] at h
-      have source := (rightInput.large (by simpa [r3] using nonnull)).2.1
-      have limbs := (rightInput.large (by simpa [r3] using nonnull)).2.2
+      have source := (rightInput.large (by simpa [r3, NatOperand.pointer] using nonnull)).2.1
+      have limbs := (rightInput.large (by simpa [r3, NatOperand.pointer] using nonnull)).2.2
+      have headIndex : words.head? = words[0]? := by cases words <;> rfl
       obtain ⟨fuel, t, trun, tf, tp, _, _, _, _, _, _, _, _, _, stored, _⟩ :=
         SmallLoop.entry_run v base address stack pointer small words count
           (vf.code hc) (vf.error.trans he) (vf.aligned ha)
@@ -142,23 +146,25 @@ theorem words_run (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
           (by simpa only [NatOperand.payload] using r2)
           (by simpa only [NatOperand.pointer] using r3) nonnull
           (by simpa only [NatOperand.payload] using r4) v8 v9
-          (by simpa [firstStep, NatOperand.words, List.getElem?_zero] using v12)
-          vsp layout positive (by simpa only [r3, NatOperand.pointer] using source)
-          (by simpa only [r3, NatOperand.pointer] using limbs)
+          (by simpa [firstStep, NatOperand.words, headIndex] using v12)
+          vsp layout positive (by simpa only [r3, NatOperand.pointer, NatOperand.words] using source)
+          (by simpa only [r3, NatOperand.pointer, NatOperand.words] using limbs)
           (by simpa only [SmallLoop.writes, LargeLoop.suffixWrites, r3, NatOperand.pointer,
-            NatOperand.words] using rightOwned (by simpa [r3] using nonnull))
-          (by simpa [firstStep, NatOperand.words, List.getElem?_zero] using low)
+            NatOperand.words] using rightOwned (by simpa [r3, NatOperand.pointer] using nonnull))
+          (by simpa [firstStep, NatOperand.words, headIndex] using low)
       apply finish fuel t trun tf tp
       simpa only [SmallLoop.native_words] using stored
   | large address words =>
     have nonnull : r (.GPR 1#5) v ≠ 0#64 := by
       rw [r1]
+      change address ≠ 0#64
       have h := lu.1
       intro hz
-      simp [NatOperand.pointer, hz] at h
+      simp [hz] at h
     obtain ⟨length, source, limbs⟩ := leftInput.large nonnull
-    have kind : firstKind (.large address words) right ≠ .smallLarge := by cases right <;> decide
-    have inv : LargeLoop.Invariant v stack pointer (.large address words).words right.words 1 count
+    have kind : firstKind (.large address words) right ≠ .smallLarge := by
+      cases right <;> simp [firstKind]
+    have inv : LargeLoop.Invariant v stack pointer (NatOperand.large address words).words right.words 1 count
         (firstStep (.large address words) right).2 := by
       refine ⟨by decide, positive, LimbAdd.step_carry_le _ _ 0 (by decide), vsp,
         owned.stackBound, v9, ?_, ?_, nonnull, length, source, limbs, ?_, rightInput,

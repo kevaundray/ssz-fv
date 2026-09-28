@@ -36,12 +36,12 @@ theorem wide_exhausted_post (original s : ArmState) (base : BitVec 64)
   rcases post with failedNative | allocated
   · have frame := failedNative.2.2.frame
     have memory := failedNative.2.2.memory
-    have local : MemoryFrame (localWrites original) s t := by
+    have localMemory : MemoryFrame (localWrites original) s t := by
       intro a _
       exact congrArg (fun bytes => bytes a) memory
     have post := failure_post original t base operand owned (frame.saved_pure memory saved)
       ((frame.registers 19#5 (by decide)).trans out) (frame.code base hc)
-      (frame.error.trans he) (frame.aligned ha) failedNative.2.1 failed (before.trans local)
+      (frame.error.trans he) (frame.aligned ha) failedNative.2.1 failed (before.trans localMemory)
     refine ⟨fuel + 54, ?_⟩
     rw [run_plus, executed]
     exact post

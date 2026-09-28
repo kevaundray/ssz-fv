@@ -25,6 +25,8 @@ theorem large_outcome (s : ArmState) (left right : NatOperand)
     omega
   rw [outcome, SszNative.NatAdd.run_large left right _ _ _ leftNonzero rightNonzero large]
   simp only [bound, ↓reduceIte]
+  cases Arena.reserve (arenaOf s).base (arenaOf s).capacity (arenaOf s).used
+    (SszNative.NatAdd.count left right + 1) <;> rfl
 
 structure Allocation (s : ArmState) (left right : NatOperand)
     (reservation : Arena.Reservation) : Prop where
@@ -95,9 +97,9 @@ theorem Allocation.suffix_contained {s : ArmState} {left right : NatOperand}
       ∃ outer ∈ writesFor s (outcome s left right),
         outer.1 ≤ inner.1 ∧ inner.1 + inner.2 ≤ outer.1 + outer.2 := by
   intro inner member
-  have pointer : (BitVec.ofNat 64 reservation.pointer).toNat = reservation.pointer :=
-    BitVec.toNat_ofNat_of_lt allocated.pointer_bound
-  simp only [LargeLoop.suffixWrites, List.mem_cons, List.mem_singleton, pointer] at member
+  have pointer : (BitVec.ofNat 64 reservation.pointer).toNat = reservation.pointer := by
+    simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt allocated.pointer_bound]
+  simp only [LargeLoop.suffixWrites, List.mem_cons, List.not_mem_nil, or_false, pointer] at member
   rcases member with rfl | rfl
   · refine ⟨((r (.GPR 31#5) s).toNat - 16, 16), ?_, by omega, by omega⟩
     rw [allocated.writes]

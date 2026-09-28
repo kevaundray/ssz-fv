@@ -17,13 +17,16 @@ theorem prepared_finish_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   rcases t with ⟨t, pc⟩
   cases prepared with
   | zero_left zero frame pointer payload pcEq =>
+    dsimp only at pcEq
     rw [pcEq]
     exact zero_left_finish_cps e base hc s t left right address capacity used ra owned frame zero pointer payload
   | zero_right leftNonzero zero frame pointer payload pcEq =>
+    dsimp only at pcEq
     rw [pcEq]
     exact zero_right_finish_cps e base hc s t left right address capacity used ra owned frame
       leftNonzero zero pointer payload
   | counted leftNonzero rightNonzero ready pcEq =>
+    dsimp only at pcEq
     rw [pcEq]
     have originals := pushed_operands s left right address capacity used ra owned
     apply selection_cps e base hc (pushedState s) t left right originals.1 originals.2
@@ -35,6 +38,7 @@ theorem prepared_finish_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       exact large_finish_cps e base hc s u left right address capacity used ra owned counted
         leftNonzero rightNonzero large
   | summed leftNonzero rightNonzero small ready pcEq =>
+    dsimp only at pcEq
     rw [pcEq]
     exact sum_finish_cps e base hc s t left right address capacity used ra owned ready
       leftNonzero rightNonzero small

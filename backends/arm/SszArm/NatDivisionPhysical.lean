@@ -19,7 +19,8 @@ theorem Owned.allocation_geometry {s : ArmState} {operand : SszNative.NatOperand
       reservation.pointer + 8 * (outcome s operand).written.length ≤ 2^64 := by
   have resources := SszNative.NatDivision.allocation_resources operand (r (.GPR 3#5) s)
     (arenaOf s).base (arenaOf s).capacity (arenaOf s).used reservation allocated
-  have length := resources.2.1
+  have length : (outcome s operand).written.length =
+      (if operand.wordCount ≤ 2 then 2 else operand.wordCount) := resources.2.1
   have positive : 0 < (outcome s operand).written.length := by
     rw [length]
     split <;> omega

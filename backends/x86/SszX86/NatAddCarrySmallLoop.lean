@@ -13,12 +13,12 @@ def Retained (s t : MachineData) : Prop :=
   t.regs.rdi = s.regs.rdi ∧ t.regs.rsp = s.regs.rsp ∧ t.zmms = s.zmms
 
 theorem fill_mapped (m : DataMem) (dst : BitVec 64) (index capacity : Nat)
-    (limbs : List (BitVec 64)) (mapped : Large.Mapped m dst capacity) :
+    (limbs : List (BitVec 64)) (hmapped : Large.Mapped m dst capacity) :
     Large.Mapped (Large.fillMem m dst index limbs) dst capacity := by
   induction limbs generalizing m index with
-  | nil => exact mapped
+  | nil => exact hmapped
   | cons first rest ih =>
-    exact ih _ _ (Large.mapped_store _ _ _ _ _ _ mapped)
+    exact ih _ _ (Large.mapped_store _ _ _ _ _ _ hmapped)
 
 /-- All paired iterations and the parity tail write exactly `count` remaining
 limbs, retaining the redundant final word also when its value is zero. -/
@@ -27,7 +27,7 @@ theorem small_loop_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     (count carry : Nat) (wide : 2 ≤ count) (physical : count+1 < 2^64) (carryBound : carry ≤ 1)
     (owned : (NatOperand.large pointer right).At (widthLoad s.dmem))
     (apart : Apart (.large pointer right) dst (8*(count+1)))
-    (mapped : Large.Mapped s.dmem dst (8*(count+1)))
+    (hmapped : Large.Mapped s.dmem dst (8*(count+1)))
     (rax : get s .rax = BitVec.ofNat 64 count)
     (rcx : get s .rcx = pointer) (r8 : get s .r8 = BitVec.ofNat 64 right.length)
     (r10 : get s .r10 = dst) (rbx : get s .rbx = dst+8#64)
@@ -43,8 +43,10 @@ theorem small_loop_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   · simpa using r11
   · exact r14
   · exact owned
-  · exact mapped
+  · exact hmapped
   intro t stable lastIndex lastCarry memory
+  change get t .rdx = BitVec.ofNat 64 (1+2*(count/2)-2) at lastIndex
+  change get t .r14 = BitVec.ofNat 64 (LimbAdd.loop (2*(count/2)) [] (right.drop 1) carry).2 at lastCarry
   have retained : Retained s t :=
     ⟨stable.1, stable.2.2.2.1, stable.2.2.2.2.1, stable.2.2.2.2.2.2.2.1,
       stable.2.2.2.2.2.2.2.2.1, stable.2.2.2.2.2.2.2.2.2⟩
@@ -78,7 +80,7 @@ theorem small_loop_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       omega
     have tMapped : Large.Mapped t.dmem dst (8*(count+1)) := by
       rw [memory]
-      exact fill_mapped _ _ _ _ _ mapped
+      exact fill_mapped _ _ _ _ _ hmapped
     apply Pair.odd_tail_cps e base hc t limb
     · rw [tRax]
       exact fun h => even ((parity_test count).mp h)
@@ -100,11 +102,11 @@ theorem small_loop_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     rw [countOdd] at splitLoop
     rw [show 1+2*(count/2) = count by omega] at splitLoop
     simp only [LimbAdd.loop, List.head?_nil, Option.getD_none,
-      List.head?_drop, List.append_nil] at splitLoop
+      List.head?_drop] at splitLoop
     change Mem.storeInt t.dmem (get t .r10 + (get t .rdx+2#64)*8#64) 8
       (limb+get t .r14).toInt = _
     rw [nextIndex, tR10, low, memory, splitLoop, fill_append]
-    simp [consumed, limb, Large.fillMem, LimbAdd.loop_length,
+    simp [consumed, limb, limbAt, Large.fillMem, LimbAdd.loop_length,
       show 1+2*(count/2) = count by omega, BitVec.ofNat_mul, Nat.mul_comm]
 
 end SszX86.NatAdd.Carry

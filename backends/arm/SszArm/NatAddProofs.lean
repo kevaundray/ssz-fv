@@ -37,7 +37,7 @@ theorem add_correct (s : ArmState) (base : BitVec 64)
     by_cases oneWord : left.wordCount ≤ 1 ∧ right.wordCount ≤ 1
     · exact one_word_correct u base left right stateOwned (scan_code dispatched.frame hc)
         (dispatched.frame.error.trans he) (dispatched.frame.aligned ha)
-        (by simpa only [oneWord, ↓reduceIte] using pc)
+        (by simpa only [oneWord, and_self, ↓reduceIte] using pc)
         leftZero rightZero oneWord representation
     · exact large_correct u base left right stateOwned (scan_code dispatched.frame hc)
         (dispatched.frame.error.trans he) (dispatched.frame.aligned ha)

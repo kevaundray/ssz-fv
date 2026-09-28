@@ -69,7 +69,7 @@ theorem Saved.output_preserved {original s t : ArmState}
   apply saved.preserve stack frame
   · right
     intro span member
-    simp only [returnWrites, List.mem_cons, List.mem_singleton] at member
+    simp only [returnWrites, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
     · have apart := space.separate
       rw [saved.sp] at apart

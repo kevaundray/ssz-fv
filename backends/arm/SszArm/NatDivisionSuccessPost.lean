@@ -44,7 +44,7 @@ theorem wide_result_post (original s : ArmState) (base : BitVec 64)
   have space := owned.return_space saved.sp out
   let t := block base fastOutputOps s
   have args := fast_output_arguments s base space
-  have local := output_local_frame owned saved out (fast_output_frame s base space)
+  have localMemory := output_local_frame owned saved out (fast_output_frame s base space)
   have ready : ReturnReady t (outcome original operand).result := by
     rw [success]
     exact fast_output_ready s base space quotient remainder pointer payload rem quotientAt quotientOwned
@@ -55,9 +55,9 @@ theorem wide_result_post (original s : ArmState) (base : BitVec 64)
   exact finish_post original t base operand owned
     (fast_output_saved original s base saved owned.stackBound space)
     (args.2.2.2.2.1.trans out) code error aligned args.1 ready
-    (written_local_preserved owned local written)
-    (cursor_local_preserved owned local cursor)
-    (before.trans (local_frame (outcome original operand) local))
+    (written_local_preserved owned localMemory written)
+    (cursor_local_preserved owned localMemory cursor)
+    (before.trans (local_frame_for (outcome original operand) localMemory))
 
 /-- After the complete quotient normalization scan, only the payload and the
 shared remainder/status/restore suffix remain. This executes those 16 instructions. -/
@@ -82,7 +82,7 @@ theorem normalized_result_post (original s : ArmState) (base : BitVec 64)
   have space := owned.return_space saved.sp out
   let t := block base payloadOps s
   have args := payload_arguments s base
-  have local := output_local_frame owned saved out (payload_frame s base space)
+  have localMemory := output_local_frame owned saved out (payload_frame s base space)
   have ready : ReturnReady t (outcome original operand).result := by
     rw [success]
     exact payload_ready s base space quotient remainder pointer payload rem status quotientAt quotientOwned
@@ -93,8 +93,8 @@ theorem normalized_result_post (original s : ArmState) (base : BitVec 64)
   exact finish_post original t base operand owned
     (payload_saved original s base saved owned.stackBound space)
     (args.2.2.2.2.1.trans out) code error aligned args.1 ready
-    (written_local_preserved owned local written)
-    (cursor_local_preserved owned local cursor)
-    (before.trans (local_frame (outcome original operand) local))
+    (written_local_preserved owned localMemory written)
+    (cursor_local_preserved owned localMemory cursor)
+    (before.trans (local_frame_for (outcome original operand) localMemory))
 
 end SszArm.NatDivision

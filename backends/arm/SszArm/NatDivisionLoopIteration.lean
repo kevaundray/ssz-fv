@@ -69,6 +69,10 @@ theorem loopFinished_read (s : ArmState) (base : BitVec 64) (n : Nat) (a : BitVe
     read_mem_bytes n a (loopFinished s base) = read_mem_bytes n a (loopStored s) := by
   simp [loopFinished, state_simp_rules]
 
+theorem loopFinished_memory (s : ArmState) (base : BitVec 64) :
+    (loopFinished s base).mem = (loopStored s).mem := by
+  simp [loopFinished, state_simp_rules]
+
 theorem loopFinished_error (s : ArmState) (base : BitVec 64) :
     read_err (loopFinished s base) = read_err s := by
   simp [loopFinished, loopStored, loopSpill, state_simp_rules]
@@ -177,7 +181,7 @@ theorem loopIteration_frame (s : ArmState) (base : BitVec 64) (count i : Nat)
     have stored := BoolCodec.write_mem_bytes_frame (loopSpill (loopCallee s base))
       (loopAddress (loopCallee s base)) 8 (r (.GPR 0#5) (loopCallee s base)) a
       (by simpa only [addr] using physical) (by simpa only [addr] using word)
-    change (loopStored (loopCallee s base)).mem a = s.mem a
+    rw [loopIteration, loopFinished_memory]
     exact stored.trans (second.trans ((congrFun (loopCallee_memory s base) a).trans first))
 
 theorem loopIteration_word (s : ArmState) (base : BitVec 64) (count i : Nat)

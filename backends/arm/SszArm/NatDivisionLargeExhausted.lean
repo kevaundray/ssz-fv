@@ -62,7 +62,9 @@ theorem large_exhausted_post (original s : ArmState) (base : BitVec 64)
     rcases member with rfl | rfl | rfl <;> bv_omega
   have unchanged := SszNative.NatDivision.failure_unchanged operand (r (.GPR 3#5) original)
     (arenaOf original).base (arenaOf original).capacity (arenaOf original).used .scratchExhausted failed
-  have unallocated : (outcome original operand).allocation = none := by rw [unchanged]; rfl
+  have unallocated : (outcome original operand).allocation = none := by
+    rw [outcome, unchanged]
+    rfl
   have finish (t : ArmState) (frame : ArenaFrame s t)
       (memory : MemoryFrame [((r (.GPR 31#5) s).toNat - 16, 16)] s t)
       (pc : read_pc t = base + 812#64) : Post original (run 54 t) operand := by
@@ -72,11 +74,11 @@ theorem large_exhausted_post (original s : ArmState) (base : BitVec 64)
       simp only [List.mem_singleton] at member
       subst span
       simp [bodyWrites, unallocated, slot]
-    have local : MemoryFrame (localWrites original) s t := by
+    have localMemory : MemoryFrame (localWrites original) s t := by
       simpa only [writesFor, unallocated] using body_frame_full operand body
     exact failure_post original t base operand owned (frame.saved_body owned body saved)
       ((frame.registers 19#5 (by decide)).trans out) (frame.code base hc)
-      (frame.error.trans he) (frame.aligned ha) pc failed (before.trans local)
+      (frame.error.trans he) (frame.aligned ha) pc failed (before.trans localMemory)
   obtain ⟨fuel, t, executed, post⟩ := arena_big_reservation_runs s base address capacity used
     hc he ha hp (by rw [saved.sp]; bv_omega) positive hbase hcapacity hused physical headerOwned
   refine ⟨fuel + 54, ?_⟩

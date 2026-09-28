@@ -143,6 +143,30 @@ def nat_add_source(rows, entries, raw, frontier, callees) -> str:
     return _leaf_source(rows, raw, "SszArm.NatAddImpl", "SszArm.NatAdd")
 
 
+def nat_exact_source(rows, entries, raw, frontier, callees) -> str:
+    _require(entries == [0] and not frontier and not callees,
+             "unexpected exact-size entry, frontier, or callees")
+    _require(len(rows) == 74 and len(raw) == 296,
+             "unexpected exact-size instruction count or image extent")
+    return _leaf_source(rows, raw, "SszArm.NatExactImpl", "SszArm.NatExact")
+
+
+def nat_to_u128_source(rows, entries, raw, frontier, callees) -> str:
+    _require(entries == [0] and not frontier and not callees,
+             "unexpected Nat.to_u128 entry, frontier, or callees")
+    _require(len(rows) == 96 and len(raw) == 384,
+             "unexpected Nat.to_u128 instruction count or image extent")
+    return _leaf_source(rows, raw, "SszArm.NatToU128Impl", "SszArm.NatToU128")
+
+
+def nat_from_u128_source(rows, entries, raw, frontier, callees) -> str:
+    _require(entries == [0] and not frontier and not callees,
+             "unexpected Nat.from_u128 entry, frontier, or callees")
+    _require(len(rows) == 105 and len(raw) == 420,
+             "unexpected Nat.from_u128 instruction count or image extent")
+    return _leaf_source(rows, raw, "SszArm.NatFromU128Impl", "SszArm.NatFromU128")
+
+
 def _leaf_source(rows, raw, module, namespace) -> str:
     _validate_rows(rows, raw)
     return f'''import {module}
@@ -265,3 +289,108 @@ example (s : ArmState) : SszArm.Udivti3.CodeAt {{s with program := bound}} 18266
   have actualBound : k < actualKernel.length := by simpa only [actualKernel_eq] using hk
   simpa only [actualKernel_eq] using h ⟨k, actualBound⟩
 '''
+
+
+def emit_source(rows, entries, raw, frontiers, callees) -> str:
+    """Bind primitive emitter words and real memcpy without deep flat lookups."""
+    _require(entries == [0] and len(rows) == 336 and len(raw) == 1996,
+             "unexpected primitive emitter image")
+    _require(frontiers == [740, 1916, 1928, 1944, 1960, 1972, 1984],
+             "unexpected primitive emitter frontiers")
+    _require(set(callees) == {"memcpy"}, "unexpected primitive emitter callees")
+    _validate_rows(rows, raw)
+    callee = callees["memcpy"]
+    copy_bytes = _parse_hex_bytes(callee["raw"])
+    _require(callee["offset"] == 118996 and callee["size"] == 56 and len(copy_bytes) == 56,
+             "unexpected linked emitter memcpy layout")
+    copy_rows = ", ".join(
+        f"({118996 + i}, 0x{_word_le(copy_bytes[i:i + 4]):08x}#32)"
+        for i in range(0, len(copy_bytes), 4))
+    # Each suffix equality unfolds at most 64 cons cells. A whole-image
+    # equality or one flat lookup per word exceeds the default recursion bound.
+    parts = [rows[i:i + 64] for i in range(0, len(rows), 64)]
+    declarations = []
+    for index, part in enumerate(parts):
+        declarations.append(f"def part{index} : List Row := [{_rows_expr(part)}]")
+        declarations.append(f"def tail{index} : List Row := [{_rows_expr(rows[index * 64:])}]")
+    for index in range(len(parts) - 1):
+        declarations.append(
+            f"theorem split{index} : tail{index} = part{index} ++ tail{index + 1} := by rfl")
+    declarations.append(f"def copyRows : List Row := [{copy_rows}]")
+    declarations.append("def actualProgram : List Row := tail0 ++ copyRows")
+    declarations.append("theorem actualProgram_eq : actualProgram = SszArm.Emit.program := by rfl")
+    declarations.append("example : SszArm.Emit.entry = 0 := by rfl")
+    declarations.append(f"example : SszArm.Emit.frontiers = {frontiers} := by rfl")
+    for index, part in enumerate(parts):
+        lo, hi = part[0]["pc"], part[-1]["pc"] + 4
+        declarations.append(f"""theorem segment{index} : Segment part{index} {lo} {hi} := by
+  refine ⟨by decide, by decide, ?_⟩
+  have checked : part{index}.all (fun row => decide ({lo} ≤ key row ∧ key row < {hi})) = true := by decide
+  intro row member
+  exact of_decide_eq_true (List.all_eq_true.mp checked row member)
+""")
+    declarations.append("""theorem copySegment : Segment copyRows 118996 119052 := by
+  refine ⟨by decide, by decide, ?_⟩
+  have checked : copyRows.all (fun row => decide (118996 ≤ key row ∧ key row < 119052)) = true := by decide
+  intro row member
+  exact of_decide_eq_true (List.all_eq_true.mp checked row member)
+""")
+    end = rows[-1]["pc"] + 4
+    for index in reversed(range(len(parts))):
+        proof = (f"  exact segment{index}" if index == len(parts) - 1 else
+                 f"  rw [split{index}]\n  exact join segment{index} suffix{index + 1} (by decide)")
+        declarations.append(
+            f"theorem suffix{index} : Segment tail{index} {parts[index][0]['pc']} {end} := by\n{proof}")
+    return _EMIT_IMAGE_ORDER + "\n".join(declarations) + """
+theorem all_ordered : Ordered actualProgram := (join suffix0 copySegment (by decide)).2.1
+def bound : Program := actualProgram.map (fun row => (BitVec.ofNat 64 row.1, row.2))
+example (s : ArmState) : SszArm.Emit.CodeAt {s with program := bound} 0 := by
+  change ∀ row ∈ SszArm.Emit.program, bound.find? (0 + BitVec.ofNat 64 row.1) = some row.2
+  rw [← actualProgram_eq]
+  intro row member
+  simpa only [bound, show (0 : BitVec 64) = 0#64 by decide, BitVec.zero_add] using
+    lookup actualProgram all_ordered row member
+"""
+
+
+_EMIT_IMAGE_ORDER = """import SszArm.EmitImpl
+open BitVec
+abbrev Row := Nat × BitVec 32
+def key (row : Row) : Nat := (BitVec.ofNat 64 row.1).toNat
+abbrev Ordered (rows : List Row) : Prop := rows.Pairwise (fun x y => key x < key y)
+def Segment (rows : List Row) (lo hi : Nat) : Prop :=
+  lo ≤ hi ∧ Ordered rows ∧ ∀ row ∈ rows, lo ≤ key row ∧ key row < hi
+theorem join {xs ys : List Row} {a b c d : Nat}
+    (left : Segment xs a b) (right : Segment ys c d) (gap : b ≤ c) :
+    Segment (xs ++ ys) a d := by
+  refine ⟨Nat.le_trans left.1 (Nat.le_trans gap right.1),
+    List.pairwise_append.mpr ⟨left.2.1, right.2.1, ?_⟩, ?_⟩
+  · intro x hx y hy
+    have lx := left.2.2 x hx
+    have ry := right.2.2 y hy
+    exact Nat.lt_of_lt_of_le lx.2 (Nat.le_trans gap ry.1)
+  · intro row member
+    rcases List.mem_append.mp member with h | h
+    · have bounds := left.2.2 row h
+      exact ⟨bounds.1, Nat.lt_of_lt_of_le bounds.2 (Nat.le_trans gap right.1)⟩
+    · have bounds := right.2.2 row h
+      exact ⟨Nat.le_trans left.1 (Nat.le_trans gap bounds.1), bounds.2⟩
+theorem lookup (rows : List Row) (ordered : Ordered rows) (row : Row) (member : row ∈ rows) :
+    Map.find? (rows.map (fun r => (BitVec.ofNat 64 r.1, r.2))) (BitVec.ofNat 64 row.1) =
+      some row.2 := by
+  induction rows with
+  | nil => cases member
+  | cons first rest ih =>
+    have pieces := List.pairwise_cons.mp ordered
+    rcases List.mem_cons.mp member with same | inside
+    · subst row
+      simp only [List.map_cons, Map.find?, ↓reduceIte]
+    · have different : BitVec.ofNat 64 first.1 ≠ BitVec.ofNat 64 row.1 := by
+        intro same
+        have less := pieces.1 row inside
+        unfold key at less
+        rw [same] at less
+        exact Nat.lt_irrefl _ less
+      simp only [List.map_cons, Map.find?, if_neg different]
+      exact ih pieces.2 inside
+"""

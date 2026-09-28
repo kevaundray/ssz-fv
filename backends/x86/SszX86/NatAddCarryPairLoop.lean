@@ -48,7 +48,7 @@ theorem loop_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   | zero => intro positive; omega
   | succ pairs ih =>
     intro positive index indexPositive within s carry carryBound rcx r8 rbx rsi r11 r14
-      owned mapped hp
+      owned hmapped hp
     let first := limbAt right index
     let second := limbAt right (index+1)
     let one := LimbAdd.step 0 first carry
@@ -73,7 +73,7 @@ theorem loop_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     have owned' : (NatOperand.large pointer right).At (widthLoad m) :=
       fill_preserves s.dmem (.large pointer right) dst index (8*capacity) [one.1]
         owned apart (by simp; omega)
-    have mapped' : Large.Mapped m dst (8*capacity) := Large.mapped_store _ _ _ _ _ _ mapped
+    have hmapped' : Large.Mapped m dst (8*capacity) := Large.mapped_store _ _ _ _ _ _ hmapped
     apply pair_cps e base hc s first second
     · have h := fetch_word s.dmem (.large pointer right) index owned indexPositive (by omega)
       simpa [get, rsi, r8, rcx, isSmall, NatOperand.words,
@@ -84,41 +84,48 @@ theorem loop_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
         BitVec.ofNat_mul, BitVec.mul_add, BitVec.add_mul, BitVec.add_assoc,
         addr1, firstEq, m, Nat.mul_comm] using h
     · rw [addr1]
-      exact Large.mapped_load _ _ _ (8*index) 8 mapped (by omega)
+      exact Large.mapped_load _ _ _ (8*index) 8 hmapped (by omega)
     · rw [addr1, firstEq, addr2]
-      exact Large.mapped_load _ _ _ (8*(index+1)) 8 mapped' (by omega)
+      exact Large.mapped_load _ _ _ (8*(index+1)) 8 hmapped' (by omega)
     intro flags
     let t := pairState s first second flags
     have stable : Stable s t := by simp [Stable, t, pairState]
     have tMemory : t.dmem = Large.fillMem s.dmem dst index [one.1,two.1] := by
       simp [t, pairState, memory, addr1, addr2, firstEq, secondEq, Large.fillMem]
+    have indexReg : s.regs.rsi.toBitVec = BitVec.ofNat 64 index := by
+      simpa only [get, Reg64s.get64] using rsi
     have tCarry : get t .r14 = BitVec.ofNat 64 two.2 := by
-      simp [t, pairState, get, secondCarryEq]
+      simp [t, pairState, get, Reg64s.get64, secondCarryEq]
     have tIndex : get t .rsi = BitVec.ofNat 64 (index+2) := by
-      simp [t, pairState, get, rsi, BitVec.ofNat_add]
-    have tLast : get t .rdx = BitVec.ofNat 64 index := by simp [t, pairState, get, rsi]
+      simp [t, pairState, get, Reg64s.get64, indexReg, BitVec.ofNat_add]
+    have tLast : get t .rdx = BitVec.ofNat 64 index := by
+      simp [t, pairState, get, Reg64s.get64, indexReg]
     have recurrence :
         LimbAdd.loop (2*(pairs+1)) [] (right.drop index) carry =
           let rest := LimbAdd.loop (2*pairs) [] (right.drop (index+2)) two.2
           (one.1 :: two.1 :: rest.1, rest.2) := by
-      rw [show 2*(pairs+1) = (2*pairs+1)+1 by omega]
-      rw [show ([] : List (BitVec 64)) = [].drop index by simp]
-      simp only [LimbAdd.loop_indexed_succ, List.drop_nil, List.getElem?_nil, Option.getD_none]
-      rfl
+      have firstStep := LimbAdd.loop_indexed_succ (2*pairs+1) index
+        ([] : List (BitVec 64)) right carry
+      have secondStep := LimbAdd.loop_indexed_succ (2*pairs) (index+1)
+        ([] : List (BitVec 64)) right one.2
+      simp only [List.drop_nil, List.getElem?_nil, Option.getD_none] at firstStep secondStep
+      rw [show 2*(pairs+1) = (2*pairs+1)+1 by omega, firstStep, secondStep]
     by_cases last : pairs = 0
     · subst pairs
       have done : get s .rsi + 1#64 = get s .r11 := by
         simp only [rsi, r11]
         bv_omega
-      simp only [done, if_true]
+      simp only [done, ite_true]
       apply hp t stable
       · simpa using tLast
-      · simpa [recurrence, LimbAdd.loop] using tCarry
-      · simpa [recurrence, LimbAdd.loop] using tMemory
+      · rw [recurrence]
+        exact tCarry
+      · rw [recurrence]
+        exact tMemory
     · have again : get s .rsi + 1#64 ≠ get s .r11 := by
         simp only [rsi, r11]
         bv_omega
-      simp only [again, if_false]
+      simp only [again, ite_false]
       apply ih (by omega) (index+2) (by omega) (by omega) t two.2
         (LimbAdd.step_carry_le 0 second one.2 (LimbAdd.step_carry_le 0 first carry carryBound))
       · simpa only [get, Reg64s.get64, stable.2.1] using rcx
@@ -131,12 +138,13 @@ theorem loop_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       · rw [tMemory]
         exact fill_preserves _ _ _ _ (8*capacity) _ owned apart (by simp; omega)
       · rw [tMemory]
-        exact Large.mapped_store _ _ _ _ _ _ (Large.mapped_store _ _ _ _ _ _ mapped)
+        exact Large.mapped_store _ _ _ _ _ _ (Large.mapped_store _ _ _ _ _ _ hmapped)
       intro final finalStable finalIndex finalCarry finalMemory
       apply hp final (stable_trans stable finalStable)
       · simpa [show index+2+2*pairs-2 = index+2*(pairs+1)-2 by omega] using finalIndex
       · simpa [recurrence] using finalCarry
-      · rw [recurrence, finalMemory, tMemory, ← fill_append]
-        rfl
+      · rw [recurrence, finalMemory, tMemory]
+        exact (fill_append s.dmem dst index [one.1, two.1]
+          (LimbAdd.loop (2*pairs) [] (right.drop (index+2)) two.2).1).symm
 
 end SszX86.NatAdd.Carry.Pair

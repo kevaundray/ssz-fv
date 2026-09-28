@@ -53,7 +53,12 @@ private theorem first_stored_cps (e : Executable) (base : Int64) (hc : CodeAt e 
   by_cases present : (get s .rsi + 1#64).toNat < (get s .r8).toNat
   · simp only [present, ↓reduceIte]
     apply Cuts.load_second_cps e base hc (secondReadyState s first guardFlags) second
-    · simpa only [present, ↓reduceIte] using hsecond
+    · have loaded : Mem.loadInt
+          (Mem.storeInt s.dmem (firstAddress s) 8 (firstWord s first).toInt)
+          (get s .rcx + get s .rsi * 8#64 + 8#64) 8 = some (second.toNat : Int) := by
+        simpa only [present, ↓reduceIte] using hsecond
+      simpa only [secondReadyState, firstStoredState, firstState, get,
+        SszX86.NatAdd.Carry.get, Reg64s.get64] using loaded
     rw [second_load_bridge]
     exact second_loaded_cps e base hc s first second guardFlags hmsecond P hp
   · have zero : second = 0 := by simpa only [present, ↓reduceIte] using hsecond
@@ -113,7 +118,10 @@ theorem pair_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   by_cases present : (get s .rsi).toNat < (get s .r8).toNat
   · simp only [present, ↓reduceIte]
     apply Cuts.load_first_cps e base hc (Cuts.startState s startFlags) first
-    · simpa only [present, ↓reduceIte] using hfirst
+    · have loaded : Mem.loadInt s.dmem (get s .rcx + get s .rsi * 8#64) 8 =
+          some (first.toNat : Int) := by
+        simpa only [present, ↓reduceIte] using hfirst
+      simpa only [Cuts.startState, get, SszX86.NatAdd.Carry.get, Reg64s.get64] using loaded
     exact first_loaded_cps e base hc s first second startFlags startFlags
       hsecond hmfirst hmsecond P hp
   · have zero : first = 0 := by simpa only [present, ↓reduceIte] using hfirst

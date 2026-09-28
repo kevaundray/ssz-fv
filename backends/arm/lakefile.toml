@@ -119,6 +119,18 @@ name = "SszNatDivisionMemory"
 srcDir = "../../proofs"
 
 [[lean_lib]]
+name = "SszNatNarrow"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszBitVector"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszBitVectorMemory"
+srcDir = "../../proofs"
+
+[[lean_lib]]
 name = "SszBitView"
 srcDir = "../../proofs"
 
@@ -144,6 +156,26 @@ srcDir = "../../proofs"
 
 [[lean_lib]]
 name = "SszByteView"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszSerializeArena"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszSerializeCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszSerializeMeasure"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszSerializeProofs"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszSerializeResources"
 srcDir = "../../proofs"
 
 [[lean_lib]]

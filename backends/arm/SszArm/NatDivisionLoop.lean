@@ -93,10 +93,11 @@ theorem loop_run (words : List (BitVec 64)) (s : ArmState) (base divisor : BitVe
       have lowerPc : read_pc u = base + 524#64 := by
         simp [u, loopIteration_pc, notzero]
       have lowerCode : JointCodeAt u base := by
-        simpa only [JointCodeAt, CodeAt, Udivti3.CodeAt, SszArm.CodeAt, uf.program] using hc
+        have program : u.program = s.program := uf.program
+        simpa only [JointCodeAt, CodeAt, Udivti3.CodeAt, SszArm.CodeAt, program] using hc
       obtain ⟨fuel, t, ht, post⟩ := ih u (SszNative.LimbDivision.step divisor remainder word).2
         empty lowerCode (uf.error.trans he) (uf.aligned ha) lowerPc lowerSpace lowerMemory
-        lowerIndex u20 positive ur nextBound
+        lowerIndex u20 ur nextBound
       have tf : LoopFrame (loopWrites (r (.GPR 31#5) s) (r (.GPR 24#5) s) low.length) u t := by
         simpa only [usp, u24] using post.frame
       have highPreserved := loopFrame_upper sp tf
@@ -133,6 +134,7 @@ theorem divideWords_run (words : List (BitVec 64)) (s : ArmState) (base divisor 
       (r (.GPR 1#5) t).toNat = (SszNative.LimbDivision.divideWords divisor words).2 ∧
       (r (.GPR 1#5) t).toNat < divisor.toNat ∧ read_pc t = base + 1032#64 := by
   let u := Op.p520.effect base s
+  have hpc : r .PC s = base + 520#64 := hp
   have first : run 1 s = u := by
     rw [run, step s base .p520 hc.1 (by simpa only [Op.row] using hp) he ha]
     rfl
@@ -140,7 +142,7 @@ theorem divideWords_run (words : List (BitVec 64)) (s : ArmState) (base divisor 
     simpa only [u, JointCodeAt, CodeAt, Udivti3.CodeAt, SszArm.CodeAt, Op.program] using hc
   obtain ⟨fuel, t, ht, post⟩ := loop_run words u base divisor 0 nonempty ucode
     (by simpa only [u, Op.error] using he) (Op.aligned _ _ _ ha)
-    (by simp [u, Op.effect, put, next, state_simp_rules, hp])
+    (by simp [u, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc])
     (by simpa [u, Op.effect, put, next, state_simp_rules] using space)
     (by simpa [u, LoopWords, Op.effect, put, next, state_simp_rules] using memory)
     (by simpa [u, Op.effect, put, next, state_simp_rules] using index)

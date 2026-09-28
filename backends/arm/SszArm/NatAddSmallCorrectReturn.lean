@@ -11,18 +11,18 @@ set_option maxHeartbeats 8000000
 /-- A scratch-failure tail is composed against the original phase state, not a
 new ownership predicate for clobbered X2/X4. -/
 theorem error_finish (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
-    (owned : Owned s left right) (prefix : ZeroFrame s u)
+    (owned : Owned s left right) (prefixFrame : ZeroFrame s u)
     (hc : CodeAt u base) (he : read_err u = .None) (ha : CheckSPAlignment u)
     (hp : read_pc u = base + 1248#64)
     (model : outcome s left right = NatArithmetic.unchanged (arenaOf s).used (.error .scratchExhausted)) :
     ∃ fuel t, run fuel u = t ∧ Post s t left right := by
   let t := errorResult .scratch base u
-  have memory : MemoryFrame (localWrites s) s t := prefix.memory.trans
-    (by simpa only [prefix.writes] using error_frame .scratch u base (prefix.owned owned.return_owned))
+  have memory : MemoryFrame (localWrites s) s t := prefixFrame.memory.trans
+    (by simpa only [prefixFrame.writes] using error_frame .scratch u base (prefixFrame.owned owned.return_owned))
   refine ⟨50, t, error_run .scratch u base hc he ha hp, ?_⟩
-  apply post_of_frame s t left right owned (prefix.returned (error_returned .scratch u base he))
-  · have image := error_image .scratch u base (prefix.owned owned.return_owned)
-    simpa only [model, NatArithmetic.unchanged, prefix.out] using image
+  apply post_of_frame s t left right owned (prefixFrame.returned (error_returned .scratch u base he))
+  · have image := error_image .scratch u base (prefixFrame.owned owned.return_owned)
+    simpa only [model, NatArithmetic.unchanged, prefixFrame.out] using image
   · intro reservation allocated
     simp only [model, NatArithmetic.unchanged] at allocated
     cases allocated
@@ -37,7 +37,7 @@ theorem error_finish (s u : ArmState) (base : BitVec 64) (left right : NatOperan
 /-- The allocated return preserves all sixteen freshly written bytes. Its model
 is the exact committed two-word result, including the original cursor update. -/
 theorem allocated_finish (s u v : ArmState) (base : BitVec 64) (left right : NatOperand)
-    (owned : Owned s left right) (prefix : ZeroFrame s u)
+    (owned : Owned s left right) (prefixFrame : ZeroFrame s u)
     (h5 : r (.GPR 5#5) u = r (.GPR 5#5) s)
     (h9 : r (.GPR 9#5) u = low left right)
     (hl : left.wordCount = 1) (hr : right.wordCount = 1)
@@ -57,8 +57,8 @@ theorem allocated_finish (s u v : ArmState) (base : BitVec 64) (left right : Nat
   have fresh := reservation_fresh owned hl hr overflow reservation reserved
   have localFresh := fresh_local fresh
   have vout : r (.GPR 0#5) v = r (.GPR 0#5) s :=
-    (frame.registers _ (by decide)).trans prefix.out
-  have vsp : r (.GPR 31#5) v = r (.GPR 31#5) s := frame.sp.trans prefix.sp
+    (frame.registers _ (by decide)).trans prefixFrame.out
+  have vsp : r (.GPR 31#5) v = r (.GPR 31#5) s := frame.sp.trans prefixFrame.sp
   have locals : localWrites v = localWrites s := by simp only [localWrites, vout, vsp]
   have returnOwned : ReturnOwned v := by
     have original := owned.return_owned
@@ -95,9 +95,9 @@ theorem allocated_finish (s u v : ArmState) (base : BitVec 64) (left right : Nat
     simp only [writesFor, model, NatArithmetic.committed]
     exact List.mem_append_left _ member
   have memory : MemoryFrame (writesFor s (outcome s left right)) s t :=
-    (local_frame _ prefix.memory).trans (allocationMemory.trans terminalAllowed)
+    (local_frame _ prefixFrame.memory).trans (allocationMemory.trans terminalAllowed)
   refine ⟨fuel, t, executed, ?_⟩
-  apply post_of_frame s t left right owned (prefix.returned (arena_returned frame returned))
+  apply post_of_frame s t left right owned (prefixFrame.returned (arena_returned frame returned))
   · simpa only [model, NatArithmetic.committed, committed_pair, vout, operand] using image
   · intro actual allocated
     have same : actual = reservation := by

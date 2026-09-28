@@ -1,0 +1,291 @@
+module
+
+public import SszX86.UintImpl
+public import SszX86.NatDivisionImpl
+public import SszX86.NatAddImpl
+public import SszX86.NatExactImpl
+public import SszX86.NatToU128Impl
+
+@[expose] public section
+
+namespace SszX86.BitVector
+open Kraken.X64.Parser
+
+set_option maxRecDepth 16384
+set_option maxHeartbeats 16000000
+
+/-- Actual post-dispatch BitVector body through the common native return. -/
+def entry : Nat := 115
+def divisionOffset : Int := -63168
+def addOffset : Int := -54864
+def exactOffset : Int := 14784
+def toU128Offset : Int := 14976
+
+def program : List (Nat × Nat × Program) := [
+  (115, 5, parse("movq %rdx,0x68(%rsp)")),
+  (120, 5, parse("movq %rdi,0x8(%rsp)")),
+  (125, 4, parse("movq 0x8(%rbp),%r15")),
+  (129, 4, parse("movq 0x10(%rbp),%r12")),
+  (133, 5, parse("leaq 0x10(%rsp),%rdi")),
+  (138, 5, parse("movl $0x8,%ecx")),
+  (143, 3, parse("movq %r15,%rsi")),
+  (146, 3, parse("movq %r12,%rdx")),
+  (149, 3, parse("movq %rbx,%r8")),
+  (152, 5, [.instr (.regular .W64 .W64 (.call (.rel (.int64 (-63325)))))]),
+  (157, 4, parse("movl 0x50(%rsp),%eax")),
+  (161, 5, parse("movq 0x10(%rsp),%rcx")),
+  (166, 5, parse("movq 0x18(%rsp),%rdx")),
+  (171, 5, parse("movq %rcx,0x78(%rsp)")),
+  (176, 8, parse("movq %rdx,0x80(%rsp)")),
+  (184, 5, parse("movq 0x20(%rsp),%r13")),
+  (189, 2, parse("testl %eax,%eax")),
+  (191, 6, parse("je bitVector_u1689")),
+  (197, 5, parse("movq 0x48(%rsp),%rcx")),
+  (202, 5, parse("movq 0x8(%rsp),%rdx")),
+  (207, 4, parse("movq %rcx,0x40(%rdx)")),
+  (211, 5, parse("movq 0x40(%rsp),%rcx")),
+  (216, 4, parse("movq %rcx,0x38(%rdx)")),
+  (220, 5, parse("movq 0x38(%rsp),%rcx")),
+  (225, 4, parse("movq %rcx,0x30(%rdx)")),
+  (229, 5, parse("movq 0x28(%rsp),%rcx")),
+  (234, 5, parse("movq 0x30(%rsp),%rsi")),
+  (239, 4, parse("movq %rsi,0x28(%rdx)")),
+  (243, 4, parse("movq %rcx,0x20(%rdx)")),
+  (247, 4, parse("movl 0x54(%rsp),%ecx")),
+  (251, 5, parse("movq 0x78(%rsp),%rsi")),
+  (256, 8, parse("movq 0x80(%rsp),%rdi")),
+  (264, 4, parse("movq %rdi,0x10(%rdx)")),
+  (268, 4, parse("movq %rsi,0x8(%rdx)")),
+  (272, 4, parse("movq %r13,0x18(%rdx)")),
+  (276, 3, parse("movl %eax,0x48(%rdx)")),
+  (279, 3, parse("movl %ecx,0x4c(%rdx)")),
+  (282, 7, parse("movq $0x1,(%rdx)")),
+  (289, 5, [.instr (.regular .W64 .W64 (.jmp (.rel (.int64 (7426)))))]),
+  (1689, 5, parse("movq 0x78(%rsp),%rax")),
+  (1694, 8, parse("movq 0x80(%rsp),%rcx")),
+  (1702, 8, parse("movq %rax,0xd0(%rsp)")),
+  (1710, 8, parse("movq %rcx,0xd8(%rsp)")),
+  (1718, 3, parse("testq %r13,%r13")),
+  (1721, 6, parse("je bitVector_u4618")),
+  (1727, 8, parse("movq 0xd0(%rsp),%rsi")),
+  (1735, 8, parse("movq 0xd8(%rsp),%rdx")),
+  (1743, 5, parse("leaq 0x10(%rsp),%rdi")),
+  (1748, 6, parse("movl $0x1,%r8d")),
+  (1754, 2, parse("xorl %ecx,%ecx")),
+  (1756, 3, parse("movq %rbx,%r9")),
+  (1759, 5, [.instr (.regular .W64 .W64 (.call (.rel (.int64 (-56628)))))]),
+  (1764, 4, parse("movl 0x50(%rsp),%eax")),
+  (1768, 2, parse("testl %eax,%eax")),
+  (1770, 6, parse("je bitVector_u4592")),
+  (1776, 5, parse("movq 0x48(%rsp),%rcx")),
+  (1781, 8, parse("movq %rcx,0xb0(%rsp)")),
+  (1789, 5, parse("movq 0x40(%rsp),%rcx")),
+  (1794, 8, parse("movq %rcx,0xa8(%rsp)")),
+  (1802, 5, parse("movq 0x38(%rsp),%rdx")),
+  (1807, 8, parse("movq %rdx,0xa0(%rsp)")),
+  (1815, 5, parse("movq 0x30(%rsp),%rsi")),
+  (1820, 8, parse("movq %rsi,0x98(%rsp)")),
+  (1828, 5, parse("movq 0x28(%rsp),%rdi")),
+  (1833, 8, parse("movq %rdi,0x90(%rsp)")),
+  (1841, 5, parse("movq 0x20(%rsp),%r8")),
+  (1846, 8, parse("movq %r8,0x88(%rsp)")),
+  (1854, 5, parse("movq 0x10(%rsp),%r9")),
+  (1859, 5, parse("movq 0x18(%rsp),%r10")),
+  (1864, 8, parse("movq %r10,0x80(%rsp)")),
+  (1872, 5, parse("movq %r9,0x78(%rsp)")),
+  (1877, 5, parse("movl 0x54(%rsp),%r11d")),
+  (1882, 8, parse("movq 0xb0(%rsp),%rbx")),
+  (1890, 5, parse("movq 0x8(%rsp),%r14")),
+  (1895, 4, parse("movq %rbx,0x40(%r14)")),
+  (1899, 4, parse("movq %rcx,0x38(%r14)")),
+  (1903, 4, parse("movq %rdx,0x30(%r14)")),
+  (1907, 4, parse("movq %rsi,0x28(%r14)")),
+  (1911, 4, parse("movq %rdi,0x20(%r14)")),
+  (1915, 4, parse("movq %r8,0x18(%r14)")),
+  (1919, 4, parse("movq %r10,0x10(%r14)")),
+  (1923, 4, parse("movq %r9,0x8(%r14)")),
+  (1927, 4, parse("movl %eax,0x48(%r14)")),
+  (1931, 4, parse("movl %r11d,0x4c(%r14)")),
+  (1935, 7, parse("movq $0x1,(%r14)")),
+  (1942, 5, [.instr (.regular .W64 .W64 (.jmp (.rel (.int64 (5773)))))]),
+  (4592, 5, parse("movq 0x10(%rsp),%rax")),
+  (4597, 5, parse("movq 0x18(%rsp),%rcx")),
+  (4602, 8, parse("movq %rax,0xd0(%rsp)")),
+  (4610, 8, parse("movq %rcx,0xd8(%rsp)")),
+  (4618, 5, parse("leaq 0x10(%rsp),%rdi")),
+  (4623, 8, parse("leaq 0xd0(%rsp),%rsi")),
+  (4631, 3, parse("movq %r14,%rdx")),
+  (4634, 5, [.instr (.regular .W64 .W64 (.call (.rel (.int64 (10145)))))]),
+  (4639, 5, parse("cmpl $0x0,0x50(%rsp)")),
+  (4644, 6, parse("je bitVector_u4832")),
+  (4650, 5, parse("movq 0x8(%rsp),%rax")),
+  (4655, 4, parse("leaq 0x8(%rax),%rdi")),
+  (4659, 5, parse("leaq 0x10(%rsp),%rsi")),
+  (4664, 5, parse("movl $0x9,%ecx")),
+  (4669, 5, parse("leaq -0x8(%rsp),%rsp")),
+  (4674, 4, parse("movq %r11,(%rsp)")),
+  (4678, 3, parse("movq (%rsi),%r11")),
+  (4681, 3, parse("movq %r11,(%rdi)")),
+  (4684, 4, parse("leaq 0x8(%rsi),%rsi")),
+  (4688, 4, parse("leaq 0x8(%rdi),%rdi")),
+  (4692, 3, parse("movq (%rsi),%r11")),
+  (4695, 3, parse("movq %r11,(%rdi)")),
+  (4698, 4, parse("leaq 0x8(%rsi),%rsi")),
+  (4702, 4, parse("leaq 0x8(%rdi),%rdi")),
+  (4706, 3, parse("movq (%rsi),%r11")),
+  (4709, 3, parse("movq %r11,(%rdi)")),
+  (4712, 4, parse("leaq 0x8(%rsi),%rsi")),
+  (4716, 4, parse("leaq 0x8(%rdi),%rdi")),
+  (4720, 3, parse("movq (%rsi),%r11")),
+  (4723, 3, parse("movq %r11,(%rdi)")),
+  (4726, 4, parse("leaq 0x8(%rsi),%rsi")),
+  (4730, 4, parse("leaq 0x8(%rdi),%rdi")),
+  (4734, 3, parse("movq (%rsi),%r11")),
+  (4737, 3, parse("movq %r11,(%rdi)")),
+  (4740, 4, parse("leaq 0x8(%rsi),%rsi")),
+  (4744, 4, parse("leaq 0x8(%rdi),%rdi")),
+  (4748, 3, parse("movq (%rsi),%r11")),
+  (4751, 3, parse("movq %r11,(%rdi)")),
+  (4754, 4, parse("leaq 0x8(%rsi),%rsi")),
+  (4758, 4, parse("leaq 0x8(%rdi),%rdi")),
+  (4762, 3, parse("movq (%rsi),%r11")),
+  (4765, 3, parse("movq %r11,(%rdi)")),
+  (4768, 4, parse("leaq 0x8(%rsi),%rsi")),
+  (4772, 4, parse("leaq 0x8(%rdi),%rdi")),
+  (4776, 3, parse("movq (%rsi),%r11")),
+  (4779, 3, parse("movq %r11,(%rdi)")),
+  (4782, 4, parse("leaq 0x8(%rsi),%rsi")),
+  (4786, 4, parse("leaq 0x8(%rdi),%rdi")),
+  (4790, 3, parse("movq (%rsi),%r11")),
+  (4793, 3, parse("movq %r11,(%rdi)")),
+  (4796, 4, parse("leaq 0x8(%rsi),%rsi")),
+  (4800, 4, parse("leaq 0x8(%rdi),%rdi")),
+  (4804, 7, parse("movq $0x0,%rcx")),
+  (4811, 4, parse("movq (%rsp),%r11")),
+  (4815, 5, parse("leaq 0x8(%rsp),%rsp")),
+  (4820, 7, parse("movq $0x1,(%rax)")),
+  (4827, 5, [.instr (.regular .W64 .W64 (.jmp (.rel (.int64 (2888)))))]),
+  (4832, 3, parse("testq %r13,%r13")),
+  (4835, 3, parse("setne %al")),
+  (4838, 3, parse("testq %r14,%r14")),
+  (4841, 3, parse("setne %cl")),
+  (4844, 2, parse("testb %al,%cl")),
+  (4846, 6, parse("je bitVector_u5233")),
+  (4852, 5, parse("movq 0x68(%rsp),%rax")),
+  (4857, 6, [.instr (.regular .W64 .W32 (.movzx (.reg (.low .rax .W32)) (.mem (w := .W8) { base := some (.reg .rax), idx := some ⟨.r14, .W8⟩, disp := .int64 (-1) })))]),
+  (4863, 4, parse("andb $0x7,%r13b")),
+  (4867, 3, parse("movl %r13d,%ecx")),
+  (4870, 2, parse("shrb %cl,%al")),
+  (4872, 2, parse("testb %al,%al")),
+  (4874, 6, parse("je bitVector_u5233")),
+  (4880, 5, parse("movq 0x8(%rsp),%rax")),
+  (4885, 8, parse("movq $0x0,0x40(%rax)")),
+  (4893, 8, parse("movq $0x0,0x38(%rax)")),
+  (4901, 8, parse("movq $0x0,0x30(%rax)")),
+  (4909, 8, parse("movq $0x0,0x28(%rax)")),
+  (4917, 8, parse("movq $0x0,0x20(%rax)")),
+  (4925, 8, parse("movq $0x0,0x18(%rax)")),
+  (4933, 8, parse("movq $0x1,0x8(%rax)")),
+  (4941, 8, parse("movq $0x0,0x10(%rax)")),
+  (4949, 7, parse("movl $0xf,0x48(%rax)")),
+  (4956, 7, parse("movq $0x1,(%rax)")),
+  (4963, 5, [.instr (.regular .W64 .W64 (.jmp (.rel (.int64 (2752)))))]),
+  (5233, 5, parse("leaq 0x10(%rsp),%rdi")),
+  (5238, 3, parse("movq %r15,%rsi")),
+  (5241, 3, parse("movq %r12,%rdx")),
+  (5244, 5, [.instr (.regular .W64 .W64 (.call (.rel (.int64 (9727)))))]),
+  (5249, 5, parse("testb $0x1,0x10(%rsp)")),
+  (5254, 6, parse("je bitVector_u6345")),
+  (5260, 5, parse("movq 0x20(%rsp),%rax")),
+  (5265, 5, parse("movq 0x28(%rsp),%rcx")),
+  (5270, 3, parse("movq %rcx,%rdx")),
+  (5273, 4, parse("shrq $0x3,%rdx")),
+  (5277, 3, parse("movq %rcx,%rsi")),
+  (5280, 5, parse("shldq $0x3d,%rax,%rsi")),
+  (5285, 2, parse("xorl %edi,%edi")),
+  (5287, 2, parse("testb $0x7,%al")),
+  (5289, 4, parse("setne %dil")),
+  (5293, 3, parse("addq %rsi,%rdi")),
+  (5296, 4, parse("adcq $0x0,%rdx")),
+  (5300, 3, parse("xorq %r14,%rdi")),
+  (5303, 3, parse("orq %rdx,%rdi")),
+  (5306, 5, parse("movq 0x8(%rsp),%rdx")),
+  (5311, 6, parse("jne bitVector_u6550")),
+  (5317, 4, parse("movb $0x3,0x10(%rdx)")),
+  (5321, 5, parse("movq 0x68(%rsp),%rsi")),
+  (5326, 4, parse("movq %rsi,0x20(%rdx)")),
+  (5330, 4, parse("movq %r14,0x28(%rdx)")),
+  (5334, 4, parse("movq %rax,0x30(%rdx)")),
+  (5338, 4, parse("movq %rcx,0x38(%rdx)")),
+  (5342, 7, parse("movq $0x0,(%rdx)")),
+  (5349, 5, [.instr (.regular .W64 .W64 (.jmp (.rel (.int64 (2366)))))]),
+  (6345, 5, parse("movq 0x8(%rsp),%rax")),
+  (6350, 8, parse("movq $0x0,0x40(%rax)")),
+  (6358, 8, parse("movq $0x0,0x38(%rax)")),
+  (6366, 8, parse("movq $0x0,0x30(%rax)")),
+  (6374, 8, parse("movq $0x0,0x28(%rax)")),
+  (6382, 8, parse("movq $0x0,0x20(%rax)")),
+  (6390, 8, parse("movq $0x1,0x8(%rax)")),
+  (6398, 8, parse("movq $0x0,0x18(%rax)")),
+  (6406, 8, parse("movq $0x0,0x10(%rax)")),
+  (6414, 7, parse("movl $0x8002,0x48(%rax)")),
+  (6421, 7, parse("movq $0x1,(%rax)")),
+  (6428, 5, [.instr (.regular .W64 .W64 (.jmp (.rel (.int64 (1287)))))]),
+  (6550, 8, parse("movq $0x0,0x40(%rdx)")),
+  (6558, 8, parse("movq $0x0,0x38(%rdx)")),
+  (6566, 8, parse("movq $0x0,0x30(%rdx)")),
+  (6574, 8, parse("movq $0x1,0x8(%rdx)")),
+  (6582, 8, parse("movq $0x0,0x10(%rdx)")),
+  (6590, 8, parse("movq $0x0,0x18(%rdx)")),
+  (6598, 8, parse("movq $0x0,0x20(%rdx)")),
+  (6606, 8, parse("movq $0x0,0x28(%rdx)")),
+  (6614, 7, parse("movl $0x8002,0x48(%rdx)")),
+  (6621, 7, parse("movq $0x1,(%rdx)")),
+  (6628, 5, [.instr (.regular .W64 .W64 (.jmp (.rel (.int64 (1087)))))]),
+  (7720, 7, parse("addq $0x138,%rsp")),
+  (7727, 1, parse("popq %rbx")),
+  (7728, 2, parse("popq %r12")),
+  (7730, 2, parse("popq %r13")),
+  (7732, 2, parse("popq %r14")),
+  (7734, 2, parse("popq %r15")),
+  (7736, 1, parse("popq %rbp")),
+  (7737, 1, parse("retq "))]
+
+def labels : List (String × Nat) := [
+  ("bitVector_u1689", 1689),
+  ("bitVector_u4592", 4592),
+  ("bitVector_u4618", 4618),
+  ("bitVector_u4832", 4832),
+  ("bitVector_u5233", 5233),
+  ("bitVector_u6345", 6345),
+  ("bitVector_u6550", 6550)]
+
+theorem all_instructions : program.all (fun row => match row.2.2 with
+    | [.instr _] => true
+    | _ => false) = true := by decide
+
+def directives (row : Nat × Nat × Program) : List (Directive × Nat) :=
+  ((labels.filter (fun item => item.2 == row.1)).map
+    (fun item => (Directive.label item.1, 0))) ++
+  row.2.2.map (fun instruction => (instruction, row.2.1))
+
+structure CodeAt (e : Executable) (base : Int64) : Prop where
+  fetch : ∀ row ∈ program,
+    e.directivesAtAddress (base + Int64.ofNat row.1) = directives row
+  targets : ∀ item ∈ labels, e.labels.label item.1 = base + Int64.ofNat item.2
+
+@[instance_reducible]
+def layout (e : Executable) : Layout :=
+  { start := e.1, size := fun i => (e.2[i]?.map Prod.snd).getD 0 }
+
+abbrev step (e : Executable) := @step1 (layout e) e
+
+theorem step_at (e : Executable) (base : Int64) (hc : CodeAt e base)
+    (row : Nat × Nat × Program) (hr : row ∈ program)
+    (s : MachineData) (post : MachineState → Prop) :
+    step e (s, base + Int64.ofNat row.1) post ↔
+      (@Directives.interp e.labels (directives row) s (base + Int64.ofNat row.1)
+        (fun pc state => .done (state, pc))).All post := by
+  simp only [step, step1, Executable.step, hc.fetch row hr]
+
+end SszX86.BitVector

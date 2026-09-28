@@ -53,7 +53,7 @@ theorem maximum_select (s : ArmState) (base : BitVec 64) (leftCount rightCount :
         constructor
         · exact cmpc.mpr (by omega)
         · bv_omega
-      simp only [flags, ↓reduceIte, Nat.max_eq_right (by omega : leftCount ≤ rightCount)]
+      simp [flags, Nat.max_eq_right (by omega : leftCount ≤ rightCount)]
     · have flags : ¬ ((AddWithCarry (BitVec.ofNat 64 rightCount)
           (~~~(BitVec.ofNat 64 leftCount)) 1#1).2.c = 1#1 ∧
           (AddWithCarry (BitVec.ofNat 64 rightCount)
@@ -64,6 +64,7 @@ theorem maximum_select (s : ArmState) (base : BitVec 64) (leftCount rightCount :
         have z := cmpz.mpr eq
         bv_omega
       simp only [flags, ↓reduceIte, Nat.max_eq_left (by omega : rightCount ≤ leftCount)]
+  simp only [NatCompare.cmp_zero_bit] at selected
   have nowrap : BitVec.ofNat 64 (max leftCount rightCount) + 1#64 ≠ 0#64 := by bv_omega
   have follow : Follows base [.p128, .p132, .p136, .p140] s := by
     simp [Follows, Op.row, Op.effect, put, next, Udivti3.compare, Udivti3.next,

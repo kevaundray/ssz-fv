@@ -35,7 +35,7 @@ theorem right_read (s : ArmState) (base pointer : BitVec 64)
   have hg := right_guard index right hi hr
   let g := block base [.p1980, .p1984] s
   have hpc : r .PC s = base + 1980#64 := hp
-  have runGuard : run 2 s = g := block_run base _ s hc he ha (by
+  have runGuard : run 2 s = g := block_run base [.p1980, .p1984] s hc he ha (by
     simp [Follows, Op.row, Op.effect, Udivti3.compare, Udivti3.next,
       next, state_simp_rules, hpc, BitVec.add_assoc])
   have frameGuard : NatCompare.Frame s g := by
@@ -70,16 +70,17 @@ theorem right_read (s : ArmState) (base pointer : BitVec 64)
   · have gp : read_pc g = base + 1988#64 := by
       simp [g, block, Op.effect, Udivti3.compare, Udivti3.next,
         state_simp_rules, h14, h4, hg, present]
-    have none : right[index]? = none := List.getElem?_eq_none (by omega)
-    have runZero := block_run base [.p1988, .p1992] g (scan_code frameGuard hc)
-      (frameGuard.error.trans he) (frameGuard.aligned ha) (by
-        simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, gp, BitVec.add_assoc])
+    have gpc : r .PC g = base + 1988#64 := gp
+    have runZero : run 2 g = block base [.p1988, .p1992] g :=
+      block_run base [.p1988, .p1992] g (scan_code frameGuard hc)
+        (frameGuard.error.trans he) (frameGuard.aligned ha) (by
+          simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, gpc, BitVec.add_assoc])
     refine ⟨?_, ?_, ?_⟩
     · simp only [readFuel, present, ↓reduceIte]
       rw [show 4 = 2 + 2 by decide, run_plus, runGuard, runZero]
       simp only [readState, present, ↓reduceIte, g]
     · simp [readState, present, block, Op.effect, put, next, state_simp_rules]
-    · simp [readState, present, block, Op.effect, put, next, state_simp_rules, none]
+    · simp [readState, present, block, Op.effect, put, next, state_simp_rules]
 
 def tailOps (carry : Bool) : List Op :=
   if carry then [.p1952, .p1964, .p1968, .p1972, .p1976]
@@ -102,7 +103,7 @@ theorem tail_run (s : ArmState) (base : BitVec 64) (remaining : Nat)
       r (.GPR 14#5) (tailState s base) = r (.GPR 16#5) s ∧
       read_pc (tailState s base) =
         base + (if remaining = 0 then 2044#64 else 1980#64) := by
-  have hz := last_guard remaining hr
+  have hz : BitVec.ofNat 64 (remaining + 1) = 1#64 ↔ remaining = 0 := by bv_omega
   have dec : BitVec.ofNat 64 (remaining + 1) - 1#64 = BitVec.ofNat 64 remaining := by
     bv_omega
   have hpc : r .PC s = base + 1952#64 := hp
@@ -111,9 +112,15 @@ theorem tail_run (s : ArmState) (base : BitVec 64) (remaining : Nat)
       simp [tailOps, carry, Follows, Op.row, Op.effect, put, next,
         state_simp_rules, hpc, BitVec.add_assoc]
   refine ⟨block_run base _ s hc he ha follow, ?_, ?_, ?_, ?_⟩
-  all_goals
-    by_cases carry : r (.FLAG .C) s = 1#1 <;>
+  · by_cases carry : r (.FLAG .C) s = 1#1 <;>
+      simp [tailState, tailOps, carry, block, Op.effect, put, next, state_simp_rules]
+  · by_cases carry : r (.FLAG .C) s = 1#1 <;>
       simp [tailState, tailOps, carry, block, Op.effect, put, next,
-        state_simp_rules, h13, dec, hz]
+        state_simp_rules, h13, dec]
+  · by_cases carry : r (.FLAG .C) s = 1#1 <;>
+      simp [tailState, tailOps, carry, block, Op.effect, put, next, state_simp_rules]
+  · by_cases carry : r (.FLAG .C) s = 1#1 <;> by_cases last : remaining = 0 <;>
+      simp [tailState, tailOps, carry, block, Op.effect, put, next,
+        state_simp_rules, h13, hz, last]
 
 end SszArm.NatAdd.SmallLoop

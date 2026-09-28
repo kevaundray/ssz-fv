@@ -44,7 +44,7 @@ theorem entry_run (s : ArmState) (base pointer sp output small : BitVec 64)
   let regions := writes sp output 1 count
   let v := block base [.p1868, .p1872, .p1876] s
   have hpc : r .PC s = base + 1868#64 := hp
-  have runEntry : run 3 s = v := block_run base _ s hc he ha (by
+  have runEntry : run 3 s = v := block_run base [.p1868, .p1872, .p1876] s hc he ha (by
     simp [Follows, Op.row, Op.effect, put, next, state_simp_rules,
       hpc, BitVec.add_assoc])
   have entryFrame : LoopFrame regions s v := readonly_frame base _ s regions (by decide)
@@ -73,6 +73,7 @@ theorem entry_run (s : ArmState) (base pointer sp output small : BitVec 64)
     simp only [regions, writes, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
     · have := layout.separate
+      have := layout.stack
       omega
     · left
       omega
@@ -81,8 +82,7 @@ theorem entry_run (s : ArmState) (base pointer sp output small : BitVec 64)
       let next := LimbAdd.step small (right.head?.getD 0#64) 0
       let rest := LimbAdd.loop count [] (right.drop 1) next.2
       (next.1 :: rest.1, rest.2) := by
-    simp only [LimbAdd.loop, List.head?_cons, Option.getD_some, List.tail_cons,
-      List.drop_one]
+    simp [LimbAdd.loop, List.drop_one]
   refine ⟨3 + fuel, t, ?_, frame, ?_,
     (frame.registers _ (by decide)).trans h1,
     (frame.registers _ (by decide)).trans h2,
@@ -107,6 +107,6 @@ theorem entry_run (s : ArmState) (base pointer sp output small : BitVec 64)
         have h := suffix k hk
         simpa only [hindex, recurrence, List.getElem?_cons_succ,
           Nat.add_comm 1 k] using h
-    simpa only [address, List.getElem?_eq_getElem j.isLt, Option.getD_some] using expected
+    simpa [address, List.getElem?_eq_getElem j.isLt] using expected
 
 end SszArm.NatAdd.SmallLoop

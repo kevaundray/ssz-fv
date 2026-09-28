@@ -34,7 +34,7 @@ theorem suffixProtected_next (stack output : BitVec 64) (index remaining address
   · exact Or.inl empty
   · right
     intro span member
-    simp only [suffixWrites, List.mem_cons, List.mem_singleton] at member
+    simp only [suffixWrites, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
     · exact apart _ (by simp [suffixWrites])
     · have separate := apart (output.toNat + 8 * index, 8 * (remaining + 1))
@@ -49,7 +49,7 @@ theorem suffixFrame_extend {s t : ArmState} (stack output : BitVec 64) (index re
   intro a outside
   apply frame.memory a
   intro span member
-  simp only [suffixWrites, List.mem_cons, List.mem_singleton] at member
+  simp only [suffixWrites, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl
   · exact outside _ (by simp [suffixWrites])
   · have separate := outside (output.toNat + 8 * index, 8 * (remaining + 1))
@@ -72,7 +72,7 @@ theorem suffixFrame_into {s t : ArmState} (stack output : BitVec 64) (index rema
   intro a outside
   apply frame.memory a
   intro span member
-  simp only [suffixWrites, List.mem_cons, List.mem_singleton] at member
+  simp only [suffixWrites, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl
   · exact outside _ slot
   · simp only [Prod.fst, Prod.snd]
@@ -94,7 +94,7 @@ theorem suffix_head_protected (stack output : BitVec 64) (index remaining : Nat)
   · omega
   · right
     intro span member
-    simp only [suffixWrites, List.mem_cons, List.mem_singleton] at member
+    simp only [suffixWrites, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
     · exact apart _ (by simp)
     · simp only [Prod.fst, Prod.snd]

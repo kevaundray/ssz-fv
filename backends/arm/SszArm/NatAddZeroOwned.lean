@@ -32,7 +32,7 @@ theorem normalized_owned (writes : List Delimited.Span) (operand : SszNative.Nat
   | small word =>
     by_cases zero : word = 0#64 <;>
       simp [SszNative.NatOperand.normalized, SszNative.NatOperand.words,
-        SszNative.NatOperand.pointer, SszNative.NatOperand.fromWords,
+        SszNative.NatOperand.fromWords,
         SszNative.Limbs.trim, zero, OperandOwned]
   | large pointer words => exact fromWords_owned writes pointer words owned
 
@@ -46,7 +46,6 @@ theorem original_low_word (s : ArmState) (pointer : BitVec 64) (words : List (Bi
   have stored := input.2.2.2 ⟨0, nonempty⟩
   apply BitVec.eq_of_toNat_eq
   have same := Option.some.inj stored
-  simpa only [widthLoad, Nat.mul_zero, Nat.add_zero, BitVec.ofNat_toNat,
-    List.getElem?_eq_getElem nonempty, Option.getD_some] using same
+  simpa [widthLoad, BitVec.setWidth_eq, List.getElem?_eq_getElem nonempty] using same
 
 end SszArm.NatAdd

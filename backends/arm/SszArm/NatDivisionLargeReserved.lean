@@ -46,7 +46,8 @@ theorem large_guard_reserved_post (original s : ArmState) (base pointer : BitVec
   have source := SszNative.NatDivision.phase_reserved (.large pointer words) (r (.GPR 3#5) original)
     (arenaOf original).base (arenaOf original).capacity (arenaOf original).used
     owned.divisor_nonzero owned.divisor_ne_one count reservation reserve
-  have allocated : (outcome original (.large pointer words)).allocation = some reservation := by rw [source]
+  have allocated : (outcome original (.large pointer words)).allocation = some reservation := by
+    rw [outcome, source]
   have stack := owned.stackBound
   have headerBound := owned.arenaBound
   have slot : (r (.GPR 31#5) s).toNat - 16 = (r (.GPR 31#5) original).toNat - 80 := by

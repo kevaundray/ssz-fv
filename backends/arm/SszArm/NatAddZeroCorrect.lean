@@ -107,7 +107,7 @@ theorem zero_right_counted_left (s : ArmState) (base pointer : BitVec 64)
     have r3 : r (.GPR 3#5) s = 0#64 := owned.rightPointer
     have r4 : r (.GPR 4#5) s = 0#64 := owned.rightPayload
     have bound : sigWords words < 2^64 :=
-      lt_of_le_of_lt (sigWords_le_length words) owned.operands.1.length_bound
+      Nat.lt_of_le_of_lt (sigWords_le_length words) owned.operands.1.length_bound
     have countNonzero : r (.GPR 9#5) s ≠ 0#64 := by
       have h : sigWords words ≠ 0 := nonzero
       rw [copy]

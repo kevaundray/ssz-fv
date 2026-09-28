@@ -21,8 +21,7 @@ theorem operand_low (s : ArmState) (pointer payload : BitVec 64)
       rw [zero] at length
       simp only [BitVec.toNat_ofNat] at length
       omega
-    · simpa only [Nat.mul_zero, BitVec.ofNat_zero, BitVec.add_zero,
-        List.getElem?_eq_getElem nonempty, Option.getD_some] using stored ⟨0, nonempty⟩
+    · simpa [List.getElem?_eq_getElem nonempty] using stored ⟨0, nonempty⟩
 
 theorem words_positive (operand : NatOperand) (nonzero : operand.wordCount ≠ 0) :
     0 < operand.words.length := by

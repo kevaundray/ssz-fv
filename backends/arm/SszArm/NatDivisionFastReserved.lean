@@ -30,9 +30,10 @@ theorem fast_reserved_post (original s : ArmState) (base : BitVec 64) (site : Fa
   have executed := fast_run site s base hc he ha hp (by omega)
   have arithmetic := fast_arithmetic site s base operand count domain input
   rw [divisor] at arithmetic
-  have high : r (.GPR 1#5) t ≠ 0#64 := by
+  have high : r (.GPR 1#5) (fastResult site s base) ≠ 0#64 := by
     intro zero
     have bound := (high_zero_iff (r (.GPR 0#5) t) (r (.GPR 1#5) t)).1 zero
+    change Udivti3.numerator (fastResult site s base) < 2^64 at bound
     rw [arithmetic.1] at bound
     exact wide bound
   let remainder := SszNative.NatDivision.wideRemainder operand (r (.GPR 3#5) original)
@@ -46,7 +47,8 @@ theorem fast_reserved_post (original s : ArmState) (base : BitVec 64) (site : Fa
     exact congrArg (fun bytes => bytes a) (fast_memory site s base)
   have code : CodeAt t base := by simpa only [t, CodeAt, fast_program] using hc.1
   have error : read_err t = .None := (fast_error site s base).trans he
-  have aligned : CheckSPAlignment t := by simpa only [CheckSPAlignment, t, fast_sp] using ha
+  have aligned : CheckSPAlignment t := by
+    simpa only [CheckSPAlignment, state_simp_rules, t, fast_sp] using ha
   have output : r (.GPR 19#5) t = r (.GPR 0#5) original :=
     (fast_gpr site s base 19#5 (by decide) (by decide) (by decide)).trans out
   have allocator : r (.GPR 21#5) t = r (.GPR 4#5) original :=

@@ -1,5 +1,6 @@
 import SszArm.NatDivisionLargeArray
 import SszArm.NatDivisionSuccessPost
+import SszArm.NatDivisionNormalizeStore
 
 namespace SszArm.NatDivision
 
@@ -72,7 +73,7 @@ theorem large_reserved_post (original s : ArmState) (base pointer : BitVec 64)
       apply frame.registers
       have member : reg = 25#5 ∨ reg = 26#5 ∨ reg = 27#5 ∨ reg = 28#5 ∨ reg = 29#5 := by bv_omega
       simp only [List.mem_cons, List.not_mem_nil, or_false]
-      tauto
+      rcases member with rfl | rfl | rfl | rfl | rfl <;> simp
     · intro reg low high
       exact congrArg (BitVec.setWidth 64) (frame.vectors reg)
   have tc : CodeAt t base := by simpa only [CodeAt, frame.program] using hc.1
@@ -101,41 +102,39 @@ theorem large_reserved_post (original s : ArmState) (base pointer : BitVec 64)
   have storeRun : run 2 t = u := by
     rw [quotient_normalization_store t base tc te ta pc, normalizedPointer]
   have outputBound : (r (.GPR 19#5) t).toNat + 8 ≤ 2^64 := by rw [outT]; have := owned.outputBound; omega
-  have storeFrame : MemoryFrame (returnWrites t) t u := by
-    intro a outside
-    have apart := outside ((r (.GPR 19#5) t).toNat, 68) (by simp [returnWrites])
-    simp only [u, state_simp_rules, ArmState.mem_w_eq_mem]
-    apply BoolCodec.write_mem_bytes_frame _ _ _ _ a outputBound
-    simp only [Prod.fst, Prod.snd] at apart
-    omega
-  have local := output_local_frame owned savedT outT storeFrame
+  obtain ⟨storeFrame, storeGpr, storeVector, storeProgram, storeError, storeAligned,
+    storePc, pointerStored⟩ := normalization_store_observations t base quotient.pointer outputBound
+  have localMemory := output_local_frame owned savedT outT storeFrame
   have savedU : Saved original u := by
     apply savedT.output_preserved owned.stackBound (owned.return_space savedT.sp outT) storeFrame
-    · simp [u, state_simp_rules]
-    · intro reg low high; simp [u, state_simp_rules]
-    · intro reg low high; simp [u, state_simp_rules]
-  have outU : r (.GPR 19#5) u = r (.GPR 0#5) original := by simpa [u, state_simp_rules] using outT
-  have writtenU := written_local_preserved owned local writtenT
-  have cursorU := cursor_local_preserved owned local cursorT
+    · exact storeGpr 31#5
+    · intro reg low high
+      exact storeGpr reg
+    · intro reg low high
+      exact congrArg (BitVec.setWidth 64) (storeVector reg)
+  have outU : r (.GPR 19#5) u = r (.GPR 0#5) original := (storeGpr 19#5).trans outT
+  have writtenU := written_local_preserved owned localMemory writtenT
+  have cursorU := cursor_local_preserved owned localMemory cursorT
   have quotientAt : quotient.At (widthLoad u) := by
     simpa only [source] using allocated_operand_at owned reservation allocated writtenU
   have quotientOwned : OperandOwned (returnWrites u) quotient := by
     simpa only [source] using allocated_operand_owned owned reservation allocated savedU.sp outU
-  have pointerStored : read_mem_bytes 8 (r (.GPR 19#5) u) u = quotient.pointer := by
-    simp only [u, state_simp_rules]
-    exact BoolCodec.read_mem_bytes_write_mem_bytes_same t 8 _ _ outputBound
-  have payloadU : r (.GPR 10#5) u = quotient.payload := by simpa [u, state_simp_rules] using normalizedPayload
+  have payloadU : r (.GPR 10#5) u = quotient.payload := (storeGpr 10#5).trans normalizedPayload
   have remU : r (.GPR 1#5) u = remainder := by
     have h := congrArg (BitVec.ofNat 64) rem
-    simpa [u, remainder, state_simp_rules, BitVec.ofNat_toNat] using h
-  have statusU : (r (.GPR 8#5) u).setWidth 32 = 0#32 := by simp [u, state_simp_rules, status]
-  have uc : CodeAt u base := by simpa [u, CodeAt, state_simp_rules] using tc
-  have ue : read_err u = .None := by simpa [u, state_simp_rules] using te
-  have ua : CheckSPAlignment u := by simpa [u, CheckSPAlignment, state_simp_rules] using ta
-  have up : read_pc u = base + 800#64 := by simp [u, state_simp_rules]
+    have value : r (.GPR 1#5) t = remainder := by
+      simpa only [remainder, divided, BitVec.ofNat_toNat, BitVec.setWidth_eq] using h
+    exact (storeGpr 1#5).trans value
+  have statusU : (r (.GPR 8#5) u).setWidth 32 = 0#32 := by rw [storeGpr 8#5, status]; rfl
+  have uc : CodeAt u base := by
+    have program : u.program = t.program := storeProgram
+    simpa only [CodeAt, program] using tc
+  have ue : read_err u = .None := storeError.trans te
+  have ua : CheckSPAlignment u := storeAligned ta
+  have up : read_pc u = base + 800#64 := storePc
   have post := normalized_result_post original u base (.large pointer words) quotient remainder owned
     savedU outU uc ue ua up (by rw [source]) pointerStored payloadU remU statusU quotientAt quotientOwned
-    writtenU cursorU (full.trans (local_frame (outcome original (.large pointer words)) local))
+    writtenU cursorU (full.trans (local_frame_for (outcome original (.large pointer words)) localMemory))
   refine ⟨fuel + 2 + 16, ?_⟩
   rw [run_plus, run_plus, executed, storeRun]
   exact post

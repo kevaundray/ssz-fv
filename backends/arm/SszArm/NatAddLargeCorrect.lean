@@ -37,7 +37,10 @@ theorem large_correct (s : ArmState) (base : BitVec 64) (left right : NatOperand
   have arenaEq : arenaOf u = arenaOf s := arena_eq_of_scan owned maxFrame
   have u8 : (r (.GPR 8#5) u).toNat = SszNative.NatAdd.count left right := by
     rw [max8]
-    exact BitVec.toNat_ofNat_of_lt (by omega)
+    have widthBound : SszNative.NatAdd.count left right < 2^64 := by omega
+    change (BitVec.ofNat 64 (SszNative.NatAdd.count left right)).toNat =
+      SszNative.NatAdd.count left right
+    simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt widthBound]
   have u5 := uf.registers 5#5 (by decide)
   have headerSeparate : (r (.GPR 5#5) u).toNat + 24 ≤ (r (.GPR 31#5) u).toNat - 16 ∨
       (r (.GPR 31#5) u).toNat ≤ (r (.GPR 5#5) u).toNat := by
@@ -88,7 +91,7 @@ theorem large_correct (s : ArmState) (base : BitVec 64) (left right : NatOperand
       apply (local_frame (outcome s left right) um).trans
       apply memory_of_contained arenaMemory
       intro inner member
-      simp only [List.mem_cons, List.mem_singleton] at member
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
       rcases member with rfl | rfl
       · refine ⟨((r (.GPR 31#5) s).toNat - 16, 16), ?_, ?_, ?_⟩
         · rw [allocated.writes]; simp [localWrites]
@@ -102,7 +105,7 @@ theorem large_correct (s : ArmState) (base : BitVec 64) (left right : NatOperand
       width.trans max8
     have v9 : r (.GPR 9#5) v = BitVec.ofNat 64 reservation.pointer := by
       apply BitVec.eq_of_toNat_eq
-      rw [pointer, BitVec.toNat_ofNat_of_lt allocated.pointer_bound]
+      rw [pointer, BitVec.toNat_ofNat, Nat.mod_eq_of_lt allocated.pointer_bound]
     have v10 : r (.GPR 10#5) v = BitVec.ofNat 64 reservation.pointer :=
       allocationPointer.trans v9
     have vcursor : read_mem_bytes 8 (r (.GPR 5#5) s + 16#64) v =
@@ -115,11 +118,11 @@ theorem large_correct (s : ArmState) (base : BitVec 64) (left right : NatOperand
           0 (SszNative.NatAdd.count left right + 1))
         (r (.GPR 5#5) s + 16#64).toNat 8 := by
       have localCursor := owned.arenaLocal.subspan 16 8 (by decide)
-      have pointerNat : (BitVec.ofNat 64 reservation.pointer).toNat = reservation.pointer :=
-        BitVec.toNat_ofNat_of_lt allocated.pointer_bound
+      have pointerNat : (BitVec.ofNat 64 reservation.pointer).toNat = reservation.pointer := by
+        simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt allocated.pointer_bound]
       right
       intro span member
-      simp only [LargeLoop.suffixWrites, List.mem_cons, List.mem_singleton,
+      simp only [LargeLoop.suffixWrites, List.mem_cons, List.not_mem_nil, or_false,
         pointerNat, Nat.mul_zero, Nat.add_zero] at member
       rcases member with rfl | rfl
       · rcases localCursor with empty | apart

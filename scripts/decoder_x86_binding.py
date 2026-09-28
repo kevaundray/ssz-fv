@@ -15,6 +15,7 @@ REG8 = {"al": "rax", "bl": "rbx", "cl": "rcx", "dl": "rdx",
 REG8.update({f"r{i}b": f"r{i}" for i in range(8, 16)})
 ALIASES = {1580: "boolScope", 2663: "boolZero", 2674: "boolBad", 7773: "boundsPanic"}
 NOPS = {
+    ("nop", "", "90"),
     ("xchgw", "%ax,%ax", "6690"),
     ("cs", "nopw0x0(%rax,%rax,1)", "662e0f1f840000000000"),
     ("nopl", "0x0(%rax)", "0f1f4000"),
@@ -22,6 +23,7 @@ NOPS = {
     ("nopl", "0x0(%rax)", "0f1f8000000000"),
     ("nopw", "0x0(%rax,%rax,1)", "660f1f440000"),
     ("nopl", "0x0(%rax,%rax,1)", "0f1f440000"),
+    ("nopw", "0x0(%rax,%rax,1)", "660f1f840000000000"),
 }
 
 
@@ -48,16 +50,28 @@ def expression(row, label_prefix=""):
     if mnemonic in CONDITIONAL:
         name = label_prefix + ALIASES.get(row["target"], f"u{row['target']}")
         return f"parse({json.dumps(mnemonic + ' ' + name)})"
+    if mnemonic == "jmpq" and operands.startswith("*"):
+        registers = {"*%rax": ("rax", b"\xff\xe0"),
+                     "*%rcx": ("rcx", b"\xff\xe1"),
+                     "*%rdx": ("rdx", b"\xff\xe2")}
+        form = registers.get(operands)
+        if form is None or encoded != form[1]:
+            raise ValueError(f"unsupported indirect dispatcher jump: {row}")
+        return f"[.instr (.regular .W64 .W64 (.jmp (.reg .{form[0]})))]"
     if mnemonic in ("jmp", "jmpq", "call", "callq"):
         operation = "call" if mnemonic.startswith("call") else "jmp"
         if operation == "call" and not row.get("callee"):
             raise ValueError(f"call lacks an extracted callee binding: {row}")
         delta = row["target"] - row["pc"] - row["width"]
         return f"[.instr (.regular .W64 .W64 (.{operation} (.rel (.int64 ({delta})))))]"
-    if mnemonic in ("cs", "nopl", "nopw", "xchgw"):
+    if mnemonic in ("cs", "nop", "nopl", "nopw", "xchgw"):
         if (mnemonic, operands, encoded.hex()) not in NOPS:
             raise ValueError(f"unrecognized architectural nop: {row}")
         return f"[.instr (.regular .W64 .W64 (.nop {row['width']}))]"
+    if mnemonic == "incl":
+        if operands != "%edi" or encoded != b"\xff\xc7":
+            raise ValueError(f"unsupported increment encoding: {row}")
+        return "[.instr (.regular .W64 .W32 (.inc (.reg (.low .rdi .W32))))]"
     if mnemonic == "movzbl":
         registers = re.fullmatch(r"%([a-z0-9]+),%([a-z0-9]+)", operands)
         if registers is not None:
@@ -86,20 +100,44 @@ def expression(row, label_prefix=""):
         src, dst = match.groups()
         condition = "c" if mnemonic == "cmovbq" else "z"
         return f"[.instr (.regular .W64 .W64 (.cmovcc .{condition} (.low .{dst} .W64) (.reg (.low .{src} .W64))))]"
+    if mnemonic == "movslq":
+        forms = {
+            "(%rcx,%rax,4),%rax": ("rcx", "rax", b"\x48\x63\x04\x81"),
+            "(%rdx,%rcx,4),%rcx": ("rdx", "rcx", b"\x48\x63\x0c\x8a"),
+            "(%rdi,%rdx,4),%rdx": ("rdi", "rdx", b"\x48\x63\x14\x97"),
+        }
+        form = forms.get(operands)
+        if form is None or encoded != form[2]:
+            raise ValueError(f"unsupported signed dispatcher table load: {row}")
+        base, target, _ = form
+        return (f"[.instr (.regular .W64 .W64 (.movsx (.reg .{target}) "
+                f"(.mem (w := .W32) {{base := some (.reg .{base}), idx := some ⟨.{target}, .W32⟩}})))]")
+    if mnemonic == "leaq" and "%rip" in operands:
+        match = re.fullmatch(r"(-?0x[0-9a-f]+|-?[0-9]+)\(%rip\),%(rcx|rdx|rdi)(?:#[0-9a-f]+<[^>]+>)?", operands)
+        if match is None or len(encoded) != 7:
+            raise ValueError(f"unsupported RIP-relative dispatcher address: {row}")
+        displacement, target = int(match[1], 0), match[2]
+        prefix = {"rcx": b"\x48\x8d\x0d", "rdx": b"\x48\x8d\x15", "rdi": b"\x48\x8d\x3d"}[target]
+        if encoded[:3] != prefix:
+            raise ValueError(f"RIP-relative destination disagrees with bytes: {row}")
+        if displacement != int.from_bytes(encoded[3:], "little", signed=True):
+            raise ValueError(f"RIP-relative displacement disagrees with bytes: {row}")
+        return (f"[.instr (.regular .W64 .W64 (.lea .{target} "
+                f"{{base := some .rip, idx := none, disp := .int64 ({displacement})}}))]")
     if mnemonic == "leaq" and "(," in operands:
         match = re.fullmatch(r"(-?0x[0-9a-f]+|-?[0-9]+)?\(,%([a-z0-9]+),8\),%([a-z0-9]+)", operands)
         if match is None or match[2] not in REG64 or match[3] not in REG64:
             raise ValueError(f"unsupported base-less address: {row}")
         address = f"{{ base := none, idx := some ⟨.{match[2]}, .W64⟩, disp := .int64 ({int(match[1] or '0', 0)}) }}"
         return f"[.instr (.regular .W64 .W64 (.lea (.low .{match[3]} .W64) {address}))]"
-    if mnemonic in {"cmovaq", "cmovneq"}:
+    if mnemonic in {"cmovaq", "cmovneq", "cmovaeq"}:
         # Kraken infers the width from the registers, after the condition code.
         mnemonic = mnemonic[:-1]
     if mnemonic in {"cmpq", "cmpb", "cmpl", "movq", "movl", "movw", "movb", "testq", "testl", "testb",
-                    "addq", "subq", "andq", "andl", "andb", "orq", "orb", "xorq", "xorl", "xorb",
-                    "shlq", "shrq", "leaq", "leal", "decq", "popq", "retq", "setb", "sete", "setne",
-                    "seta", "sbbb", "pushq", "shrl", "movabsq", "adcq", "cmova", "setl",
-                    "negq", "setae", "cmovne", "imulq", "mulq"}:
+                    "addq", "addl", "subq", "andq", "andl", "andb", "orq", "orb", "xorq", "xorl", "xorb",
+                    "shlq", "shll", "shlb", "shrq", "shrb", "shldq", "shrdq", "leaq", "leal", "decq", "popq", "retq", "setb", "sete", "setne",
+                    "seta", "sbbb", "sbbq", "pushq", "shrl", "movabsq", "adcq", "cmova", "setl",
+                    "negq", "notb", "setae", "cmovne", "cmovae", "imulq", "mulq"}:
         if not re.fullmatch(r"[%a-z0-9(),$x+-]*", operands):
             raise ValueError(f"unsupported operand syntax: {row}")
         return f"parse({json.dumps(mnemonic + ' ' + operands)})"
@@ -145,8 +183,9 @@ def _image_parts(rows, raw, label_prefix=""):
     return names, expressions, pieces
 
 
-def _image_source(rows, raw, module, namespace, constants, label_prefix=""):
+def _image_source(rows, raw, module, namespace, constants, label_prefix="", *, tail_pieces=()):
     names, expressions, pieces = _image_parts(rows, raw, label_prefix)
+    pieces.extend(tail_pieces)
     label_literal = ', '.join(f'({json.dumps(name)}, {pc})' for name, pc in names)
     constant_proofs = "\n".join(
         f"example : {namespace}.{name} = {value} := by decide"
@@ -161,7 +200,7 @@ example : actual = {namespace}.program := by decide
 {constant_proofs}
 example : {namespace}.labels = [{label_literal}] := by decide
 
-def bound : Executable := (0, List.flatten [{', '.join(pieces)}])
+noncomputable def bound : Executable := (0, List.flatten [{', '.join(pieces)}])
 example : {namespace}.CodeAt bound 0 := by
   constructor
   · have h : {namespace}.program.all (fun row =>
@@ -207,6 +246,27 @@ def nat_add_source(rows, entries, raw, frontier, callees):
         raise ValueError("unexpected Nat addition entry, frontier, callees, or image extent")
     return _image_source(rows, raw, "SszX86.NatAddImpl", "SszX86.NatAdd",
                          {"entry": 0}, label_prefix="natAdd_")
+
+
+def nat_exact_source(rows, entries, raw, frontier, callees):
+    if entries != [0] or frontier or callees or len(rows) != 53 or len(raw) != 190:
+        raise ValueError("unexpected exact-size entry, frontier, callees, or image extent")
+    return _image_source(rows, raw, "SszX86.NatExactImpl", "SszX86.NatExact",
+                         {"entry": 0}, label_prefix="natExact_")
+
+
+def nat_to_u128_source(rows, entries, raw, frontier, callees):
+    if entries != [0] or frontier or callees or len(rows) != 39 or len(raw) != 119:
+        raise ValueError("unexpected Nat.to_u128 entry, frontier, callees, or image extent")
+    return _image_source(rows, raw, "SszX86.NatToU128Impl", "SszX86.NatToU128",
+                         {"entry": 0}, label_prefix="natToU128_")
+
+
+def nat_from_u128_source(rows, entries, raw, frontier, callees):
+    if entries != [0] or frontier or callees or len(rows) != 47 or len(raw) != 177:
+        raise ValueError("unexpected Nat.from_u128 entry, frontier, callees, or image extent")
+    return _image_source(rows, raw, "SszX86.NatFromU128Impl", "SszX86.NatFromU128",
+                         {"entry": 0}, label_prefix="natFromU128_")
 
 
 
@@ -344,4 +404,56 @@ example : SszX86.Udivti3.Embedded.CodeAt bound 160352 := by
         SszX86.Udivti3.layout, SszX86.Udivti3.program, Kraken.Layout.apply]
     intro name hn
     exact of_decide_eq_true (List.all_eq_true.mp h name hn)
+'''
+
+
+def emit_source(rows, entries, raw, frontiers, callees, *, linked_bytes,
+                memcpy_rows, memcpy_raw, table_bytes):
+    expected_frontiers = [1615, 1625, 1638, 1653, 1666, 1675, 1683, 1694]
+    if (entries != [0, 256, 414] or frontiers != expected_frontiers
+            or len(rows) != 276 or len(raw) != 1705 or set(callees) != {"memcpy"}):
+        raise ValueError("unexpected primitive emitter entries, frontiers, or image extent")
+    helper = callees["memcpy"]
+    if (helper["offset"] != 110736 or helper["size"] != 57
+            or len(memcpy_rows) != 19 or len(memcpy_raw) != 57
+            or memcpy_raw != bytes.fromhex(helper["raw"])
+            or len(linked_bytes) != 110793 or linked_bytes[:len(raw)] != raw
+            or linked_bytes[110736:] != memcpy_raw):
+        raise ValueError("unexpected linked emitter memcpy image")
+    if table_bytes != bytes.fromhex("806b01001e6c0100b36b0100db6b0100"):
+        raise ValueError("unexpected primitive emitter jump-table bytes")
+    labels, _, helper_pieces = _image_parts(memcpy_rows, memcpy_raw, "copy_")
+    if labels != [("copy_u9", 9), ("copy_u33", 33), ("copy_u38", 38), ("copy_u56", 56)]:
+        raise ValueError("unexpected memcpy control-flow labels")
+    for pc, name in ((9, "bulk"), (33, "tail"), (38, "byte"), (56, "done")):
+        helper_pieces = [piece.replace(f"copy_u{pc}", f"copy_{name}")
+                         for piece in helper_pieces]
+    tail = _byte_segments(linked_bytes[len(raw):110736]) + helper_pieces
+    source = _image_source(
+        rows, raw, "SszX86.EmitMemcpyEmbedded", "SszX86.Emit",
+        {"entry": 0, "memcpyOffset": 110736, "tableOffset": -92800},
+        "emit_", tail_pieces=tail)
+    return source + f'''
+example : SszX86.Emit.tableBytes = [{', '.join(map(str, table_bytes))}] := by decide
+def actualCopy : List (Directive × Nat) := List.flatten [{', '.join(helper_pieces)}]
+example : actualCopy = (SszX86.memcpyExecutable 0).2 := by decide
+example : SszX86.Emit.MemcpyCodeAt bound 110736 := by
+  apply SszX86.Emit.MemcpyCodeAt.of_rows
+  · have checked : (SszX86.memcpyExecutable 110736).withAddresses.all (fun row =>
+        decide (bound.directivesAtAddress row.1 =
+          (SszX86.memcpyExecutable 110736).directivesAtAddress row.1)) = true := by
+      simp (config := {{instances := true, maxSteps := 1000000}}) [bound, Kraken.Executable.directivesAtAddress,
+        Kraken.Executable.withAddresses, SszX86.memcpyExecutable, SszX86.memcpyLayout,
+        SszX86.memcpyProgram, Kraken.Layout.apply]
+    intro row member
+    exact of_decide_eq_true (List.all_eq_true.mp checked row member)
+  · have checked : SszX86.Emit.memcpyLabels.all (fun name =>
+        decide (bound.labels.label name =
+          (SszX86.memcpyExecutable 110736).labels.label name)) = true := by
+      dsimp (config := {{instances := true}}) [Executable.labels]
+      simp (config := {{instances := true, maxSteps := 1000000}}) [bound, Kraken.Executable.withAddresses,
+        SszX86.Emit.memcpyLabels, SszX86.memcpyExecutable, SszX86.memcpyLayout,
+        SszX86.memcpyProgram, Kraken.Layout.apply]
+    intro name member
+    exact of_decide_eq_true (List.all_eq_true.mp checked name member)
 '''

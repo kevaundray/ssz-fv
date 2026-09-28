@@ -68,35 +68,43 @@ theorem read_frame (s : ArmState) (base sp output : BitVec 64)
     (right : List (BitVec 64)) (index remaining : Nat)
     (hsp : r (.GPR 31#5) s = sp) (hs : 16 ≤ sp.toNat) :
     LoopFrame (writes sp output index remaining) s (readState s base right index) := by
-  have savedFrame := NatCompare.saved_frame s 9#5 (by simpa [hsp] using hs)
+  let regions := writes sp output index remaining
+  let g := block base [.p1980, .p1984] s
+  have guardFrame : LoopFrame regions s g :=
+    readonly_frame base [.p1980, .p1984] s regions (by decide)
   by_cases present : index < right.length
-  all_goals
-    constructor
-    · simp [readState, present, loadResult, saved, state_simp_rules]
-    · simp [readState, present, loadResult, saved, state_simp_rules]
-    · intro reg hr
-      simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
-      simp (disch := simp_all) [readState, present, loadResult, LoadKind.dst,
-        LoadKind.tmp, block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
-        saved, state_simp_rules]
-    · intro reg
-      simp [readState, present, loadResult, LoadKind.tmp, block, Op.effect,
-        put, next, Udivti3.compare, Udivti3.next, saved, state_simp_rules]
-    · intro a outside
-      have slot := outside (sp.toNat - 16, 16) (by simp [writes])
-      simp only [readState, present, ↓reduceIte, loadResult, LoadKind.tmp,
-        block, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
-        Udivti3.compare, Udivti3.next, ArmState.mem_w_eq_mem]
-      first
-      | exact savedFrame.memory a (by rw [hsp]; omega)
-      | rfl
+  · have gsp : r (.GPR 31#5) g = sp := guardFrame.sp.trans hsp
+    have savedFrame := NatCompare.saved_frame g 9#5 (by simpa only [gsp] using hs)
+    have loadedFrame : LoopFrame regions g
+        (loadResult g base .loopRightSmall (right[index]?.getD 0#64)) := by
+      constructor
+      · simp [loadResult, saved, state_simp_rules]
+      · simp [loadResult, saved, read_err, state_simp_rules]
+      · intro reg hr
+        simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
+        simp (disch := simp_all) [loadResult, LoadKind.dst, saved, state_simp_rules]
+      · intro reg
+        simp [loadResult, saved, state_simp_rules]
+      · intro a outside
+        have slot := outside (sp.toNat - 16, 16) (by simp [regions, writes])
+        simp only [loadResult, ArmState.mem_w_eq_mem]
+        change (saved g 9#5).mem a = g.mem a
+        exact savedFrame.memory a (by rw [gsp]; omega)
+    simpa only [readState, present, ↓reduceIte] using guardFrame.trans loadedFrame
+  · have zeroFrame : LoopFrame regions g (block base [.p1988, .p1992] g) :=
+      readonly_frame base [.p1988, .p1992] g regions (by decide)
+    simpa only [readState, present, ↓reduceIte] using guardFrame.trans zeroFrame
 
 theorem tail_frame (s : ArmState) (base : BitVec 64) (regions : List Span) :
     LoopFrame regions s (tailState s base) := by
   apply readonly_frame
   intro op hop
   unfold tailOps at hop
-  split at hop <;> simp_all [readonlyOps]
+  split at hop
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at hop
+    rcases hop with rfl | rfl | rfl | rfl | rfl <;> decide
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at hop
+    rcases hop with rfl | rfl | rfl | rfl | rfl | rfl <;> decide
 
 /-- Suffix composition enlarges an allowed span; it does not authorize padding
 or any already-used arena bytes. -/

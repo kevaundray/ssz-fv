@@ -27,7 +27,11 @@ binding: models
 	python3 scripts/check-nat-compare-binding.py
 	python3 scripts/check-nat-add-binding.py
 	python3 scripts/check-nat-division-binding.py
+	python3 scripts/check-nat-conversion-binding.py
+	python3 scripts/check-bitvector-binding.py
 	python3 scripts/check-delimited-binding.py
+	python3 scripts/check-bitlist-binding.py
+	python3 scripts/check-dispatch-binding.py
 
 smoke:
 	python3 scripts/check-uint64.py

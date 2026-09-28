@@ -14,7 +14,7 @@ theorem loopFrame_prefix {sp pointer : BitVec 64} {small large : Nat} {s t : Arm
   intro a outside
   apply frame.memory a
   intro span member
-  simp only [loopWrites, List.mem_cons, List.mem_singleton] at member
+  simp only [loopWrites, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl
   · exact outside _ (by simp [loopWrites])
   · have := outside (pointer.toNat, 8 * large) (by simp [loopWrites])
@@ -31,7 +31,7 @@ theorem loopIteration_full_frame (s : ArmState) (base : BitVec 64) (count i : Na
   intro a outside
   apply frame.memory a
   intro span member
-  simp only [loopRoundWrites, List.mem_cons, List.mem_singleton] at member
+  simp only [loopRoundWrites, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl
   · exact outside _ (by simp [loopWrites])
   · have := outside ((r (.GPR 24#5) s).toNat, 8 * count) (by simp [loopWrites])
@@ -53,11 +53,13 @@ theorem loopIteration_lower (s : ArmState) (base : BitVec 64)
     have := space.physical; omega
   · right
     intro span member
-    simp only [loopRoundWrites, List.mem_cons, List.mem_singleton] at member
+    simp only [loopRoundWrites, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
     · simp only [Prod.fst, Prod.snd]
       rw [space.address (by omega : i < low.length + 1)]
-      have := space.apart; omega
+      have := space.apart
+      have := space.stack
+      omega
     · simp only [Prod.fst, Prod.snd, loopAddress, index,
         space.address (by omega : i < low.length + 1),
         space.address (by omega : low.length < low.length + 1)]
@@ -73,11 +75,13 @@ theorem loopFrame_upper {s t : ArmState} {sp pointer : BitVec 64} {count : Nat}
     have := space.physical; omega
   · right
     intro span member
-    simp only [loopWrites, List.mem_cons, List.mem_singleton] at member
+    simp only [loopWrites, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
     · simp only [Prod.fst, Prod.snd]
       rw [space.address (by omega : count < count + 1)]
-      have := space.apart; omega
+      have := space.apart
+      have := space.stack
+      omega
     · simp only [Prod.fst, Prod.snd]
       rw [space.address (by omega : count < count + 1)]
       omega

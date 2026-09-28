@@ -51,7 +51,7 @@ theorem allocated_output_protected {original s : ArmState} {operand : SszNative.
   · exact Or.inl empty
   · right
     intro span member
-    simp only [returnWrites, List.mem_cons, List.mem_singleton] at member
+    simp only [returnWrites, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
     · rw [out]
       exact separate ((r (.GPR 0#5) original).toNat, 68) (by simp [localWrites])

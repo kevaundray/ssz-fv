@@ -20,6 +20,11 @@ import SszNatArithmeticMemory
 import SszNatOperandNormalization
 import SszNatAddMemory
 import SszNatDivisionMemory
+import SszNatNarrow
+import SszBitVector
+import SszBitVectorMemory
+import SszSerializeResources
+import SszArm.NatFromU128Model
 import SszArm.LogicalImmediateRegression
 import SszArm.Impl
 import SszArm.Proofs
@@ -41,6 +46,14 @@ import SszArm.ByteViewBody
 import SszArm.ByteViewControlFlow
 import SszArm.NatCompareProofs
 import SszArm.DelimitedProofs
+import SszArm.NatDivisionProofs
+import SszArm.NatToU128Proofs
+import SszArm.NatExactProofs
+import SszArm.NatAddProofs
+import SszArm.BitVectorProgram
+import SszArm.BitVectorProofs
+import SszArm.BitListProofs
+import SszArm.DispatchProofs
 import SszArm.BoolProofs
 import SszArm.BoolBody
 import SszArm.BoolBlockMemory
@@ -188,5 +201,82 @@ import SszArm.UintTails
 #print axioms SszNative.NatArithmetic.fromWide_result_at
 #print axioms SszNative.NatAdd.run_result_at
 #print axioms SszNative.NatDivision.run_result_at
+#print axioms SszArm.NatDivision.program_correct
+#print axioms SszArm.NatDivision.program_correct_success
+#print axioms SszArm.NatToU128.to_u128_correct
+#print axioms SszArm.NatExact.exact_correct
+#print axioms SszArm.NatAdd.add_correct
+#print axioms SszArm.NatAdd.add_correct_arithmetic
+
+#print axioms SszNative.NatOperand.wordCount_le_iff_value_lt
+#print axioms SszNative.NatNarrow.toU128_some_iff
+#print axioms SszNative.NatNarrow.toU128_none_iff
+#print axioms SszNative.NatNarrow.runExact_iff
+
+#print axioms SszNative.BitVector.run_refines
+#print axioms SszNative.BitVector.run_scratch_iff
+#print axioms SszNative.BitVector.rounding_failure_no_rollback
+#print axioms SszNative.BitVector.ResultAt.erased
+#print axioms SszNative.BitVector.expected_of_division
+#print axioms SszNative.BitVector.expected_of_round
+#print axioms SszNative.BitVector.expected_remainder_bound
+#print axioms SszNative.BitVector.scope_narrows
+#print axioms SszArm.BitVector.run_program
+#print axioms SszArm.BitVector.program_correct
+#print axioms SszArm.BitVector.program_refines
+#print axioms SszArm.BitList.program_correct
+#print axioms SszArm.BitList.bitList_correct
+#print axioms SszArm.BitList.progressiveBitList_correct
+#print axioms SszArm.BitList.bitList_ssz_correct
+#print axioms SszArm.BitList.progressiveBitList_ssz_correct
+#print axioms SszArm.Dispatch.Boolean.program_correct
+#print axioms SszArm.Dispatch.Bytes.program_correct
+#print axioms SszArm.Dispatch.Bytes.program_refines
+#print axioms SszArm.Dispatch.BitVector.program_correct
+#print axioms SszArm.Dispatch.BitVector.program_refines
+#print axioms SszArm.Dispatch.Unsigned.program_correct
+#print axioms SszArm.Dispatch.Unsigned.program_refines
+#print axioms SszArm.DispatchBitList.program_correct
+#print axioms SszArm.DispatchBitList.bitList_ssz_correct
+#print axioms SszArm.DispatchBitList.progressiveBitList_ssz_correct
+
+#print axioms SszNative.Arena.reserveBytes_some_iff
+#print axioms SszNative.Arena.reserveBytes_none_iff
+#print axioms SszNative.Arena.reserveBytes_interval
+#print axioms SszNative.Serialize.expected_encoding
+#print axioms SszNative.Serialize.measure_refines
+#print axioms SszNative.Serialize.encodedSize_refines
+#print axioms SszNative.Serialize.serialize_refines
+#print axioms SszNative.Serialize.serializeAlloc_refines
+#print axioms SszNative.Serialize.serialize_success_iff
+#print axioms SszNative.Serialize.serializeAlloc_success_iff
+#print axioms SszNative.Serialize.serialize_scratch_iff
+#print axioms SszNative.Serialize.serializeAlloc_scratch_iff
+#print axioms SszNative.Serialize.encodedSize_output_iff
+#print axioms SszNative.Serialize.serialize_output_iff
+#print axioms SszNative.Serialize.serializeAlloc_output_iff
+#print axioms SszNative.Serialize.serialize_resources
+#print axioms SszNative.Serialize.measureList_limit_no_rollback
+#print axioms SszNative.Serialize.measureList_second_failure_no_rollback
+#print axioms SszNative.Serialize.serializeAlloc_reservation_failure
+#print axioms SszNative.Serialize.serializeAlloc_zero
+#print axioms SszNative.Serialize.applyWrites_prefix
+#print axioms SszNative.Serialize.applyWrites_tail
+#print axioms SszNative.Serialize.applyWrites_no_read
+#print axioms SszNative.Serialize.serialize_failure_unchanged
+
+#print axioms SszArm.NatFromU128.correct
+#print axioms SszArm.NatFromU128.small_correct
+#print axioms SszArm.NatFromU128.Post.value
+#print axioms SszArm.NatFromU128.Post.pair
+#print axioms SszArm.NatFromU128.Post.protected
+#print axioms SszArm.NatFromU128.small_resources
+#print axioms SszArm.NatFromU128.allocated_iff
+#print axioms SszArm.NatFromU128.exhausted_iff
+#print axioms SszArm.NatFromU128.Post.allocated
+#print axioms SszArm.NatFromU128.Post.unallocated
+#print axioms SszArm.NatFromU128.correct_value
+#print axioms SszArm.NatFromU128.Post.result_owned
+#print axioms SszArm.NatFromU128.correct_model
 
 audit_native

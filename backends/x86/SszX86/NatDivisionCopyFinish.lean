@@ -72,19 +72,18 @@ theorem loop_ready (s t u : MachineData) (operand : NatOperand)
     rw [copied.index, entry.index, BitVec.neg_neg]
   · intro i hi
     have hiCount : i < operand.wordCount := by
-      simpa only [Limbs.trim_length] using hi
+      simpa only [Limbs.trim_length, NatOperand.wordCount] using hi
     have hiLength : i < operand.words.length :=
       Nat.lt_of_lt_of_le hiCount (Limbs.sigWords_le_length _)
     change Mem.loadInt u.dmem (get u .r14 + BitVec.ofNat 64 (8*i)) 8 = _
     rw [copied.destination]
-    have load := copied.load physical i hiCount
-    simpa [limb, List.getElem?_eq_getElem hiLength, Limbs.trim_eq_take] using load
+    have hl := copied.load physical i hiCount
+    simpa [limb, List.getElem?_eq_getElem hiLength, Limbs.trim_eq_take] using hl
   · have same := copied.load_apart (s.regs.r8.toBitVec+16#64) 8 cursorApart
     have observed : widthLoad u.dmem (s.regs.r8.toNat+16) 8 =
         widthLoad t.dmem (s.regs.r8.toNat+16) 8 := by
       unfold widthLoad
       congr 1
-      simpa only [← UInt64.toNat_toBitVec, width_address] using same
     exact observed.trans entry.cursor
   · rw [stack, copied.load_apart (s.regs.rsp.toBitVec-56#64) 8
       (fun i hi j hj => spillApart i (by omega) j hj)]
@@ -92,6 +91,7 @@ theorem loop_ready (s t u : MachineData) (operand : NatOperand)
   · rw [stack]
     exact copied.saved s (s.regs.rsp.toBitVec-56#64) spillApart entry.saved
   · rw [stack]
+    change ∃ old, Mem.loadInt u.dmem (s.regs.rsp.toBitVec-56#64-8#64) 8 = some old
     have slotAddress : s.regs.rsp.toBitVec-56#64-8#64 = s.regs.rsp.toBitVec-64#64 := by bv_omega
     rw [slotAddress, copied.load_apart (s.regs.rsp.toBitVec-64#64) 8
       (fun i hi j hj => stackApart i (by omega) j hj)]

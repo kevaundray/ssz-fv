@@ -75,6 +75,10 @@ theorem wide_reserved_post (original s : ArmState) (base : BitVec 64)
     cases failed.1
   · have expected := Option.some.inj (native.symm.trans reserve')
     have expectedPointer := congrArg SszNative.Arena.Reservation.pointer expected
+    change address.toNat + SszNative.Arena.start address.toNat used.toNat =
+      reservation.pointer at expectedPointer
+    change r (.GPR 8#5) u = address at pointeru
+    change (r (.GPR 9#5) u).toNat = SszNative.Arena.start address.toNat used.toNat at startu
     have committed : t = block base arenaSmallStoreOps u := result
     have frame : ArenaFrame s t := by
       rw [committed]

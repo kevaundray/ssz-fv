@@ -11,12 +11,12 @@ set_option maxHeartbeats 8000000
 
 /-- The invariant at +1980 describes the next unread physical index and the
 remaining allocated words. At zero remaining it instead describes +2044. -/
-structure Invariant (s : ArmState) (base : BitVec 64) (index remaining carry : Nat) : Prop where
+structure Invariant (s : ArmState) (base : BitVec 64) (index remaining carryValue : Nat) : Prop where
   pc : read_pc s = base + (if remaining = 0 then 2044#64 else 1980#64)
-  carry : r (.GPR 12#5) s = BitVec.ofNat 64 carry
+  carry : r (.GPR 12#5) s = BitVec.ofNat 64 carryValue
   remaining : r (.GPR 13#5) s = BitVec.ofNat 64 remaining
   index : r (.GPR 14#5) s = BitVec.ofNat 64 index
-  carryBound : carry ≤ 1
+  carryBound : carryValue ≤ 1
 
 /-- Entire arbitrary-length Small-left/Large-right carry suffix. Physical input
 length is not replaced by significant length: high zero limbs remain readable,
@@ -100,6 +100,7 @@ theorem loop_run (remaining : Nat) (base pointer sp output : BitVec 64)
           rcases member with rfl | rfl
           · rw [addressNat]
             have := layout.separate
+            have := layout.stack
             omega
           · rw [addressNat]
             left

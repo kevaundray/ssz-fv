@@ -1,4 +1,5 @@
 import SszArm.NatAddTrim
+import SszArm.NatAddRightTrimState
 
 namespace SszArm.NatAdd
 
@@ -7,10 +8,6 @@ open NatCompare (Source Words saved)
 
 set_option maxRecDepth 32768
 set_option maxHeartbeats 8000000
-
-def rightRoundState (s : ArmState) (base word : BitVec 64) : ArmState :=
-  block base [.p348, .p352, .p356]
-    (loadResult (block base [.p308, .p312] s) base .trimRight word)
 
 /-- The right scan uses an all-ones sentinel, not a signed-length test. -/
 theorem right_round (s : ArmState) (base pointer : BitVec 64)
@@ -34,10 +31,11 @@ theorem right_round (s : ArmState) (base pointer : BitVec 64)
   have hpc : r .PC s = base + 308#64 := hp
   have hu : run 2 s = u := block_run base [.p308, .p312] s hc he ha (by
     simp [Follows, Op.row, Op.effect, next, state_simp_rules, hpc,
-      h11, notLast, BitVec.add_assoc])
+      h11, BitVec.add_assoc])
   have huf : NatCompare.Frame s u := scan_frame base _ s (by decide)
   have hup : read_pc u = base + 316#64 := by
-    simp [u, block, Op.effect, next, state_simp_rules, h11, notLast]
+    simp [u, block, Op.effect, next, state_simp_rules, h11, notLast,
+      NatCompare.count_zero_bit]
   have hus : Source u pointer words := huf.source _ _ hs
   have hum : Words u pointer words := huf.words _ _ hs hm
   have hload : read_mem_bytes 8
@@ -58,14 +56,9 @@ theorem right_round (s : ArmState) (base pointer : BitVec 64)
     (hvf.error.trans he) (hvf.aligned ha) follow
   have htf : NatCompare.Frame v (block base [.p348, .p352, .p356] v) :=
     scan_frame base _ _ (by decide)
-  refine ⟨?_, hvf.trans htf, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, hvf.trans htf, right_round_fields s base _ n h11⟩
   · rw [show 13 = 2 + 8 + 3 by decide, run_plus, run_plus, hu, hv]
     exact ht
-  all_goals
-    by_cases zero : words[n]?.getD 0#64 = 0#64 <;>
-      simp_all (config := {decide := true, instances := true})
-        [rightRoundState, u, v, loadResult, LoadKind.start, LoadKind.dst,
-          LoadKind.tmp, block, Op.effect, put, next, saved, state_simp_rules]
 
 /-- Complete right significant-count scan without canonical-input assumptions. -/
 theorem right_trim (base pointer : BitVec 64) (words : List (BitVec 64)) :
@@ -94,7 +87,8 @@ theorem right_trim (base pointer : BitVec 64) (words : List (BitVec 64)) :
         hpc, h11, BitVec.add_assoc]
     refine ⟨2, t, block_run base ops s hc he ha follow,
       scan_frame base ops s (by decide), scan_zero base ops s (by decide), ?_, ?_, ?_, ?_⟩
-    all_goals simp [t, ops, block, Op.effect, next, state_simp_rules, h11, significantCount]
+    all_goals simp [t, ops, block, Op.effect, next, state_simp_rules, h11,
+      significantCount, NatCompare.count_zero_bit]
   | succ n ih =>
     intro s hn hc he ha hp h3 h11 hs hm
     have h11' : r (.GPR 11#5) s = BitVec.ofNat 64 n := by

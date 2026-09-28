@@ -70,9 +70,9 @@ theorem zero_right_large_right (s : ArmState) (base pointer : BitVec 64)
     change pointer ≠ 0#64
     have positive := owned.rightAt.1
     intro h
-    simp [h, SszNative.NatOperand.pointer] at positive
+    simp [h] at positive
   have bound : left.wordCount < 2^64 :=
-    lt_of_le_of_lt (sigWords_le_length left.words) owned.operands.1.length_bound
+    Nat.lt_of_le_of_lt (sigWords_le_length left.words) owned.operands.1.length_bound
   have notZero : BitVec.ofNat 64 left.wordCount ≠ 0#64 := by bv_omega
   have zeroWords : sigWords words = 0 := zero
   obtain ⟨fuel, u, execution, scanned, out, retained, originalIndex, rightCount, pc⟩ :=
@@ -89,18 +89,17 @@ theorem zero_right_large_right (s : ArmState) (base pointer : BitVec 64)
     have ptr : r (.GPR 1#5) u = 0#64 := ownedU.leftPointer
     have ran : run ops.length u = v := block_run base ops u
       (scan_code scanned hc) (scanned.error.trans he) (scanned.aligned ha) (by
-        simp [ops, Follows, Op.row, Op.effect, put, next, state_simp_rules,
-          hpc, countU, ptr, BitVec.add_assoc])
+        simp [ops, Follows, Op.row, Op.effect, state_simp_rules, hpc, countU])
     have frame : NatCompare.Frame u v := scan_frame base ops u (by decide)
     have outV : r (.GPR 0#5) v = r (.GPR 0#5) u := scan_zero base ops u (by decide)
     have ownedV := ownedU.transport frame outV
     have pcV : read_pc v = base + 656#64 := by
-      simp [v, ops, block, Op.effect, put, next, state_simp_rules, hpc, countU, ptr]
+      simp [v, ops, block, Op.effect, put, next, state_simp_rules, countU, ptr]
     apply Post.prepend ownedU frame outV ops.length ran
     apply zero_small_post .left v base word (.small word) (.large pointer words) ownedV
       (scan_code frame (scan_code scanned hc)) (frame.error.trans (scanned.error.trans he))
       (frame.aligned (scanned.aligned ha)) pcV ownedV.leftPointer ownedV.leftPayload
-    simpa only [small_normalized] using SszNative.NatAdd.run_zero_right (.small word)
+    simpa only [outcome, small_normalized] using SszNative.NatAdd.run_zero_right (.small word)
       (.large pointer words) (arenaOf v).base (arenaOf v).capacity (arenaOf v).used nonzero zero
   | large leftPointer leftWords =>
     let ops : List Op := [.p408, .p576, .p580]

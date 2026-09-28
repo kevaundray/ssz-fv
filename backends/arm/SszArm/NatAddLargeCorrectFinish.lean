@@ -28,8 +28,8 @@ theorem finish_run (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
     ∃ fuel t, run fuel u = t ∧ Post s t left right := by
   let written := SszNative.NatAdd.writtenWords left right
   let pointer := BitVec.ofNat 64 reservation.pointer
-  have pointerNat : pointer.toNat = reservation.pointer :=
-    BitVec.toNat_ofNat_of_lt allocated.pointer_bound
+  have pointerNat : pointer.toNat = reservation.pointer := by
+    simp only [pointer, BitVec.toNat_ofNat, Nat.mod_eq_of_lt allocated.pointer_bound]
   have len : written.length = SszNative.NatAdd.count left right + 1 :=
     SszNative.NatAdd.writtenWords_length left right
   have bound : written.length + 1 < 2^64 := by
@@ -85,11 +85,12 @@ theorem finish_run (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
   have finalWords : NatCompare.Words t pointer written := by
     intro i
     have hi := i.isLt
+    have hiCount : i.val < SszNative.NatAdd.count left right + 1 := by omega
     have physical := allocated.physical
     have address : (pointer + BitVec.ofNat 64 (8 * i.val)).toNat =
-        pointer.toNat + 8 * i.val := by rw [pointerNat]; rw [len] at hi; bv_omega
+        pointer.toNat + 8 * i.val := by rw [pointerNat]; bv_omega
     rw [(value_local_frame .large v base returnOwned).read _ 8
-      (by rw [address, pointerNat]; rw [len] at hi; omega)
+      (by rw [address, pointerNat]; omega)
       (by rw [address]; exact outputLocal.subspan (8 * i.val) 8 (by omega))]
     exact vwords i
   have finalWritten : WrittenAt (widthLoad t) (outcome s left right) := by
@@ -106,8 +107,8 @@ theorem finish_run (s u : ArmState) (base : BitVec 64) (left right : NatOperand)
     rw [localMemory.read _ 8 (by rw [cursorAddress]; have := owned.arenaBound; omega)
       (by rw [cursorAddress]; exact owned.arenaLocal.subspan 16 8 (by decide))]
     rw [Memory.mem_eq_iff_read_mem_bytes_eq.mp vm, cursor]
-    simpa only [allocated.outcomeEq, NatArithmetic.committed] using
-      BitVec.toNat_ofNat_of_lt allocated.usedBound
+    simp only [allocated.outcomeEq, NatArithmetic.committed, BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt allocated.usedBound]
   refine ⟨normFuel + 12, t, ?_, post_of_frame s t left right owned
     (rootFrame.returned (value_returned .large v base (vf.error.trans he)))
     ?_ finalWritten finalCursor finalMemory⟩
