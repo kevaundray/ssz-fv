@@ -58,7 +58,7 @@ def x86_source(bodies, span):
     cursor = 0
     for (name, stem, prefix), base in zip(MEMBERS, BASES["x86"]):
         rows, _, raw, _, _ = bodies[name]
-        labels, expressions, body_pieces = _image_parts(rows, raw, prefix)
+        labels, expressions, body_pieces, _ = _image_parts(rows, raw, prefix)
         pieces.extend(_byte_segments(span[cursor:base]))
         pieces.extend(body_pieces)
         cursor = base + len(raw)

@@ -69,7 +69,7 @@ def frontiers(namespace, arch):
 
 
 def x86_source(rows, raw, table):
-    labels, expressions, pieces = _image_parts(rows, raw, "dispatch_")
+    labels, expressions, pieces, _ = _image_parts(rows, raw, "dispatch_")
     if labels:
         raise ValueError("x86: indirect dispatcher unexpectedly gained direct labels")
     return f'''import SszX86.DispatchImpl

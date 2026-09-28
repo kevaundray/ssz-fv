@@ -74,7 +74,7 @@ def x86_source(bodies, span):
     cursor = 0
     for (name, stem, prefix), base in zip(MEMBERS, OFFSETS["x86"]):
         rows, entries, raw, _, _ = bodies[name]
-        labels, expressions, body_pieces = _image_parts(rows, raw, prefix)
+        labels, expressions, body_pieces, _ = _image_parts(rows, raw, prefix)
         if base < cursor:
             raise ValueError("overlapping x86 components")
         addresses.extend(range(cursor, base, 256))

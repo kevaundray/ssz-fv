@@ -94,12 +94,23 @@ def expression(row, label_prefix=""):
             raise ValueError(f"unsupported increment: {row}")
         return f"[.instr (.regular .W64 .W64 (.inc (.reg (.low .{operands[1:]} .W64))))]"
     if mnemonic in ("cmovbq", "cmoveq"):
-        match = re.fullmatch(r"%([a-z0-9]+),%([a-z0-9]+)", operands)
-        if match is None or any(reg not in REG64 for reg in match.groups()):
-            raise ValueError(f"unsupported conditional move: {row}")
-        src, dst = match.groups()
         condition = "c" if mnemonic == "cmovbq" else "z"
-        return f"[.instr (.regular .W64 .W64 (.cmovcc .{condition} (.low .{dst} .W64) (.reg (.low .{src} .W64))))]"
+        match = re.fullmatch(r"%([a-z0-9]+),%([a-z0-9]+)", operands)
+        if match is not None:
+            if any(reg not in REG64 for reg in match.groups()):
+                raise ValueError(f"unsupported conditional-move registers: {row}")
+            src, dst = match.groups()
+            return f"[.instr (.regular .W64 .W64 (.cmovcc .{condition} (.low .{dst} .W64) (.reg (.low .{src} .W64))))]"
+        memory = re.fullmatch(r"(-?0x[0-9a-f]+|-?[0-9]+)?\(%([a-z0-9]+)(?:,%([a-z0-9]+)(?:,(1|2|4|8))?)?\),%([a-z0-9]+)", operands)
+        if memory is None:
+            raise ValueError(f"unsupported conditional move: {row}")
+        disp, base, index, scale, dst = memory.groups()
+        if base not in REG64 or (index is not None and index not in REG64) or dst not in REG64:
+            raise ValueError(f"unsupported conditional-move memory registers: {row}")
+        idx = "none" if index is None else f"some ⟨.{index}, .W{8 * int(scale or '1')}⟩"
+        address = f"{{ base := some (.reg .{base}), idx := {idx}, disp := .int64 ({int(disp or '0', 0)}) }}"
+        return (f"[.instr (.regular .W64 .W64 (.cmovcc .{condition} (.low .{dst} .W64) "
+                f"(.mem (w := .W64) {address})))]")
     if mnemonic == "movslq":
         forms = {
             "(%rcx,%rax,4),%rax": ("rcx", "rax", b"\x48\x63\x04\x81"),
@@ -166,25 +177,31 @@ def _image_parts(rows, raw, label_prefix=""):
         selected[pc] = (operation, width)
         end = pc + width
     # Flatten typed segments to avoid expensive elaboration of deeply nested appends.
-    pieces, cursor = [], 0
+    pieces, positions, cursor = [], [], 0
     for pc in sorted(set(selected) | {pc for _, pc in names}):
         if pc < cursor or pc >= len(raw):
             raise ValueError(f"label inside instruction or outside image: {pc}")
         if cursor < pc:
             pieces.extend(_byte_segments(raw[cursor:pc]))
-        pieces.extend(f"[(.label {json.dumps(name)}, 0)]" for name, address in names if address == pc)
+            positions.extend((at, min(256, pc - at)) for at in range(cursor, pc, 256))
+        for name, address in names:
+            if address == pc:
+                pieces.append(f"[(.label {json.dumps(name)}, 0)]")
+                positions.append((pc, 0))
         cursor = pc
         if pc in selected:
             operation, width = selected[pc]
             pieces.append(f"({operation} : Program).map (fun d => (d, {width}))")
+            positions.append((pc, width))
             cursor += width
     if cursor < len(raw):
         pieces.extend(_byte_segments(raw[cursor:]))
-    return names, expressions, pieces
+        positions.extend((at, min(256, len(raw) - at)) for at in range(cursor, len(raw), 256))
+    return names, expressions, pieces, positions
 
 
 def _image_source(rows, raw, module, namespace, constants, label_prefix="", *, tail_pieces=()):
-    names, expressions, pieces = _image_parts(rows, raw, label_prefix)
+    names, expressions, pieces, _ = _image_parts(rows, raw, label_prefix)
     pieces.extend(tail_pieces)
     label_literal = ', '.join(f'({json.dumps(name)}, {pc})' for name, pc in names)
     constant_proofs = "\n".join(
@@ -284,9 +301,9 @@ def delimited_source(body, comparison, linked):
             callee["size"] != len(compare_raw) or
             span[:len(compare_raw)] != compare_raw or span[-origin:] != raw):
         raise ValueError("delimited/comparison linked-image mismatch")
-    names, expressions, pieces = _image_parts(compare_rows, compare_raw, "natCompare_")
+    names, expressions, pieces, _ = _image_parts(compare_rows, compare_raw, "natCompare_")
     pieces.extend(_byte_segments(span[len(compare_raw):-origin]))
-    body_names, body_expressions, body_pieces = _image_parts(rows, raw, "delimited_")
+    body_names, body_expressions, body_pieces, _ = _image_parts(rows, raw, "delimited_")
     pieces.extend(body_pieces)
     definitions, witnesses = [], []
     for suffix, namespace, base, row_expressions, image_labels in (
@@ -344,7 +361,7 @@ def nat_division_source(body, linked):
         raise ValueError("unexpected Nat division/runtime linked image")
     if [row["pc"] for row in rows if row.get("callee")] != [261, 783]:
         raise ValueError("unexpected Nat division callsites")
-    names, expressions, pieces = _image_parts(rows, raw, "natDivision_")
+    names, expressions, pieces, _ = _image_parts(rows, raw, "natDivision_")
     pieces.extend(_byte_segments(span[len(raw):160352]))
     pieces.append("(SszX86.Udivti3.executable 160352).2")
     label_literal = ", ".join(f"({json.dumps(name)}, {pc})" for name, pc in names)
@@ -422,7 +439,7 @@ def emit_source(rows, entries, raw, frontiers, callees, *, linked_bytes,
         raise ValueError("unexpected linked emitter memcpy image")
     if table_bytes != bytes.fromhex("806b01001e6c0100b36b0100db6b0100"):
         raise ValueError("unexpected primitive emitter jump-table bytes")
-    labels, _, helper_pieces = _image_parts(memcpy_rows, memcpy_raw, "copy_")
+    labels, _, helper_pieces, _ = _image_parts(memcpy_rows, memcpy_raw, "copy_")
     if labels != [("copy_u9", 9), ("copy_u33", 33), ("copy_u38", 38), ("copy_u56", 56)]:
         raise ValueError("unexpected memcpy control-flow labels")
     for pc, name in ((9, "bulk"), (33, "tail"), (38, "byte"), (56, "done")):
@@ -461,7 +478,7 @@ example : SszX86.Emit.MemcpyCodeAt bound 110736 := by
 
 def _component_witness(stem, base, image_labels, expressions, *, chunked=False,
                        split_fetch=False):
-    """Bound fetch decisions shared by linked measure and serialize images."""
+    """Bound fetch decisions for linked executable components."""
     namespace = f"SszX86.{stem}"
     label_literal = ", ".join(
         f"({json.dumps(name)}, {pc})" for name, pc in image_labels)
@@ -598,7 +615,7 @@ def measure_source(bodies, span, *, origin, table_bytes=None):
     for key, stem, prefix, offset, _, _ in members:
         body_rows, _, body_raw, _, _ = bodies[key]
         base = offset - origin
-        image_labels, expressions, body_pieces = _image_parts(body_rows, body_raw, prefix)
+        image_labels, expressions, body_pieces, _ = _image_parts(body_rows, body_raw, prefix)
         pieces.extend(_byte_segments(span[cursor:base]))
         pieces.extend(body_pieces)
         cursor = base + len(body_raw)
@@ -709,7 +726,7 @@ def serialize_source(bodies, span, *, origin, table_bytes=None):
     for key, stem, prefix, offset, _, _ in members:
         rows, _, raw, _, _ = bodies[key]
         base = offset - origin
-        image_labels, expressions, body_pieces = _image_parts(rows, raw, prefix)
+        image_labels, expressions, body_pieces, _ = _image_parts(rows, raw, prefix)
         pieces.extend(_byte_segments(span[cursor:base]))
         if key == "memcpy":
             if image_labels != [("copy_u9", 9), ("copy_u33", 33),
@@ -812,3 +829,153 @@ theorem boundSerializeClosureAt : SszX86.Serialize.ClosureAt bound 66368 := by
   · exact boundNatFromU128CodeAt
   · exact boundMemcpyCodeAt
 '''
+
+
+def nat_mul_source(bodies, span, *, origin):
+    """Bind multiplication and both helpers using bounded structural certificates."""
+    from decoder_binding import validate_nat_mul_image
+    from decoder_x86_image import bounded_image
+
+    validate_nat_mul_image("x86", bodies, span, origin)
+    segments, image_labels, components = [], [], []
+    cursor = 0
+    for key, stem, prefix, base in (
+            ("nat_mul", "NatMul", "natMul_", 0),
+            ("nat_mul_word", "NatMulWord", "natMulWord_", 832),
+            ("memset", "Memset", "mulSet_", 148928)):
+        rows, _, raw, _, _ = bodies[key]
+        names, expressions, pieces, positions = _image_parts(rows, raw, prefix)
+        for at, source in zip(range(cursor, base, 256), _byte_segments(span[cursor:base])):
+            segments.append((at, min(256, base - at), source))
+        if key == "memset":
+            renames = {"mulSet_u27": "bulk27", "mulSet_u44": "tail44",
+                       "mulSet_u49": "byte49", "mulSet_u62": "done62"}
+            if names != [(name, pc) for name, pc in
+                         (("mulSet_u27", 27), ("mulSet_u44", 44),
+                          ("mulSet_u49", 49), ("mulSet_u62", 62))]:
+                raise ValueError("unexpected multiplication memset labels")
+            for old, new in renames.items():
+                pieces = [piece.replace(old, new) for piece in pieces]
+            names = [(renames[name], pc) for name, pc in names]
+        segments.extend((base + pc, width, source)
+                        for (pc, width), source in zip(positions, pieces))
+        image_labels.extend((name, base + pc) for name, pc in names)
+        components.append((stem, base, rows, names, expressions))
+        cursor = base + len(raw)
+    if cursor != len(span):
+        raise ValueError("multiplication closure does not cover its pinned extent")
+    declarations, locations = bounded_image(segments, image_labels)
+    for stem, base, rows, names, expressions in components:
+        if stem == "Memset":
+            facts = []
+            for row in rows:
+                pc = base + row["pc"]
+                fact = f"boundMemsetRow{row['pc']}"
+                facts.append(fact)
+                declarations.append(f"""
+theorem {fact} :
+    bound.directivesAtAddress ({pc} : Int64) =
+      (SszX86.memsetExecutable 148928).directivesAtAddress ({pc} : Int64) := by
+  rw [show ({pc} : Int64) = Int64.ofNat {pc} from by decide]
+  rw [imageFocus{locations[pc]} (Int64.ofNat {pc}) (by decide) (by decide)]
+  simp (config := {{instances := true}}) only [SszX86.memsetExecutable, SszX86.memsetLayout, SszX86.memsetProgram,
+    Kraken.Layout.apply, Kraken.Executable.directivesAtAddress,
+    List.mapIdx_cons, List.mapIdx_nil, Kraken.Executable.withAddresses] <;> decide
+""")
+            declarations.append(f"""
+theorem boundMemsetFetch :
+    (SszX86.memsetExecutable 148928).withAddresses.all (fun row =>
+      decide (bound.directivesAtAddress row.1 =
+        (SszX86.memsetExecutable 148928).directivesAtAddress row.1)) = true := by
+  simp (config := {{instances := true}}) [SszX86.memsetExecutable,
+    SszX86.memsetLayout, SszX86.memsetProgram, Kraken.Layout.apply,
+    Kraken.Executable.withAddresses, {', '.join(facts)}]
+theorem boundMemsetTargets : SszX86.NatMul.MemsetCall.memsetLabels.all (fun name =>
+    decide (bound.labels.label name =
+      (SszX86.memsetExecutable 148928).labels.label name)) = true := by
+  simp (config := {{instances := true}}) only [boundLabel, Executable.labels,
+    SszX86.memsetExecutable, SszX86.memsetLayout, SszX86.memsetProgram,
+    Kraken.Layout.apply, List.mapIdx_cons, List.mapIdx_nil,
+    Kraken.Executable.withAddresses] <;> decide
+theorem boundMemsetCodeAt : SszX86.NatMul.MemsetCall.MemsetCodeAt bound 148928 := by
+  apply SszX86.NatMul.MemsetCall.MemsetCodeAt.of_rows
+  · intro row member
+    exact of_decide_eq_true (List.all_eq_true.mp boundMemsetFetch row member)
+  · intro name member
+    exact of_decide_eq_true (List.all_eq_true.mp boundMemsetTargets name member)
+""")
+            continue
+        namespace = f"SszX86.{stem}"
+        chunks, checks = [], []
+        for number, at in enumerate(range(0, len(rows), 32)):
+            chunk = f"actual{stem}Chunk{number}"
+            check = f"bound{stem}Chunk{number}Fetch"
+            chunks.append(chunk)
+            checks.append(check)
+            declarations.append(
+                f"def {chunk} : List (Nat × Nat × Program) := "
+                f"[{', '.join(expressions[at:at + 32])}]\n"
+                f"theorem {chunk}_eq : {chunk} = {namespace}.programChunk{number} := by decide\n")
+            facts = []
+            for row, expression_row in zip(rows[at:at + 32], expressions[at:at + 32]):
+                pc = base + row["pc"]
+                fact = f"bound{stem}Row{row['pc']}"
+                facts.append(fact)
+                declarations.append(f"""
+theorem {fact} :
+    bound.directivesAtAddress ({base} + Int64.ofNat {row['pc']}) =
+      {namespace}.directives {expression_row} := by
+  rw [show ({base} : Int64) + Int64.ofNat {row['pc']} = Int64.ofNat {pc} from by decide]
+  rw [imageFocus{locations[pc]} (Int64.ofNat {pc}) (by decide) (by decide)]
+  decide
+""")
+            branches = "\n".join(f"  · exact decide_eq_true {fact}" for fact in facts)
+            declarations.append(f"""
+theorem {check} : {chunk}.all (fun row =>
+    decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
+      {namespace}.directives row)) = true := by
+  apply List.all_eq_true.mpr
+  intro row member
+  simp only [{chunk}, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with {' | '.join('rfl' for _ in facts)}
+{branches}
+""")
+        declarations.append(f"""
+def actual{stem} : List (Nat × Nat × Program) := {' ++ '.join(chunks)}
+theorem actual{stem}_eq : actual{stem} = {namespace}.program := by
+  simp only [actual{stem}, {namespace}.program, {', '.join(f'{chunk}_eq' for chunk in chunks)}]
+example : {namespace}.entry = 0 := by decide
+example : {namespace}.usedLabels = [{', '.join(f'({json.dumps(name)}, {pc})' for name, pc in names)}] := by decide
+theorem bound{stem}Targets : {namespace}.usedLabels.all (fun item =>
+    decide (bound.labels.label item.1 = {base} + Int64.ofNat item.2)) = true := by
+  simp only [boundLabel]
+  decide
+theorem bound{stem}CodeAt : {namespace}.CodeAt bound {base} := by
+  constructor
+  · have checked : actual{stem}.all (fun row =>
+        decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
+          {namespace}.directives row)) = true := by
+      simp only [actual{stem}, List.all_append, {', '.join(checks)}, Bool.and_true]
+    intro row member
+    rw [← actual{stem}_eq] at member
+    exact of_decide_eq_true (List.all_eq_true.mp checked row member)
+  · intro item member
+    exact of_decide_eq_true (List.all_eq_true.mp bound{stem}Targets item member)
+""")
+    return """import SszX86.NatMulMemsetEmbedded
+import SszX86.NatMulWordImpl
+import SszX86.LinkedImage
+import SszX86.LinkedImageSequential
+import ProofAudit
+open Kraken.X64.Parser SszX86.LinkedImage
+""" + "\n".join(declarations) + """
+example : SszX86.NatMul.wordOffset = 832 := by decide
+example : SszX86.NatMul.memsetOffset = 148928 := by decide
+example : SszX86.NatMul.panicFrontiers = [814, 817] := by decide
+theorem SszX86.NatMulBinding.closureAt :
+    SszX86.NatMul.CodeAt bound 0 ∧
+      SszX86.NatMulWord.CodeAt bound 832 ∧
+        SszX86.NatMul.MemsetCall.MemsetCodeAt bound 148928 :=
+  ⟨boundNatMulCodeAt, boundNatMulWordCodeAt, boundMemsetCodeAt⟩
+audit_native
+"""

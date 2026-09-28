@@ -26,6 +26,7 @@ binding: models
 	python3 scripts/check-byte-view-binding.py
 	python3 scripts/check-nat-compare-binding.py
 	python3 scripts/check-nat-add-binding.py
+	python3 scripts/check-nat-mul-binding.py
 	python3 scripts/check-nat-division-binding.py
 	python3 scripts/check-nat-conversion-binding.py
 	python3 scripts/check-bitvector-binding.py

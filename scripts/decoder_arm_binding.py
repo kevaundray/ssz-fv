@@ -397,7 +397,7 @@ theorem lookup (rows : List Row) (ordered : Ordered rows) (row : Row) (member : 
 
 
 
-def _ordered_image_declarations(groups, *, chunked_programs=(), flat_programs=()):
+def _ordered_image_declarations(groups, *, chunked_programs=(), flat_programs=(), part_size=100):
     """Share bounded word equalities and ordered lookup for linked ARM images."""
     declarations = ["""
 def shiftRows (base : Nat) (rows : List Row) : List Row :=
@@ -423,14 +423,15 @@ theorem append_eq {xs xs' ys ys' : List Row}
         return result
 
     for name, group_rows, base, program in groups:
-        # Match literal modules' 100-word blocks for their equality, but
-        # discharge ordering in halves so every recursive decision is bounded.
-        parts = [group_rows[i:i + 100] for i in range(0, len(group_rows), 100)]
+        # Preserve literal module chunk boundaries where required; flat programs
+        # may use smaller blocks to keep equality checks within default limits.
+        parts = [group_rows[i:i + part_size] for i in range(0, len(group_rows), part_size)]
         part_names = []
         part_proofs = []
         for index, part in enumerate(parts):
             part_name = f"{name.lower()}Part{index}"
-            halves = [part[i:i + 50] for i in range(0, len(part), 50)]
+            half_size = (part_size + 1) // 2
+            halves = [part[i:i + half_size] for i in range(0, len(part), half_size)]
             half_names = []
             half_proofs = []
             for half_index, half in enumerate(halves):
@@ -466,23 +467,29 @@ theorem append_eq {xs xs' ys ys' : List Row}
                 f"  conv =>\n    rhs\n    unfold {program}\n    simp only [List.append_assoc]\n"
                 if program in chunked_programs else "")
             if program in flat_programs:
-                # Literal suffixes identify a flat component without reducing
-                # every append in one recursive equality check.
+                # Check finite prefixes, then compose take/drop identities.
+                # Comparing two long literal suffixes directly exceeds kernel depth.
                 tails = [f"{name.lower()}Tail{i}" for i in range(len(parts))]
                 for index, tail in enumerate(tails):
+                    source = program if index == 0 else (
+                        f"{tails[index - 1]}.drop {len(parts[index - 1])}")
+                    declarations.append(f"def {tail} : List Row := {source}")
                     declarations.append(
-                        f"def {tail} : List Row := [{_rows_expr(group_rows[index * 100:])}]")
-                splits = []
-                for index in range(len(parts) - 1):
-                    split = f"{tails[index]}_split"
-                    splits.append(split)
+                        f"theorem {tail}_head : {tail}.take {len(parts[index])} = "
+                        f"{part_names[index]} := by decide")
+                for index in reversed(range(len(parts))):
+                    tail, count = tails[index], len(parts[index])
+                    if index + 1 < len(parts):
+                        suffix = f"{tails[index + 1]}_eq"
+                        proof = f"append_eq {tail}_head {suffix}"
+                    else:
+                        proof = (f"(append_eq {tail}_head (show {tail}.drop {count} = [] "
+                                 f"from by decide)).trans (List.append_nil _)")
                     declarations.append(
-                        f"theorem {split} : {tails[index]} = "
-                        f"{part_names[index]} ++ {tails[index + 1]} := by rfl")
-                normalization = f"  change actual{name} = {tails[0]}\n"
-                if splits:
-                    normalization += (
-                        "  conv =>\n    rhs\n    rw [" + ", ".join(splits) + "]\n")
+                        f"theorem {tail}_eq : {tail} = {append_rows(part_names[index:])} :=\n"
+                        f"  (List.take_append_drop {count} {tail}).symm.trans ({proof})")
+                normalization = ""
+                equality = f"{tails[0]}_eq.symm"
             declarations.append(
                 f"theorem actual{name}_eq : actual{name} = {program} := by\n"
                 f"{normalization}  exact {equality}")
@@ -790,4 +797,59 @@ theorem serialize_codeAt (s : ArmState) :
 """)
     return _EMIT_IMAGE_ORDER.replace(
         "import SszArm.EmitImpl", "import SszArm.SerializeImpl", 1
+    ) + "\n".join(declarations)
+
+
+def nat_mul_source(bodies, span, *, origin) -> str:
+    """Bind both multiplication entries and real memset in one linked program."""
+    from decoder_binding import validate_nat_mul_image
+
+    validate_nat_mul_image("arm", bodies, span, origin)
+    groups = []
+    for key, name, base, program in (
+            ("nat_mul", "NatMul", 0, "SszArm.NatMul.program"),
+            ("nat_mul_word", "NatMulWord", 1544, "SszArm.NatMulWord.program"),
+            ("memset", "Memset", 167060, None)):
+        rows, _, raw, _, _ = bodies[key]
+        _validate_rows(rows, raw)
+        groups.append((name, rows, base, program))
+    declarations = _ordered_image_declarations(
+        groups, flat_programs={"SszArm.NatMul.program", "SszArm.NatMulWord.program"},
+        part_size=50)
+    declarations.append("""
+example : SszArm.NatMul.entry = 0 := by rfl
+example : SszArm.NatMulWord.entry = 0 := by rfl
+example : SszArm.NatMul.wordOffset = 1544#64 := by rfl
+example : SszArm.NatMul.memsetOffset = 167060#64 := by rfl
+
+theorem boundNatMulCodeAt (s : ArmState) :
+    SszArm.NatMul.CodeAt {s with program := bound} 0#64 := by
+  change ∀ row ∈ SszArm.NatMul.program,
+    bound.find? (0#64 + BitVec.ofNat 64 row.1) = some row.2
+  rw [← actualNatMul_eq]
+  exact natmul_lookup
+
+theorem boundNatMulWordCodeAt (s : ArmState) :
+    SszArm.NatMulWord.CodeAt {s with program := bound} 1544#64 := by
+  change ∀ row ∈ SszArm.NatMulWord.program,
+    bound.find? (1544#64 + BitVec.ofNat 64 row.1) = some row.2
+  rw [← actualNatMulWord_eq]
+  exact natmulword_lookup
+
+theorem boundMemsetCodeAt (s : ArmState) :
+    SszArm.CodeAt {s with program := bound} 167060#64 SszArm.Memset.program := by
+  change ∀ k (hk : k < SszArm.Memset.program.length),
+    bound.find? (167060#64 + BitVec.ofNat 64 (4 * k)) = some SszArm.Memset.program[k]
+  have checked : ∀ k : Fin 13,
+      (4 * k.val, SszArm.Memset.program[k.val]) ∈ actualMemset := by decide
+  intro k hk
+  exact memset_lookup _ (checked ⟨k, hk⟩)
+
+theorem SszArm.NatMulBinding.closureAt (s : ArmState) :
+    SszArm.NatMul.JointCodeAt {s with program := bound} 0#64 :=
+  ⟨boundNatMulCodeAt s, boundNatMulWordCodeAt s, boundMemsetCodeAt s⟩
+audit_native
+""")
+    return _EMIT_IMAGE_ORDER.replace(
+        "import SszArm.EmitImpl", "import SszArm.NatMulCalls\nimport ProofAudit", 1
     ) + "\n".join(declarations)

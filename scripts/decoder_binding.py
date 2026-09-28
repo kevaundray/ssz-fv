@@ -28,6 +28,14 @@ FUNCTIONS = {
         "x86": "_ZN13ssz_fv_native3nat3Nat3add17h3da88e6260e8092cE",
         "arm": "_ZN13ssz_fv_native3nat3Nat3add17h567a3b65c99417eaE",
     },
+    "nat_mul": {
+        "x86": "_ZN13ssz_fv_native3nat3Nat3mul17ha2639a6aac923654E",
+        "arm": "_ZN13ssz_fv_native3nat3Nat3mul17h5dc2c96f405496c8E",
+    },
+    "nat_mul_word": {
+        "x86": "_ZN13ssz_fv_native3nat3Nat8mul_word17h0294313f2dc52cdfE",
+        "arm": "_ZN13ssz_fv_native3nat3Nat8mul_word17h44eb4fbc8039a355E",
+    },
     "nat_div_rem_small": {
         "x86": "_ZN13ssz_fv_native3nat3Nat13div_rem_small17h502d1ce340c4e801E",
         "arm": "_ZN13ssz_fv_native3nat3Nat13div_rem_small17he8c5c3bc7904fc5eE",
@@ -57,6 +65,7 @@ FUNCTIONS = {
         "arm": "_ZN13ssz_fv_native5codec9serialize17h0d728b7a742b35d3E",
     },
     "memcpy": {"x86": "memcpy", "arm": "memcpy"},
+    "memset": {"x86": "memset", "arm": "memset"},
 }
 
 
@@ -250,3 +259,50 @@ def linked_span(temp, arch, root, raw, callees):
         if span[offset:offset + callee["size"]].hex() != callee["raw"]:
             raise ValueError(f"{arch}: linked span/callee mismatch")
     return low, span
+
+
+def validate_nat_mul_image(arch, bodies, span, origin):
+    """Pin the complete multiplication closure, including gaps and panic bytes."""
+    from hashlib import sha256
+
+    if arch == "x86":
+        specs = {"nat_mul": (0, 218, 825), "nat_mul_word": (832, 221, 875),
+                 "memset": (148928, 18, 63)}
+        frontier = [814, 817]
+        span_digest = "3d73dde8285914cb74679e21e894d0bebcfe1406fb322a393d0b87c0df76f809"
+        selection_digest = "dc27e6b3bb1092e7e9ff4fd11ad4b9a513f8d1c09690a3b3ef07bb43da7ced96"
+        from decoder_x86_binding import expression
+    elif arch == "arm":
+        specs = {"nat_mul": (0, 384, 1544), "nat_mul_word": (1544, 458, 1832),
+                 "memset": (167060, 13, 52)}
+        frontier = [1536]
+        span_digest = "111b0d1704ef7d2a71026ef937a14869bd3881fcfb9563752becadf248ef0007"
+        selection_digest = "db89fc28d95e12e30d5c29e864d43ec82969e280d70996cffe912da6d6cf6714"
+    else:
+        raise ValueError(f"unsupported multiplication architecture: {arch}")
+    if (set(bodies) != set(specs) or type(origin) is not int or origin != 0
+            or len(span) != specs["memset"][0] + specs["memset"][2]
+            or sha256(span).hexdigest() != span_digest):
+        raise ValueError(f"{arch}: multiplication linked image differs from pinned closure")
+    selected = {}
+    for key, (offset, count, size) in specs.items():
+        rows, entries, raw, frontiers, callees = bodies[key]
+        expected_callees = {
+            FUNCTIONS[child][arch]: {
+                "offset": specs[child][0], "size": specs[child][2],
+                "raw": bodies[child][2].hex()}
+            for child in ("nat_mul_word", "memset")
+        } if key == "nat_mul" else {}
+        if (entries != [0] or frontiers != (frontier if key == "nat_mul" else [])
+                or not all(type(pc) is int for pc in entries + frontiers)
+                or len(rows) != count or len(raw) != size
+                or span[offset:offset + size] != raw or callees != expected_callees):
+            raise ValueError(f"{arch}: unexpected multiplication component: {key}")
+        selected[key] = [
+            [row["pc"], row["width"], row["encoding"],
+             expression(row) if arch == "x86" else None,
+             row.get("target"), row.get("callee")]
+            for row in rows]
+    selection = json.dumps(selected, sort_keys=True, separators=(",", ":")).encode()
+    if sha256(selection).hexdigest() != selection_digest:
+        raise ValueError(f"{arch}: multiplication selected instructions differ from pinned closure")
