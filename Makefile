@@ -34,6 +34,7 @@ binding: models
 	python3 scripts/check-dispatch-binding.py
 	python3 scripts/check-emit-binding.py
 	python3 scripts/check-measure-binding.py
+	python3 scripts/check-serialize-binding.py
 
 smoke:
 	python3 scripts/check-uint64.py

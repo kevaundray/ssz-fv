@@ -26,6 +26,7 @@ import SszBitVectorMemory
 import SszSerializeResources
 import SszArm.EmitImpl
 import SszArm.MeasureImpl
+import SszArm.SerializeImpl
 import SszArm.NatFromU128Model
 import SszArm.LogicalImmediateRegression
 import SszArm.Impl
@@ -295,5 +296,12 @@ import SszArm.UintTails
 #print axioms SszArm.Measure.compare_codeAt
 #print axioms SszArm.Measure.fromU128_codeAt
 #print axioms SszArm.Measure.memcpy_codeAt
+
+#print axioms SszArm.Serialize.body_codeAt
+#print axioms SszArm.Serialize.measure_codeAt
+#print axioms SszArm.Serialize.emit_codeAt
+#print axioms SszArm.Serialize.compare_codeAt
+#print axioms SszArm.Serialize.fromU128_codeAt
+#print axioms SszArm.Serialize.memcpy_codeAt
 
 audit_native

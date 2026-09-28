@@ -459,6 +459,87 @@ example : SszX86.Emit.MemcpyCodeAt bound 110736 := by
 '''
 
 
+def _component_witness(stem, base, image_labels, expressions, *, chunked=False,
+                       split_fetch=False):
+    """Bound fetch decisions shared by linked measure and serialize images."""
+    namespace = f"SszX86.{stem}"
+    label_literal = ", ".join(
+        f"({json.dumps(name)}, {pc})" for name, pc in image_labels)
+    declarations, witnesses, chunks = [], [], []
+    for number, at in enumerate(range(0, len(expressions), 64)):
+        chunk = f"actual{stem}Chunk{number}"
+        chunks.append(chunk)
+        declarations.append(
+            f"def {chunk} : List (Nat × Nat × Program) := "
+            f"[{', '.join(expressions[at:at + 64])}]\n")
+        if chunked:
+            declarations.append(
+                f"theorem {chunk}_eq : {chunk} = {namespace}.programChunk{number}"
+                " := by decide\n")
+    declarations.append(
+        f"def actual{stem} : List (Nat × Nat × Program) := {' ++ '.join(chunks)}\n")
+    if chunked:
+        equalities = ", ".join(f"{chunk}_eq" for chunk in chunks)
+        equality_proof = (
+            f"by\n  simp only [actual{stem}, {namespace}.program, {equalities}]")
+    else:
+        equality_proof = "by decide"
+    declarations.append(
+        f"theorem actual{stem}_eq : actual{stem} = {namespace}.program := "
+        f"{equality_proof}\n"
+        f"example : {namespace}.labels = [{label_literal}] := by decide\n"
+        f"example : {namespace}.entry = 0 := by decide\n")
+
+    # Opaque top-level certificates keep large lookup proofs out of CodeAt.
+    chunk_checks = []
+    for number, chunk in enumerate(chunks):
+        check = f"bound{stem}Chunk{number}Fetch"
+        chunk_checks.append(check)
+        parts = ((f"{check}First", f"({chunk}.take 32)"),
+                 (f"{check}Rest", f"({chunk}.drop 32)")) if split_fetch else ((check, chunk),)
+        for part_check, part_rows in parts:
+            witnesses.append(f'''theorem {part_check} : {part_rows}.all (fun row =>
+    decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
+      {namespace}.directives row)) = true := by
+  simp (config := {{maxSteps := 1000000}}) [bound, Kraken.Executable.directivesAtAddress,
+    Kraken.Executable.withAddresses, {chunk},
+    {namespace}.directives, {namespace}.labels]
+''')
+        if split_fetch:
+            witnesses.append(f'''theorem {check} : {chunk}.all (fun row =>
+    decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
+      {namespace}.directives row)) = true := by
+  rw [← List.take_append_drop 32 {chunk}, List.all_append,
+    {check}First, {check}Rest]
+  rfl
+''')
+    if len(chunk_checks) == 1:
+        fetch_proof = f"exact {chunk_checks[0]}"
+    else:
+        fetch_proof = (
+            f"simp only [actual{stem}, List.all_append, "
+            f"{', '.join(chunk_checks)}, Bool.and_true]")
+    witnesses.append(f'''theorem bound{stem}Targets : {namespace}.labels.all (fun item =>
+    decide (bound.labels.label item.1 = {base} + Int64.ofNat item.2)) = true := by
+  dsimp (config := {{instances := true}}) [Executable.labels]
+  simp (config := {{maxSteps := 1000000}}) [bound, Kraken.Executable.withAddresses,
+    {namespace}.labels]
+
+theorem bound{stem}CodeAt : {namespace}.CodeAt bound {base} := by
+  constructor
+  · have checked : actual{stem}.all (fun row =>
+        decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
+          {namespace}.directives row)) = true := by
+      {fetch_proof}
+    intro row member
+    rw [← actual{stem}_eq] at member
+    exact of_decide_eq_true (List.all_eq_true.mp checked row member)
+  · intro item member
+    exact of_decide_eq_true (List.all_eq_true.mp bound{stem}Targets item member)
+''')
+    return declarations, witnesses
+
+
 def measure_source(bodies, span, *, origin, table_bytes=None):
     """Bind primitive measurement and both helpers in their real linked image."""
     from decoder_binding import FUNCTIONS
@@ -521,71 +602,10 @@ def measure_source(bodies, span, *, origin, table_bytes=None):
         pieces.extend(_byte_segments(span[cursor:base]))
         pieces.extend(body_pieces)
         cursor = base + len(body_raw)
-        namespace = f"SszX86.{stem}"
-        label_literal = ", ".join(
-            f"({json.dumps(name)}, {pc})" for name, pc in image_labels)
-        chunks = []
-        for number, at in enumerate(range(0, len(expressions), 64)):
-            chunk = f"actual{stem}Chunk{number}"
-            chunks.append(chunk)
-            declarations.append(
-                f"def {chunk} : List (Nat × Nat × Program) := "
-                f"[{', '.join(expressions[at:at + 64])}]\n")
-            if key == "measure":
-                declarations.append(
-                    f"theorem {chunk}_eq : {chunk} = {namespace}.programChunk{number}"
-                    " := by decide\n")
-        declarations.append(
-            f"def actual{stem} : List (Nat × Nat × Program) := {' ++ '.join(chunks)}\n")
-        if key == "measure":
-            equalities = ", ".join(f"{chunk}_eq" for chunk in chunks)
-            equality_proof = (
-                f"by\n  simp only [actual{stem}, {namespace}.program, {equalities}]")
-        else:
-            equality_proof = "by decide"
-        declarations.append(
-            f"theorem actual{stem}_eq : actual{stem} = {namespace}.program := "
-            f"{equality_proof}\n"
-            f"example : {namespace}.labels = [{label_literal}] := by decide\n"
-            f"example : {namespace}.entry = 0 := by decide\n")
-
-        # Separate opaque declarations keep large lookup proof terms out of the
-        # final CodeAt record while bounding each fetch decision to 64 rows.
-        chunk_checks = []
-        for number, chunk in enumerate(chunks):
-            check = f"bound{stem}Chunk{number}Fetch"
-            chunk_checks.append(check)
-            witnesses.append(f'''theorem {check} : {chunk}.all (fun row =>
-    decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
-      {namespace}.directives row)) = true := by
-  simp (config := {{maxSteps := 1000000}}) [bound, Kraken.Executable.directivesAtAddress,
-    Kraken.Executable.withAddresses, {chunk},
-    {namespace}.directives, {namespace}.labels]
-''')
-        if len(chunk_checks) == 1:
-            fetch_proof = f"exact {chunk_checks[0]}"
-        else:
-            fetch_proof = (
-                f"simp only [actual{stem}, List.all_append, "
-                f"{', '.join(chunk_checks)}, Bool.and_true]")
-        witnesses.append(f'''theorem bound{stem}Targets : {namespace}.labels.all (fun item =>
-    decide (bound.labels.label item.1 = {base} + Int64.ofNat item.2)) = true := by
-  dsimp (config := {{instances := true}}) [Executable.labels]
-  simp (config := {{maxSteps := 1000000}}) [bound, Kraken.Executable.withAddresses,
-    {namespace}.labels]
-
-theorem bound{stem}CodeAt : {namespace}.CodeAt bound {base} := by
-  constructor
-  · have checked : actual{stem}.all (fun row =>
-        decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
-          {namespace}.directives row)) = true := by
-      {fetch_proof}
-    intro row member
-    rw [← actual{stem}_eq] at member
-    exact of_decide_eq_true (List.all_eq_true.mp checked row member)
-  · intro item member
-    exact of_decide_eq_true (List.all_eq_true.mp bound{stem}Targets item member)
-''')
+        component_declarations, component_witnesses = _component_witness(
+            stem, base, image_labels, expressions, chunked=key == "measure")
+        declarations.extend(component_declarations)
+        witnesses.extend(component_witnesses)
     pieces.extend(_byte_segments(span[cursor:]))
     return f'''import SszX86.MeasureImpl
 import SszX86.NatCompareImpl
@@ -609,4 +629,186 @@ example : SszX86.Measure.tableDestinations = [{', '.join(map(str, destinations))
 -- Preserve every real gap byte; all three CodeAt witnesses use this one image.
 noncomputable def bound : Executable := (0, List.flatten [{', '.join(pieces)}])
 {''.join(witnesses)}
+'''
+
+
+def serialize_source(bodies, span, *, origin, table_bytes=None):
+    """Bind the actual serialize wrapper and its full primitive helper closure."""
+    from hashlib import sha256
+    from decoder_binding import FUNCTIONS
+
+    # Offsets are relative to the wrapper, not rebased component-local PCs.
+    members = (
+        ("nat_compare", "NatCompare", "natCompare_", -66368, 107, 373),
+        ("nat_from_u128", "NatFromU128", "natFromU128_", -48192, 47, 177),
+        ("measure", "Measure", "measure_", -33488, 476, 3528),
+        ("emit", "Emit", "emit_", -29952, 276, 1705),
+        ("serialize", "Serialize", "serialize_", 0, 99, 424),
+        ("memcpy", "Memcpy", "copy_", 80784, 19, 57),
+    )
+    if (set(bodies) != {member[0] for member in members}
+            or origin != -66368 or len(span) != 147209):
+        raise ValueError("unexpected serialize closure or linked image extent")
+    # Pin the complete extracted image, including all otherwise unselected gap
+    # bytes. Component equality alone cannot detect mutations in those gaps.
+    if sha256(span).hexdigest() != "b5fbd27cc6f2263803d7a3f81ccdb58d4a2662738977817247bb11b56d6d44df":
+        raise ValueError("serialize linked image bytes differ from the pinned image")
+    expected_tables = {
+        "measure": bytes.fromhex(
+            "125d0100ff5f0100f55e01004c5f0100365d01005360010085600100"
+            "a25f0100e66001006e5e0100b5600100245d01008c5d0100"),
+        "emit": bytes.fromhex("806b01001e6c0100b36b0100db6b0100"),
+    }
+    if table_bytes != expected_tables:
+        raise ValueError("unexpected serialize readonly jump tables")
+    entries = {
+        "measure": [0, 46, 795, 529, 616, 82, 879, 929],
+        "emit": [0, 256, 414],
+    }
+    emit_frontiers = [1615, 1625, 1638, 1653, 1666, 1675, 1683, 1694]
+    graph = {
+        "serialize": ("measure", "emit"),
+        "measure": ("nat_compare", "nat_from_u128"),
+        "emit": ("memcpy",),
+    }
+    offsets = {key: offset for key, _, _, offset, _, _ in members}
+    selected = {}
+    for key, _, _, offset, count, size in members:
+        rows, body_entries, raw, frontiers, callees = bodies[key]
+        base = offset - origin
+        expected_callees = {FUNCTIONS[child]["x86"]: child
+                            for child in graph.get(key, ())}
+        if (body_entries != entries.get(key, [0])
+                or frontiers != (emit_frontiers if key == "emit" else [])
+                or set(callees) != set(expected_callees)
+                or len(rows) != count or len(raw) != size
+                or span[base:base + size] != raw):
+            raise ValueError(f"unexpected serialize component contract: {key}")
+        for symbol, child in expected_callees.items():
+            helper = callees[symbol]
+            child_raw = bodies[child][2]
+            if (helper["offset"] != offsets[child] - offset
+                    or helper["size"] != len(child_raw)
+                    or bytes.fromhex(helper["raw"]) != child_raw):
+                raise ValueError(f"serialize callee metadata mismatch: {key}/{child}")
+        for row in rows:
+            if row.get("callee") and (
+                    row["callee"] not in callees
+                    or row.get("target") != callees[row["callee"]]["offset"]):
+                raise ValueError(f"serialize linked call target mismatch: {key}/{row}")
+        # Normalize assembler whitespace/address annotations through the existing
+        # translator, but pin every selected PC, width, operation and branch/call.
+        selected[key] = [[row["pc"], row["width"], expression(row),
+                          row.get("target"), row.get("callee")] for row in rows]
+    selection = json.dumps(selected, sort_keys=True, separators=(",", ":")).encode()
+    if sha256(selection).hexdigest() != "e4c5ac121fc03c544fcf3ade6e547036f9b307f4a751f7d62c361587cc8e768f":
+        raise ValueError("serialize selected instruction rows differ from the pinned closure")
+
+    declarations, witnesses, pieces = [], [], []
+    cursor = 0
+    for key, stem, prefix, offset, _, _ in members:
+        rows, _, raw, _, _ = bodies[key]
+        base = offset - origin
+        image_labels, expressions, body_pieces = _image_parts(rows, raw, prefix)
+        pieces.extend(_byte_segments(span[cursor:base]))
+        if key == "memcpy":
+            if image_labels != [("copy_u9", 9), ("copy_u33", 33),
+                                ("copy_u38", 38), ("copy_u56", 56)]:
+                raise ValueError("unexpected serialize memcpy labels")
+            for pc, name in ((9, "bulk"), (33, "tail"), (38, "byte"), (56, "done")):
+                body_pieces = [piece.replace(f"copy_u{pc}", f"copy_{name}")
+                               for piece in body_pieces]
+            declarations.append(
+                f"def actualCopy : List (Directive × Nat) := List.flatten "
+                f"[{', '.join(body_pieces)}]\n"
+                "theorem actualCopy_eq : actualCopy = (SszX86.memcpyExecutable 0).2"
+                " := by decide\n")
+        else:
+            component_declarations, component_witnesses = _component_witness(
+                stem, base, image_labels, expressions,
+                chunked=key in ("measure", "serialize"), split_fetch=key == "serialize")
+            declarations.extend(component_declarations)
+            witnesses.extend(component_witnesses)
+        pieces.extend(body_pieces)
+        cursor = base + len(raw)
+    pieces.extend(_byte_segments(span[cursor:]))
+    table_literals = "\n".join(
+        f"example : SszX86.{key.title()}.tableBytes = "
+        f"[{', '.join(map(str, raw))}] := by decide"
+        for key, raw in table_bytes.items())
+    return f'''import SszX86.SerializeImpl
+open Kraken.X64.Parser
+set_option maxRecDepth 16384
+set_option maxHeartbeats 32000000
+
+{''.join(declarations)}
+{table_literals}
+example : SszX86.Serialize.measureOffset = -33488 := by decide
+example : SszX86.Serialize.emitOffset = -29952 := by decide
+example : SszX86.Serialize.compareOffset = -66368 := by decide
+example : SszX86.Serialize.fromU128Offset = -48192 := by decide
+example : SszX86.Serialize.memcpyOffset = 80784 := by decide
+example : (32880 : Int64) + Int64.ofInt SszX86.Measure.compareOffset = 0 := by decide
+example : (32880 : Int64) + Int64.ofInt SszX86.Measure.fromU128Offset = 18176 := by decide
+example : (36416 : Int64) + Int64.ofNat SszX86.Emit.memcpyOffset = 147152 := by decide
+example : SszX86.Serialize.measureTableOffset = -122804 := by decide
+example : SszX86.Serialize.emitTableOffset = -122752 := by decide
+example : SszX86.Serialize.measureOffset + SszX86.Measure.tableOffset =
+    SszX86.Serialize.measureTableOffset := by decide
+example : SszX86.Serialize.emitOffset + SszX86.Emit.tableOffset =
+    SszX86.Serialize.emitTableOffset := by decide
+example : SszX86.Measure.tableAddress 32880 =
+    ((66368 : Int64) + Int64.ofInt SszX86.Serialize.measureTableOffset).toBitVec := by decide
+example : SszX86.Emit.tableAddress 36416 =
+    ((66368 : Int64) + Int64.ofInt SszX86.Serialize.emitTableOffset).toBitVec := by decide
+
+def signedTableDestinations (offset : Int) (bytes : List UInt8) : List Int :=
+  (List.range (bytes.length / 4)).map fun i =>
+    let displacement := (bytes.getD (4 * i) 0).toNat +
+      256 * (bytes.getD (4 * i + 1) 0).toNat +
+      65536 * (bytes.getD (4 * i + 2) 0).toNat +
+      16777216 * (bytes.getD (4 * i + 3) 0).toNat
+    offset + (if displacement < 2147483648 then Int.ofNat displacement
+      else Int.ofNat displacement - 4294967296)
+
+theorem boundMeasureTableDestinations :
+    signedTableDestinations SszX86.Measure.tableOffset SszX86.Measure.tableBytes =
+      SszX86.Measure.tableDestinations.map Int.ofNat := by decide
+theorem boundEmitTableDestinations :
+    signedTableDestinations SszX86.Emit.tableOffset SszX86.Emit.tableBytes =
+      [256, 414, 307, 347] := by decide
+
+-- One image; every real gap byte is retained. Readonly tables remain data, not code.
+noncomputable def bound : Executable := (0, List.flatten [{', '.join(pieces)}])
+{''.join(witnesses)}
+theorem boundMemcpyFetch :
+    (SszX86.memcpyExecutable 147152).withAddresses.all (fun row =>
+      decide (bound.directivesAtAddress row.1 =
+        (SszX86.memcpyExecutable 147152).directivesAtAddress row.1)) = true := by
+  simp (config := {{instances := true, maxSteps := 1000000}}) [bound,
+    Kraken.Executable.directivesAtAddress, Kraken.Executable.withAddresses,
+    SszX86.memcpyExecutable, SszX86.memcpyLayout, SszX86.memcpyProgram, Kraken.Layout.apply]
+
+theorem boundMemcpyTargets : SszX86.Emit.memcpyLabels.all (fun name =>
+    decide (bound.labels.label name =
+      (SszX86.memcpyExecutable 147152).labels.label name)) = true := by
+  dsimp (config := {{instances := true}}) [Executable.labels]
+  simp (config := {{instances := true, maxSteps := 1000000}}) [bound,
+    Kraken.Executable.withAddresses, SszX86.Emit.memcpyLabels,
+    SszX86.memcpyExecutable, SszX86.memcpyLayout, SszX86.memcpyProgram, Kraken.Layout.apply]
+
+theorem boundMemcpyCodeAt : SszX86.Emit.MemcpyCodeAt bound 147152 := by
+  apply SszX86.Emit.MemcpyCodeAt.of_rows
+  · intro row member
+    exact of_decide_eq_true (List.all_eq_true.mp boundMemcpyFetch row member)
+  · intro name member
+    exact of_decide_eq_true (List.all_eq_true.mp boundMemcpyTargets name member)
+
+theorem boundSerializeClosureAt : SszX86.Serialize.ClosureAt bound 66368 := by
+  refine ⟨boundSerializeCodeAt, ?_, ?_, ?_, ?_, ?_⟩
+  · exact boundMeasureCodeAt
+  · exact boundEmitCodeAt
+  · exact boundNatCompareCodeAt
+  · exact boundNatFromU128CodeAt
+  · exact boundMemcpyCodeAt
 '''

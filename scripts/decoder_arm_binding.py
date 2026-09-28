@@ -396,47 +396,9 @@ theorem lookup (rows : List Row) (ordered : Ordered rows) (row : Row) (member : 
 """
 
 
-def measure_source(bodies, span, *, origin, table_bytes=None) -> str:
-    """Bind the selected measurement body and all helpers in one linked program."""
-    _require(set(bodies) == {"measure", "nat_compare", "nat_from_u128", "memcpy"},
-             "unexpected measurement function set")
-    _require(origin == -40272 and len(span) == 163676 and table_bytes is None,
-             "unexpected ARM measurement span, origin, or table")
-    rows, entries, raw, frontiers, callees = bodies["measure"]
-    _require(entries == [0] and len(rows) == 1030 and len(raw) == 4352
-             and frontiers == [1092, 3108],
-             "unexpected primitive measurement image")
-    helpers = (
-        ("nat_compare", "_ZN13ssz_fv_native3nat3Nat7compare17h066191a25a9f736bE",
-         -40272, 178, 712, "Compare", "SszArm.NatCompare.program"),
-        ("nat_from_u128", "_ZN13ssz_fv_native3nat3Nat9from_u12817h73292f97725c3b7dE",
-         -15748, 105, 420, "FromU128", "SszArm.NatFromU128.program"),
-        ("memcpy", "memcpy", 123348, 14, 56, "Memcpy", None),
-    )
-    _require(set(callees) == {helper[1] for helper in helpers},
-             "unexpected primitive measurement callees")
-    _validate_rows(rows, raw)
-    caller_base = -origin
-    _require(span[caller_base:caller_base + len(raw)] == raw,
-             "measurement caller does not match linked span")
-    groups = []
-    for key, symbol, offset, count, size, name, program in helpers:
-        helper_rows, helper_entries, helper_raw, helper_frontiers, helper_callees = bodies[key]
-        _require(helper_entries == [0] and not helper_frontiers and not helper_callees
-                 and len(helper_rows) == count and len(helper_raw) == size,
-                 f"unexpected measurement {key} image")
-        _validate_rows(helper_rows, helper_raw)
-        _require([row["pc"] for row in helper_rows] == list(range(0, size, 4)),
-                 f"incomplete measurement {key} image")
-        callee = callees[symbol]
-        base = caller_base + offset
-        _require(callee["offset"] == offset and callee["size"] == size
-                 and _parse_hex_bytes(callee["raw"]) == helper_raw
-                 and span[base:base + size] == helper_raw,
-                 f"measurement {key} linked-image mismatch")
-        groups.append((name, helper_rows, base, program))
-    groups.insert(2, ("Body", rows, caller_base, "SszArm.Measure.bodyProgram"))
 
+def _ordered_image_declarations(groups, *, chunked_programs=(), flat_programs=()):
+    """Share bounded word equalities and ordered lookup for linked ARM images."""
     declarations = ["""
 def shiftRows (base : Nat) (rows : List Row) : List Row :=
   rows.map (fun row => (base + row.1, row.2))
@@ -461,7 +423,7 @@ theorem append_eq {xs xs' ys ys' : List Row}
         return result
 
     for name, group_rows, base, program in groups:
-        # Match MeasureImpl's 100-word private blocks for its equality, but
+        # Match literal modules' 100-word blocks for their equality, but
         # discharge ordering in halves so every recursive decision is bounded.
         parts = [group_rows[i:i + 100] for i in range(0, len(group_rows), 100)]
         part_names = []
@@ -498,11 +460,29 @@ theorem append_eq {xs xs' ys ys' : List Row}
         declarations.append(f"def actual{name} : List Row := {append_rows(part_names)}")
         if program is not None:
             equality = "(by rfl)"
-            for _ in (parts[:-1] if name == "Body" else []):
+            for _ in (parts[:-1] if program in chunked_programs else []):
                 equality = f"(append_eq (by rfl) {equality})"
             normalization = (
                 f"  conv =>\n    rhs\n    unfold {program}\n    simp only [List.append_assoc]\n"
-                if name == "Body" else "")
+                if program in chunked_programs else "")
+            if program in flat_programs:
+                # Literal suffixes identify a flat component without reducing
+                # every append in one recursive equality check.
+                tails = [f"{name.lower()}Tail{i}" for i in range(len(parts))]
+                for index, tail in enumerate(tails):
+                    declarations.append(
+                        f"def {tail} : List Row := [{_rows_expr(group_rows[index * 100:])}]")
+                splits = []
+                for index in range(len(parts) - 1):
+                    split = f"{tails[index]}_split"
+                    splits.append(split)
+                    declarations.append(
+                        f"theorem {split} : {tails[index]} = "
+                        f"{part_names[index]} ++ {tails[index + 1]} := by rfl")
+                normalization = f"  change actual{name} = {tails[0]}\n"
+                if splits:
+                    normalization += (
+                        "  conv =>\n    rhs\n    rw [" + ", ".join(splits) + "]\n")
             declarations.append(
                 f"theorem actual{name}_eq : actual{name} = {program} := by\n"
                 f"{normalization}  exact {equality}")
@@ -544,6 +524,51 @@ theorem lookup_shifted (base : Nat) (rows : List Row)
   simp only [actualProgram, List.mem_append]
   exact {included}
 """)
+    return declarations
+
+
+def measure_source(bodies, span, *, origin, table_bytes=None) -> str:
+    """Bind the selected measurement body and all helpers in one linked program."""
+    _require(set(bodies) == {"measure", "nat_compare", "nat_from_u128", "memcpy"},
+             "unexpected measurement function set")
+    _require(origin == -40272 and len(span) == 163676 and table_bytes is None,
+             "unexpected ARM measurement span, origin, or table")
+    rows, entries, raw, frontiers, callees = bodies["measure"]
+    _require(entries == [0] and len(rows) == 1030 and len(raw) == 4352
+             and frontiers == [1092, 3108],
+             "unexpected primitive measurement image")
+    helpers = (
+        ("nat_compare", "_ZN13ssz_fv_native3nat3Nat7compare17h066191a25a9f736bE",
+         -40272, 178, 712, "Compare", "SszArm.NatCompare.program"),
+        ("nat_from_u128", "_ZN13ssz_fv_native3nat3Nat9from_u12817h73292f97725c3b7dE",
+         -15748, 105, 420, "FromU128", "SszArm.NatFromU128.program"),
+        ("memcpy", "memcpy", 123348, 14, 56, "Memcpy", None),
+    )
+    _require(set(callees) == {helper[1] for helper in helpers},
+             "unexpected primitive measurement callees")
+    _validate_rows(rows, raw)
+    caller_base = -origin
+    _require(span[caller_base:caller_base + len(raw)] == raw,
+             "measurement caller does not match linked span")
+    groups = []
+    for key, symbol, offset, count, size, name, program in helpers:
+        helper_rows, helper_entries, helper_raw, helper_frontiers, helper_callees = bodies[key]
+        _require(helper_entries == [0] and not helper_frontiers and not helper_callees
+                 and len(helper_rows) == count and len(helper_raw) == size,
+                 f"unexpected measurement {key} image")
+        _validate_rows(helper_rows, helper_raw)
+        _require([row["pc"] for row in helper_rows] == list(range(0, size, 4)),
+                 f"incomplete measurement {key} image")
+        callee = callees[symbol]
+        base = caller_base + offset
+        _require(callee["offset"] == offset and callee["size"] == size
+                 and _parse_hex_bytes(callee["raw"]) == helper_raw
+                 and span[base:base + size] == helper_raw,
+                 f"measurement {key} linked-image mismatch")
+        groups.append((name, helper_rows, base, program))
+    groups.insert(2, ("Body", rows, caller_base, "SszArm.Measure.bodyProgram"))
+    declarations = _ordered_image_declarations(
+        groups, chunked_programs={"SszArm.Measure.bodyProgram"})
     declarations.append("""
 example : SszArm.Measure.entry = 0 := by rfl
 example : SszArm.Measure.frontiers = [1092, 3108] := by rfl
@@ -575,4 +600,194 @@ theorem measure_codeAt (s : ArmState) :
 """)
     return _EMIT_IMAGE_ORDER.replace(
         "import SszArm.EmitImpl", "import SszArm.MeasureImpl", 1
+    ) + "\n".join(declarations)
+
+
+def serialize_source(bodies, span, *, origin, table_bytes=None) -> str:
+    """Bind the actual serialize wrapper and primitive closure in one ARM image."""
+    from hashlib import sha256
+
+    # Relative to the original standalone serialize entry, not a synthetic root.
+    specs = (
+        ("nat_compare", -78380, 712, ((0, 712),), [],
+         "51111a14f3070af5098217e615c08827975cf452846ba01826748c2e5655262e",
+         "Compare", "SszArm.NatCompare.program"),
+        ("nat_from_u128", -53856, 420, ((0, 420),), [],
+         "129949dabc6c440892c7db8dfb189bb12566f21934f687e1bab4b9a5b5f2ffee",
+         "FromU128", "SszArm.NatFromU128.program"),
+        ("measure", -38108, 4352, ((0, 1092), (1156, 2900), (2984, 3108), (3116, 4276)),
+         [1092, 3108],
+         "16b518576779f284f22f4c7609e23ef1a3555c708c08497ac6b1650faaff0fd5",
+         "Measure", "SszArm.Measure.bodyProgram"),
+        ("emit", -33756, 1996, ((0, 740), (796, 868), (896, 1368), (1484, 1536),
+                                  (1580, 1588)),
+         [740, 1916, 1928, 1944, 1960, 1972, 1984],
+         "edfe46a25130ea88eac1c200663c66a1ee7a1567ed41af36c7fecfb5265455ef",
+         "Emit", "SszArm.Emit.bodyProgram"),
+        ("serialize", 0, 692, ((0, 692),), [],
+         "661a9170dc1854f25887cff67f9a7c138297fbc223c7433d369356b28ff058db",
+         "Serialize", "SszArm.Serialize.bodyProgram"),
+        ("memcpy", 85240, 56, ((0, 56),), [],
+         "7f5022cb240032194b2b2f50db5c0b19896edef3b68e5598d8d509be82acc6af",
+         "Memcpy", "SszArm.Emit.memcpyProgram"),
+    )
+    symbols = {
+        "nat_compare": "_ZN13ssz_fv_native3nat3Nat7compare17h066191a25a9f736bE",
+        "nat_from_u128": "_ZN13ssz_fv_native3nat3Nat9from_u12817h73292f97725c3b7dE",
+        "measure": "_ZN13ssz_fv_native5codec7measure17h6f170d30c3984362E",
+        "emit": "_ZN13ssz_fv_native5codec4emit17h0c79599762be27eaE",
+        "memcpy": "memcpy",
+    }
+    calls = {
+        "serialize": {48: "measure", 668: "emit"},
+        "measure": {160: "nat_compare", 1052: "nat_compare", 1728: "nat_compare",
+                    1912: "nat_from_u128", 1940: "memcpy"},
+        "emit": {648: "memcpy", 856: "memcpy", 1252: "memcpy"},
+        "nat_compare": {}, "nat_from_u128": {}, "memcpy": {},
+    }
+    _require(set(bodies) == {spec[0] for spec in specs},
+             "unexpected ARM serialize function set")
+    _require(type(origin) is int and origin == -78380 and len(span) == 163676
+             and table_bytes is None,
+             "unexpected ARM serialize origin, span extent, or table")
+    # Pin the full extracted extent, including unselected bytes. The witness below
+    # owns selected executable rows only; it makes no claim about their execution.
+    _require(sha256(span).hexdigest()
+             == "b93bb296fa7e2876d862067191f9f5552463f797c5d2c2e2478d7671ab4e6897",
+             "ARM serialize linked span bytes changed")
+    offsets = {spec[0]: spec[1] for spec in specs}
+    sizes = {spec[0]: spec[2] for spec in specs}
+    groups = []
+    for key, offset, size, ranges, expected_frontiers, digest, name, program in specs:
+        rows, entries, raw, frontiers, callees = bodies[key]
+        selected = [pc for start, end in ranges for pc in range(start, end, 4)]
+        _require(entries == [0] and frontiers == expected_frontiers
+                 and all(type(pc) is int for pc in entries + frontiers)
+                 and len(raw) == size and sha256(raw).hexdigest() == digest,
+                 f"unexpected ARM serialize {key} entry, frontier, or bytes")
+        _validate_rows(rows, raw)
+        _require([row["pc"] for row in rows] == selected
+                 and all(type(row["pc"]) is int for row in rows),
+                 f"unexpected ARM serialize {key} selected rows")
+        base = offset - origin
+        _require(span[base:base + size] == raw,
+                 f"ARM serialize {key} does not match linked span")
+        expected_calls = calls[key]
+        _require(set(callees) == {symbols[callee] for callee in expected_calls.values()},
+                 f"unexpected ARM serialize {key} callees")
+        for callee_key in set(expected_calls.values()):
+            metadata = callees[symbols[callee_key]]
+            _require(type(metadata.get("offset")) is int
+                     and metadata["offset"] == offsets[callee_key] - offset
+                     and type(metadata.get("size")) is int
+                     and metadata["size"] == sizes[callee_key]
+                     and _parse_hex_bytes(metadata["raw"]) == bodies[callee_key][2],
+                     f"ARM serialize {key}/{callee_key} linked metadata mismatch")
+        for row in rows:
+            word = int(row["encoding"], 16)
+            pc = row["pc"]
+            callee_key = expected_calls.get(pc)
+            _require(row.get("callee") == (symbols[callee_key] if callee_key else None)
+                     and (word & 0xfc000000 == 0x94000000) == (callee_key is not None),
+                     f"ARM serialize {key} callsite mismatch at {pc}")
+            # Validate the decoder's branch metadata against the actual immediate,
+            # including the linked BL targets and primitive frontier branches.
+            if word & 0x7c000000 == 0x14000000:
+                immediate, bits = word & 0x03ffffff, 26
+            elif (word & 0xff000010 == 0x54000000
+                  or word & 0x7e000000 == 0x34000000):
+                immediate, bits = (word >> 5) & 0x7ffff, 19
+            elif word & 0x7e000000 == 0x36000000:
+                immediate, bits = (word >> 5) & 0x3fff, 14
+            else:
+                _require("target" not in row,
+                         f"ARM serialize {key} nonbranch target metadata at {pc}")
+                continue
+            signed = immediate - (1 << bits) if immediate & (1 << (bits - 1)) else immediate
+            target = pc + 4 * signed
+            _require(type(row.get("target")) is int and row["target"] == target,
+                     f"ARM serialize {key} branch target mismatch at {pc}")
+            if callee_key is not None:
+                _require(target == offsets[callee_key] - offset,
+                         f"ARM serialize {key} linked call target mismatch at {pc}")
+        groups.append((name, rows, base, program))
+
+    declarations = _ordered_image_declarations(
+        groups, chunked_programs={"SszArm.Measure.bodyProgram", "SszArm.Serialize.bodyProgram"},
+        flat_programs={"SszArm.Emit.bodyProgram"})
+    declarations.append("""
+example : SszArm.Serialize.entry = 0 := by rfl
+example : SszArm.Serialize.frontiers = [] := by rfl
+example : SszArm.Serialize.measureOffset = -38108#64 := by rfl
+example : SszArm.Serialize.emitOffset = -33756#64 := by rfl
+example : SszArm.Measure.entry = 0 := by rfl
+example : SszArm.Measure.frontiers = [1092, 3108] := by rfl
+example : SszArm.Measure.compareOffset = -40272#64 := by rfl
+example : SszArm.Measure.fromU128Offset = -15748#64 := by rfl
+example : SszArm.Measure.memcpyOffset = 123348#64 := by rfl
+example : SszArm.Emit.entry = 0 := by rfl
+example : SszArm.Emit.frontiers = [740, 1916, 1928, 1944, 1960, 1972, 1984] := by rfl
+example : SszArm.Emit.memcpyOffset = 118996 := by rfl
+
+theorem compare_codeAt (s : ArmState) :
+    SszArm.NatCompare.CodeAt {s with program := bound} 0#64 := by
+  change ∀ row ∈ SszArm.NatCompare.program,
+    bound.find? (0#64 + BitVec.ofNat 64 row.1) = some row.2
+  rw [← actualCompare_eq]
+  exact compare_lookup
+
+theorem fromU128_codeAt (s : ArmState) :
+    SszArm.NatFromU128.CodeAt {s with program := bound} 24524#64 := by
+  change ∀ row ∈ SszArm.NatFromU128.program,
+    bound.find? (24524#64 + BitVec.ofNat 64 row.1) = some row.2
+  rw [← actualFromU128_eq]
+  exact fromu128_lookup
+
+theorem memcpy_codeAt (s : ArmState) :
+    SszArm.CodeAt {s with program := bound} 163620#64 SszArm.Memcpy.program := by
+  change ∀ k (hk : k < SszArm.Memcpy.program.length),
+    bound.find? (163620#64 + BitVec.ofNat 64 (4 * k)) = some SszArm.Memcpy.program[k]
+  have checked : ∀ k : Fin 14,
+      (4 * k.val, SszArm.Memcpy.program[k.val]) ∈ actualMemcpy := by decide
+  intro k hk
+  exact memcpy_lookup _ (checked ⟨k, hk⟩)
+
+theorem measure_codeAt (s : ArmState) :
+    SszArm.Measure.CodeAt {s with program := bound} 40272#64 := by
+  constructor
+  · change ∀ row ∈ SszArm.Measure.bodyProgram,
+      bound.find? (40272#64 + BitVec.ofNat 64 row.1) = some row.2
+    rw [← actualMeasure_eq]
+    exact measure_lookup
+  · exact compare_codeAt s
+  · exact fromU128_codeAt s
+  · exact memcpy_codeAt s
+
+theorem emit_codeAt (s : ArmState) :
+    SszArm.Emit.CodeAt {s with program := bound} 44624#64 := by
+  intro row member
+  change row ∈ SszArm.Emit.bodyProgram ++
+    SszArm.Emit.memcpyProgram.map (fun r => (SszArm.Emit.memcpyOffset + r.1, r.2)) at member
+  rcases List.mem_append.mp member with body | copy
+  · rw [← actualEmit_eq] at body
+    exact emit_lookup row body
+  · rcases List.mem_map.mp copy with ⟨localRow, inside, rfl⟩
+    rw [← actualMemcpy_eq] at inside
+    change bound.find? (44624#64 + BitVec.ofNat 64 (118996 + localRow.1)) = some localRow.2
+    have baseSum : 44624#64 + 118996#64 = 163620#64 := by decide
+    simpa only [BitVec.ofNat_add, ← BitVec.add_assoc, baseSum] using
+      memcpy_lookup localRow inside
+
+theorem serialize_codeAt (s : ArmState) :
+    SszArm.Serialize.CodeAt {s with program := bound} 78380#64 := by
+  constructor
+  · change ∀ row ∈ SszArm.Serialize.bodyProgram,
+      bound.find? (78380#64 + BitVec.ofNat 64 row.1) = some row.2
+    rw [← actualSerialize_eq]
+    exact serialize_lookup
+  · exact measure_codeAt s
+  · exact emit_codeAt s
+""")
+    return _EMIT_IMAGE_ORDER.replace(
+        "import SszArm.EmitImpl", "import SszArm.SerializeImpl", 1
     ) + "\n".join(declarations)
