@@ -394,3 +394,185 @@ theorem lookup (rows : List Row) (ordered : Ordered rows) (row : Row) (member : 
       simp only [List.map_cons, Map.find?, if_neg different]
       exact ih pieces.2 inside
 """
+
+
+def measure_source(bodies, span, *, origin, table_bytes=None) -> str:
+    """Bind the selected measurement body and all helpers in one linked program."""
+    _require(set(bodies) == {"measure", "nat_compare", "nat_from_u128", "memcpy"},
+             "unexpected measurement function set")
+    _require(origin == -40272 and len(span) == 163676 and table_bytes is None,
+             "unexpected ARM measurement span, origin, or table")
+    rows, entries, raw, frontiers, callees = bodies["measure"]
+    _require(entries == [0] and len(rows) == 1030 and len(raw) == 4352
+             and frontiers == [1092, 3108],
+             "unexpected primitive measurement image")
+    helpers = (
+        ("nat_compare", "_ZN13ssz_fv_native3nat3Nat7compare17h066191a25a9f736bE",
+         -40272, 178, 712, "Compare", "SszArm.NatCompare.program"),
+        ("nat_from_u128", "_ZN13ssz_fv_native3nat3Nat9from_u12817h73292f97725c3b7dE",
+         -15748, 105, 420, "FromU128", "SszArm.NatFromU128.program"),
+        ("memcpy", "memcpy", 123348, 14, 56, "Memcpy", None),
+    )
+    _require(set(callees) == {helper[1] for helper in helpers},
+             "unexpected primitive measurement callees")
+    _validate_rows(rows, raw)
+    caller_base = -origin
+    _require(span[caller_base:caller_base + len(raw)] == raw,
+             "measurement caller does not match linked span")
+    groups = []
+    for key, symbol, offset, count, size, name, program in helpers:
+        helper_rows, helper_entries, helper_raw, helper_frontiers, helper_callees = bodies[key]
+        _require(helper_entries == [0] and not helper_frontiers and not helper_callees
+                 and len(helper_rows) == count and len(helper_raw) == size,
+                 f"unexpected measurement {key} image")
+        _validate_rows(helper_rows, helper_raw)
+        _require([row["pc"] for row in helper_rows] == list(range(0, size, 4)),
+                 f"incomplete measurement {key} image")
+        callee = callees[symbol]
+        base = caller_base + offset
+        _require(callee["offset"] == offset and callee["size"] == size
+                 and _parse_hex_bytes(callee["raw"]) == helper_raw
+                 and span[base:base + size] == helper_raw,
+                 f"measurement {key} linked-image mismatch")
+        groups.append((name, helper_rows, base, program))
+    groups.insert(2, ("Body", rows, caller_base, "SszArm.Measure.bodyProgram"))
+
+    declarations = ["""
+def shiftRows (base : Nat) (rows : List Row) : List Row :=
+  rows.map (fun row => (base + row.1, row.2))
+theorem shiftRows_append (base : Nat) (xs ys : List Row) :
+    shiftRows base (xs ++ ys) = shiftRows base xs ++ shiftRows base ys := by
+  exact List.map_append
+theorem append_eq {xs xs' ys ys' : List Row}
+    (left : xs = xs') (right : ys = ys') : xs ++ ys = xs' ++ ys' := by
+  rw [left, right]
+"""]
+
+    def join_proofs(proofs):
+        result = proofs[-1]
+        for proof in reversed(proofs[:-1]):
+            result = f"(join {proof} {result} (by decide))"
+        return result
+
+    def append_rows(names):
+        result = names[-1]
+        for name in reversed(names[:-1]):
+            result = f"({name} ++ {result})"
+        return result
+
+    for name, group_rows, base, program in groups:
+        # Match MeasureImpl's 100-word private blocks for its equality, but
+        # discharge ordering in halves so every recursive decision is bounded.
+        parts = [group_rows[i:i + 100] for i in range(0, len(group_rows), 100)]
+        part_names = []
+        part_proofs = []
+        for index, part in enumerate(parts):
+            part_name = f"{name.lower()}Part{index}"
+            halves = [part[i:i + 50] for i in range(0, len(part), 50)]
+            half_names = []
+            half_proofs = []
+            for half_index, half in enumerate(halves):
+                half_name = f"{part_name}_{half_index}"
+                half_names.append(half_name)
+                half_proofs.append(f"{half_name}_segment")
+                lo, hi = base + half[0]["pc"], base + half[-1]["pc"] + 4
+                declarations.append(f"def {half_name} : List Row := [{_rows_expr(half)}]")
+                declarations.append(f"""theorem {half_name}_segment :
+    Segment (shiftRows {base} {half_name}) {lo} {hi} := by
+  refine ⟨by decide, by decide, ?_⟩
+  have checked : (shiftRows {base} {half_name}).all
+      (fun row => decide ({lo} ≤ key row ∧ key row < {hi})) = true := by decide
+  intro row member
+  exact of_decide_eq_true (List.all_eq_true.mp checked row member)
+""")
+            declarations.append(f"def {part_name} : List Row := {append_rows(half_names)}")
+            half_rewrites = ", shiftRows_append" if len(half_names) > 1 else ""
+            declarations.append(f"""theorem {part_name}_segment :
+    Segment (shiftRows {base} {part_name})
+      {base + part[0]["pc"]} {base + part[-1]["pc"] + 4} := by
+  simp only [{part_name}{half_rewrites}]
+  exact {join_proofs(half_proofs)}
+""")
+            part_names.append(part_name)
+            part_proofs.append(f"{part_name}_segment")
+        declarations.append(f"def actual{name} : List Row := {append_rows(part_names)}")
+        if program is not None:
+            equality = "(by rfl)"
+            for _ in (parts[:-1] if name == "Body" else []):
+                equality = f"(append_eq (by rfl) {equality})"
+            normalization = (
+                f"  conv =>\n    rhs\n    unfold {program}\n    simp only [List.append_assoc]\n"
+                if name == "Body" else "")
+            declarations.append(
+                f"theorem actual{name}_eq : actual{name} = {program} := by\n"
+                f"{normalization}  exact {equality}")
+        part_rewrites = ", shiftRows_append" if len(part_names) > 1 else ""
+        declarations.append(f"""theorem actual{name}_segment :
+    Segment (shiftRows {base} actual{name})
+      {base + group_rows[0]["pc"]} {base + group_rows[-1]["pc"] + 4} := by
+  simp only [actual{name}{part_rewrites}]
+  exact {join_proofs(part_proofs)}
+""")
+
+    declarations.append(
+        "def actualProgram : List Row := " +
+        append_rows([f"shiftRows {base} actual{name}" for name, _, base, _ in groups]))
+    declarations.append(
+        "theorem all_ordered : Ordered actualProgram :=\n  " +
+        f"{join_proofs([f'actual{name}_segment' for name, _, _, _ in groups])}.2.1")
+    declarations.append("""
+def bound : Program := actualProgram.map (fun row => (BitVec.ofNat 64 row.1, row.2))
+theorem lookup_shifted (base : Nat) (rows : List Row)
+    (included : ∀ row ∈ shiftRows base rows, row ∈ actualProgram)
+    (row : Row) (member : row ∈ rows) :
+    bound.find? (BitVec.ofNat 64 base + BitVec.ofNat 64 row.1) = some row.2 := by
+  have inside : (base + row.1, row.2) ∈ shiftRows base rows :=
+    List.mem_map.mpr ⟨row, member, rfl⟩
+  have found := lookup actualProgram all_ordered (base + row.1, row.2)
+    (included _ inside)
+  simpa only [bound, BitVec.ofNat_add] using found
+""")
+    for index, (name, _, base, _) in enumerate(groups):
+        included = "member" if index == len(groups) - 1 else "(Or.inl member)"
+        for _ in range(index):
+            included = f"(Or.inr {included})"
+        declarations.append(f"""theorem {name.lower()}_lookup (row : Row)
+    (member : row ∈ actual{name}) :
+    bound.find? ({base}#64 + BitVec.ofNat 64 row.1) = some row.2 := by
+  apply lookup_shifted {base} actual{name} ?_ row member
+  intro other member
+  simp only [actualProgram, List.mem_append]
+  exact {included}
+""")
+    declarations.append("""
+example : SszArm.Measure.entry = 0 := by rfl
+example : SszArm.Measure.frontiers = [1092, 3108] := by rfl
+example : SszArm.Measure.compareOffset = -40272#64 := by rfl
+example : SszArm.Measure.fromU128Offset = -15748#64 := by rfl
+example : SszArm.Measure.memcpyOffset = 123348#64 := by rfl
+
+theorem measure_codeAt (s : ArmState) :
+    SszArm.Measure.CodeAt {s with program := bound} 40272#64 := by
+  constructor
+  · change ∀ row ∈ SszArm.Measure.bodyProgram,
+      bound.find? (40272#64 + BitVec.ofNat 64 row.1) = some row.2
+    rw [← actualBody_eq]
+    exact body_lookup
+  · change ∀ row ∈ SszArm.NatCompare.program,
+      bound.find? (0#64 + BitVec.ofNat 64 row.1) = some row.2
+    rw [← actualCompare_eq]
+    exact compare_lookup
+  · change ∀ row ∈ SszArm.NatFromU128.program,
+      bound.find? (24524#64 + BitVec.ofNat 64 row.1) = some row.2
+    rw [← actualFromU128_eq]
+    exact fromu128_lookup
+  · change ∀ k (hk : k < SszArm.Memcpy.program.length),
+      bound.find? (163620#64 + BitVec.ofNat 64 (4 * k)) = some SszArm.Memcpy.program[k]
+    have checked : ∀ k : Fin 14,
+        (4 * k.val, SszArm.Memcpy.program[k.val]) ∈ actualMemcpy := by decide
+    intro k hk
+    exact memcpy_lookup _ (checked ⟨k, hk⟩)
+""")
+    return _EMIT_IMAGE_ORDER.replace(
+        "import SszArm.EmitImpl", "import SszArm.MeasureImpl", 1
+    ) + "\n".join(declarations)

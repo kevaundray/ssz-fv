@@ -457,3 +457,156 @@ example : SszX86.Emit.MemcpyCodeAt bound 110736 := by
     intro name member
     exact of_decide_eq_true (List.all_eq_true.mp checked name member)
 '''
+
+
+def measure_source(bodies, span, *, origin, table_bytes=None):
+    """Bind primitive measurement and both helpers in their real linked image."""
+    from decoder_binding import FUNCTIONS
+
+    members = (
+        ("nat_compare", "NatCompare", "natCompare_", -32880, 107, 373),
+        ("nat_from_u128", "NatFromU128", "natFromU128_", -14704, 47, 177),
+        ("measure", "Measure", "measure_", 0, 476, 3528),
+    )
+    if set(bodies) != {member[0] for member in members}:
+        raise ValueError("unexpected primitive measurement helper closure")
+    rows, entries, raw, frontiers, callees = bodies["measure"]
+    helper_symbols = {FUNCTIONS[key]["x86"] for key in ("nat_compare", "nat_from_u128")}
+    if (entries != [0, 46, 795, 529, 616, 82, 879, 929]
+            or frontiers or set(callees) != helper_symbols
+            or origin != -32880 or len(span) != 36408):
+        raise ValueError("unexpected primitive measurement entries, callees, or linked layout")
+    expected_table = bytes.fromhex(
+        "125d0100ff5f0100f55e01004c5f0100365d01005360010085600100"
+        "a25f0100e66001006e5e0100b5600100245d01008c5d0100")
+    if table_bytes != expected_table:
+        raise ValueError("unexpected primitive measurement jump-table bytes")
+    table_offset = -89316
+    destinations = [
+        table_offset + int.from_bytes(table_bytes[at:at + 4], "little", signed=True)
+        for at in range(0, len(table_bytes), 4)
+    ]
+    if destinations != [46, 795, 529, 616, 82, 879, 929, 702, 1026, 394, 977, 64, 168]:
+        raise ValueError("unexpected primitive measurement jump-table destinations")
+    dispatch = [row for row in rows if row["pc"] == 44]
+    if (len(dispatch) != 1 or dispatch[0]["width"] != 2
+            or bytes.fromhex(dispatch[0]["encoding"]) != b"\xff\xe2"):
+        raise ValueError("primitive measurement lacks its actual indirect dispatcher")
+    for row in rows:
+        if row.get("callee"):
+            if (row["callee"] not in callees
+                    or row["target"] != callees[row["callee"]]["offset"]):
+                raise ValueError(f"primitive measurement helper target mismatch: {row}")
+
+    # Check all component extents before constructing any proof declarations.
+    for key, _, _, offset, count, size in members:
+        body_rows, body_entries, body_raw, body_frontiers, body_callees = bodies[key]
+        base = offset - origin
+        if (len(body_rows) != count or len(body_raw) != size
+                or span[base:base + size] != body_raw):
+            raise ValueError(f"unexpected linked primitive measurement component: {key}")
+        if key != "measure":
+            helper = callees[FUNCTIONS[key]["x86"]]
+            if (body_entries != [0] or body_frontiers or body_callees
+                    or helper["offset"] != offset or helper["size"] != size
+                    or bytes.fromhex(helper["raw"]) != body_raw):
+                raise ValueError(f"primitive measurement helper ABI mismatch: {key}")
+
+    declarations, witnesses, pieces = [], [], []
+    cursor = 0
+    for key, stem, prefix, offset, _, _ in members:
+        body_rows, _, body_raw, _, _ = bodies[key]
+        base = offset - origin
+        image_labels, expressions, body_pieces = _image_parts(body_rows, body_raw, prefix)
+        pieces.extend(_byte_segments(span[cursor:base]))
+        pieces.extend(body_pieces)
+        cursor = base + len(body_raw)
+        namespace = f"SszX86.{stem}"
+        label_literal = ", ".join(
+            f"({json.dumps(name)}, {pc})" for name, pc in image_labels)
+        chunks = []
+        for number, at in enumerate(range(0, len(expressions), 64)):
+            chunk = f"actual{stem}Chunk{number}"
+            chunks.append(chunk)
+            declarations.append(
+                f"def {chunk} : List (Nat × Nat × Program) := "
+                f"[{', '.join(expressions[at:at + 64])}]\n")
+            if key == "measure":
+                declarations.append(
+                    f"theorem {chunk}_eq : {chunk} = {namespace}.programChunk{number}"
+                    " := by decide\n")
+        declarations.append(
+            f"def actual{stem} : List (Nat × Nat × Program) := {' ++ '.join(chunks)}\n")
+        if key == "measure":
+            equalities = ", ".join(f"{chunk}_eq" for chunk in chunks)
+            equality_proof = (
+                f"by\n  simp only [actual{stem}, {namespace}.program, {equalities}]")
+        else:
+            equality_proof = "by decide"
+        declarations.append(
+            f"theorem actual{stem}_eq : actual{stem} = {namespace}.program := "
+            f"{equality_proof}\n"
+            f"example : {namespace}.labels = [{label_literal}] := by decide\n"
+            f"example : {namespace}.entry = 0 := by decide\n")
+
+        # Separate opaque declarations keep large lookup proof terms out of the
+        # final CodeAt record while bounding each fetch decision to 64 rows.
+        chunk_checks = []
+        for number, chunk in enumerate(chunks):
+            check = f"bound{stem}Chunk{number}Fetch"
+            chunk_checks.append(check)
+            witnesses.append(f'''theorem {check} : {chunk}.all (fun row =>
+    decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
+      {namespace}.directives row)) = true := by
+  simp (config := {{maxSteps := 1000000}}) [bound, Kraken.Executable.directivesAtAddress,
+    Kraken.Executable.withAddresses, {chunk},
+    {namespace}.directives, {namespace}.labels]
+''')
+        if len(chunk_checks) == 1:
+            fetch_proof = f"exact {chunk_checks[0]}"
+        else:
+            fetch_proof = (
+                f"simp only [actual{stem}, List.all_append, "
+                f"{', '.join(chunk_checks)}, Bool.and_true]")
+        witnesses.append(f'''theorem bound{stem}Targets : {namespace}.labels.all (fun item =>
+    decide (bound.labels.label item.1 = {base} + Int64.ofNat item.2)) = true := by
+  dsimp (config := {{instances := true}}) [Executable.labels]
+  simp (config := {{maxSteps := 1000000}}) [bound, Kraken.Executable.withAddresses,
+    {namespace}.labels]
+
+theorem bound{stem}CodeAt : {namespace}.CodeAt bound {base} := by
+  constructor
+  · have checked : actual{stem}.all (fun row =>
+        decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
+          {namespace}.directives row)) = true := by
+      {fetch_proof}
+    intro row member
+    rw [← actual{stem}_eq] at member
+    exact of_decide_eq_true (List.all_eq_true.mp checked row member)
+  · intro item member
+    exact of_decide_eq_true (List.all_eq_true.mp bound{stem}Targets item member)
+''')
+    pieces.extend(_byte_segments(span[cursor:]))
+    return f'''import SszX86.MeasureImpl
+import SszX86.NatCompareImpl
+import SszX86.NatFromU128Impl
+open Kraken.X64.Parser
+set_option maxRecDepth 16384
+set_option maxHeartbeats 32000000
+
+{''.join(declarations)}
+example : SszX86.Measure.compareOffset = -32880 := by decide
+example : SszX86.Measure.fromU128Offset = -14704 := by decide
+example : (32880 : Int64) + Int64.ofInt SszX86.Measure.compareOffset = 0 := by decide
+example : (32880 : Int64) + Int64.ofInt SszX86.Measure.fromU128Offset = 18176 := by decide
+example : SszX86.Measure.tableOffset = {table_offset} := by decide
+example : SszX86.Measure.tableAddress 32880 =
+    ((32880 : Int64) + Int64.ofInt SszX86.Measure.tableOffset).toBitVec := by decide
+example : SszX86.Measure.tableBytes = [{', '.join(map(str, table_bytes))}] := by decide
+example : SszX86.Measure.tableBytes.length = 52 := by decide
+example : SszX86.Measure.tableDestinations = [{', '.join(map(str, destinations))}] := by decide
+
+-- Preserve every real gap byte; all three CodeAt witnesses use this one image.
+noncomputable def bound : Executable := (0, List.flatten [{', '.join(pieces)}])
+{''.join(witnesses)}
+'''
