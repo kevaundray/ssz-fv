@@ -332,6 +332,12 @@ $lean e2_prof.lean 2>&1 | grep took   # simp ~125 s of 127 s wall
 
 The serializer image certificate independently rechecked both shipped closures: **99 wrapper / 1,024 total selected x86 instructions** and **173 wrapper / 1,836 total selected ARM instructions**. The combined check took **267.51 seconds** after a 120-second process deadline interrupted the first attempt; Lean proof limits were unchanged. Image binding alone is not execution refinement; the new x86 root supplies the latter.
 
+**Localize context search before adding proof abstractions:** an ARM returned-error proof repeatedly exhausted 200,000 heartbeats even after its run/post composition was split. Sequential, flushed tactic markers located the actual stall after finite payload-index normalization: `all_goals assumption` searched a large concrete-state context. Selecting the six already-named payload witnesses explicitly checked the module in **959 ms**. The temporary diagnostic module was removed; no proof limits changed.
+
+**Checked prerequisites for recursive codecs:** `SszCodecTypes` retains native NatOperand representations throughout all thirteen descriptor kinds and six recursive value kinds, with total raw-schema erasure and exact primitive adapters. `SszLimbMul`/`SszNatMul` model the real row-major multiply/add/carry loops, significant-word dispatch, normalized borrowing, checked reservations and complete scratch writes. Both toolchains accepted these modules; strict roots passed **1,333 x86 jobs / 647 ARM jobs**. These are mathematical representation/algorithm proofs, not multiplication or composite-codec ISA refinement.
+
+Model runtime smokes on both toolchains exercised nested fixed/variable container serialization, union selection, >64-bit recursive metadata, multiply carries, redundant limbs, borrowing, alignment and capacity boundaries. Separate freestanding probes exercised the shipped private multiplication helpers on both ISAs, including scratch/tail frames and failure preservation. The first ARM probe incorrectly used C's hidden X8 structure-return convention and faulted; inspecting the shipped entry showed the Rust internal result pointer in **X0**. An explicit first output-pointer argument passed. Only temporary ELF symbol visibility was changed to call the private helpers; assembly instructions and native sources were unchanged, and temporary binaries were removed.
+
 ## 2. What has helped
 
 ### Opaque block summaries instead of repeated symbolic execution

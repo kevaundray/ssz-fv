@@ -25,6 +25,8 @@ import SszNatNarrow
 import SszBitVector
 import SszBitVectorMemory
 import SszSerializeResources
+import SszNatMul
+import SszCodecTypesProofs
 import SszX86.EmitMemcpyEmbedded
 import SszX86.EmitProofs
 import SszX86.MeasureProofs
@@ -266,5 +268,17 @@ import SszX86.BitListResources
 #print axioms SszX86.Serialize.ClosureAt.memcpy
 #print axioms SszX86.Serialize.program_correct
 #print axioms SszX86.Serialize.program_refines
+
+#print axioms SszNative.LimbMul.mul_value
+#print axioms SszNative.NatMul.writtenWords_native_loop
+#print axioms SszNative.NatMul.run_value
+#print axioms SszNative.NatMul.runWord_value
+#print axioms SszNative.NatMul.run_resources
+#print axioms SszNative.NatMul.failure_unchanged
+#print axioms SszNative.Codec.Value.erase_toPrimitive
+#print axioms SszNative.Codec.Desc.eraseFields_zip
+#print axioms SszNative.Codec.Desc.eraseVariants_zip
+#print axioms SszNative.Codec.Desc.inductionOnChildren
+#print axioms SszNative.Codec.Value.inductionOnChildren
 
 audit_native

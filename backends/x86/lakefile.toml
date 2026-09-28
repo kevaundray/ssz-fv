@@ -73,6 +73,10 @@ name = "SszLimbAdd"
 srcDir = "../../proofs"
 
 [[lean_lib]]
+name = "SszLimbMul"
+srcDir = "../../proofs"
+
+[[lean_lib]]
 name = "SszLimbDivision"
 srcDir = "../../proofs"
 
@@ -102,6 +106,10 @@ srcDir = "../../proofs"
 
 [[lean_lib]]
 name = "SszNatAdd"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatMul"
 srcDir = "../../proofs"
 
 [[lean_lib]]
@@ -178,6 +186,14 @@ srcDir = "../../proofs"
 
 [[lean_lib]]
 name = "SszSerializeResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecTypes"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecTypesProofs"
 srcDir = "../../proofs"
 
 [[lean_lib]]

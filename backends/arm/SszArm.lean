@@ -24,6 +24,8 @@ import SszNatNarrow
 import SszBitVector
 import SszBitVectorMemory
 import SszSerializeResources
+import SszNatMul
+import SszCodecTypesProofs
 import SszArm.EmitImpl
 import SszArm.EmitProgram
 import SszArm.MeasureImpl
@@ -306,5 +308,17 @@ import SszArm.UintTails
 #print axioms SszArm.Serialize.compare_codeAt
 #print axioms SszArm.Serialize.fromU128_codeAt
 #print axioms SszArm.Serialize.memcpy_codeAt
+
+#print axioms SszNative.LimbMul.mul_value
+#print axioms SszNative.NatMul.writtenWords_native_loop
+#print axioms SszNative.NatMul.run_value
+#print axioms SszNative.NatMul.runWord_value
+#print axioms SszNative.NatMul.run_resources
+#print axioms SszNative.NatMul.failure_unchanged
+#print axioms SszNative.Codec.Value.erase_toPrimitive
+#print axioms SszNative.Codec.Desc.eraseFields_zip
+#print axioms SszNative.Codec.Desc.eraseVariants_zip
+#print axioms SszNative.Codec.Desc.inductionOnChildren
+#print axioms SszNative.Codec.Value.inductionOnChildren
 
 audit_native
