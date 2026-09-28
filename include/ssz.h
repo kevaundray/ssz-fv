@@ -152,8 +152,16 @@ extern "C" {
  * size, serialization, and allocating serialization against pinned SSZ,
  * including exact resource failures, ordered scratch effects/no rollback,
  * output prefix initialization, untouched tails, and no output-content reads.
- * Both roots audit these logical contracts; serializer ISA execution,
- * concrete memory/provenance, and ABI refinement remain open.
+ * Both roots audit these logical contracts; complete serializer-wrapper ISA
+ * execution, concrete memory/provenance, and ABI refinement remain open.
+ * The x86 private primitive emitter now has root-audited entry-through-RET
+ * refinement for all seven primitive kinds under original successful-input
+ * and caller-memory ownership preconditions. It includes actual linked memcpy,
+ * exact encoded bytes and success fields, initialized output prefixes,
+ * untouched capacity tails/result padding, original borrowed inputs, and
+ * restored stack, callee-saved registers, and vector state. It assumes neither
+ * a readable Plan nor future execution. ARM emitter execution, primitive
+ * measurement, and complete serializer-wrapper execution remain open.
  *
  * Executing this ABI on both targets is runtime evidence, not an ISA proof.
  */

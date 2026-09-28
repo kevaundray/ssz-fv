@@ -26,6 +26,7 @@ import SszBitVector
 import SszBitVectorMemory
 import SszSerializeResources
 import SszX86.EmitMemcpyEmbedded
+import SszX86.EmitProofs
 import SszX86.MeasureImpl
 import SszX86.SerializeImpl
 import SszX86.NatFromU128Corollaries
@@ -249,6 +250,8 @@ import SszX86.BitListResources
 #print axioms SszNative.Serialize.bsr_certificate
 
 #print axioms SszX86.Emit.MemcpyCodeAt.of_rows
+#print axioms SszX86.Emit.program_correct
+#print axioms SszX86.Emit.program_refines
 
 #print axioms SszX86.Measure.step_at
 
