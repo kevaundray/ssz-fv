@@ -154,14 +154,14 @@ extern "C" {
  * output prefix initialization, untouched tails, and no output-content reads.
  * Both roots audit these logical contracts; complete serializer-wrapper ISA
  * execution, concrete memory/provenance, and ABI refinement remain open.
- * The x86 private primitive emitter now has root-audited entry-through-RET
+ * Both private primitive emitters now have root-audited entry-through-RET
  * refinement for all seven primitive kinds under original successful-input
- * and caller-memory ownership preconditions. It includes actual linked memcpy,
+ * and caller-memory ownership preconditions. They include actual linked memcpy,
  * exact encoded bytes and success fields, initialized output prefixes,
  * untouched capacity tails/result padding, original borrowed inputs, and
- * restored stack, callee-saved registers, and vector state. It assumes neither
- * a readable Plan nor future execution. ARM emitter execution, primitive
- * measurement, and complete serializer-wrapper execution remain open.
+ * restored stack and callee-saved scalar/vector register state. They assume
+ * neither a readable Plan nor future execution. Primitive measurement and
+ * complete serializer-wrapper execution remain open.
  *
  * Executing this ABI on both targets is runtime evidence, not an ISA proof.
  */

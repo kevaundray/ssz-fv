@@ -25,6 +25,7 @@ import SszBitVector
 import SszBitVectorMemory
 import SszSerializeResources
 import SszArm.EmitImpl
+import SszArm.EmitProgram
 import SszArm.MeasureImpl
 import SszArm.SerializeImpl
 import SszArm.NatFromU128Model
@@ -291,6 +292,8 @@ import SszArm.UintTails
 
 #print axioms SszArm.Emit.body_codeAt
 #print axioms SszArm.Emit.memcpy_codeAt
+#print axioms SszArm.Emit.program_correct
+#print axioms SszArm.Emit.program_refines
 
 #print axioms SszArm.Measure.body_codeAt
 #print axioms SszArm.Measure.compare_codeAt
