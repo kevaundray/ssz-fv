@@ -30,7 +30,7 @@ theorem mul_word_inline_correct (e : Executable) (base : Int64) (hc : CodeAt e b
       · rfl
       · exact UInt64.toBitVec_ofBitVec _
     · simpa only [pushedState, entryState, SszNative.NatMul.lowWord, SszNative.NatAdd.lowWord,
-        NatOperand.words, List.getElem?_cons_zero, Option.getD_some] using owned.operand_payload
+        NatOperand.words, NatOperand.payload, List.getElem?_cons_zero, Option.getD_some] using owned.operand_payload
     · exact owned.factor
   · intro large selectorFlags
     exact False.elim (large owned.operand_pointer)

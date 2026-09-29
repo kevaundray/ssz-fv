@@ -1,0 +1,3 @@
+import SszIndicesFrontierSemanticErrors
+
+set_option autoImplicit false

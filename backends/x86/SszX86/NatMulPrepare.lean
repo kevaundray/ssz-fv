@@ -19,8 +19,10 @@ theorem prepare_runs (e : Executable) (base : Int64) (hc : CodeAt e base)
     | small limb =>
       have phase := prepare_left_small e base hc {s with status := flags} limb right
         leftPointer leftPayload rightPointer rightPayload rightAt
-      exact eventually_weaken _ _ _ _
-        (fun _ h => Prepared.rebase ⟨rfl, rfl, rfl, rfl, rfl⟩ h) phase
+      exact eventually_weaken (step e) (Prepared {s with status := flags} (.small limb) right base)
+        (Prepared s (.small limb) right base) _
+        (fun _ h => Prepared.rebase (s := s) (u := {s with status := flags})
+          ⟨rfl, rfl, rfl, rfl, rfl⟩ h) phase
     | large p words =>
       have positive := leftAt.1
       have hp : p = 0#64 := leftPointer.symm.trans zero
@@ -37,7 +39,8 @@ theorem prepare_runs (e : Executable) (base : Int64) (hc : CodeAt e base)
         bv_omega
       have phase := prepare_left_large e base hc u p words right
         leftPointer leftPayload rightPointer rightPayload count leftAt rightAt
-      exact eventually_weaken _ _ _ _
-        (fun _ h => Prepared.rebase ⟨rfl, rfl, rfl, rfl, rfl⟩ h) phase
+      exact eventually_weaken (step e) (Prepared u (.large p words) right base)
+        (Prepared s (.large p words) right base) _
+        (fun _ h => Prepared.rebase (s := s) (u := u) ⟨rfl, rfl, rfl, rfl, rfl⟩ h) phase
 
 end SszX86.NatMul

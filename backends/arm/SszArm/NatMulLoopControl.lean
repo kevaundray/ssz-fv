@@ -46,6 +46,7 @@ def loopInit (base : BitVec 64) (s : ArmState) : ArmState :=
 theorem loop_init_run (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
     (pc : read_pc s = base + 580#64) : run 5 s = loopInit base s := by
+  change r .PC s = base + 580#64 at pc
   apply block_run base [.p580, .p584, .p588, .p592, .p596] s code error aligned
   simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, pc, BitVec.add_assoc]
 
@@ -57,6 +58,7 @@ theorem loop_init_values (s : ArmState) (base : BitVec 64)
     r (.GPR 10#5) (loopInit base s) = r (.GPR 28#5) s ∧
     r (.GPR 11#5) (loopInit base s) = r (.GPR 20#5) s ∧
     r (.GPR 12#5) (loopInit base s) = 0#64 := by
+  change r .PC s = base + 580#64 at pc
   simp [loopInit, block, Op.effect, put, next, state_simp_rules, pc, BitVec.add_assoc]
 
 theorem loop_init_stable (s : ArmState) (base : BitVec 64) :
@@ -68,7 +70,9 @@ theorem loop_init_stable (s : ArmState) (base : BitVec 64) :
   · intro reg different
     simp_all [loopInit, block, Op.effect, put, next, state_simp_rules]
   · intro reg
-    simp [loopInit, block, Op.effect, put, next, state_simp_rules]
+    unfold loopInit block
+    exact NatMulStateFold.preserves (fun t (op : Op) => op.effect base t) (r (.SFP reg))
+      ([.p580, .p584, .p588, .p592, .p596] : List Op) s (fun op _ t => op.sfp base t reg)
 
 theorem loop_init_memory (s : ArmState) (base : BitVec 64) :
     (loopInit base s).mem = s.mem := by
@@ -80,6 +84,7 @@ def loopRowInit (base : BitVec 64) (s : ArmState) : ArmState :=
 theorem loop_row_init_run (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
     (pc : read_pc s = base + 664#64) : run 4 s = loopRowInit base s := by
+  change r .PC s = base + 664#64 at pc
   apply block_run base [.p664, .p668, .p672, .p676] s code error aligned
   simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, pc, BitVec.add_assoc]
 
@@ -89,6 +94,7 @@ def loopAdds (base : BitVec 64) (s : ArmState) : ArmState :=
 theorem loop_adds_run (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
     (pc : read_pc s = base + 872#64) : run 4 s = loopAdds base s := by
+  change r .PC s = base + 872#64 at pc
   apply block_run base [.p872, .p876, .p880, .p884] s code error aligned
   simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, pc, BitVec.add_assoc]
 
@@ -105,12 +111,14 @@ theorem loop_carry_run (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
     (pc : read_pc s = base + 920#64) :
     run (loopCarryOps s).length s = loopCarried base s := by
+  change r .PC s = base + 920#64 at pc
   have follows : Follows base (loopCarryOps s) s := by
     unfold loopCarryOps
     split <;> simp_all [Follows, Op.row, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
   rw [block_run base (loopCarryOps s) s code error aligned follows]
   unfold loopCarryOps
-  split <;> simp_all [loopCarried, block, Op.effect, put, next, state_simp_rules]
+  split <;> simp_all [loopCarried, block, Op.effect, put, next, NatAdd.load_gpr_pc,
+    state_simp_rules, BitVec.add_assoc]
 
 def loopColumn (base : BitVec 64) (s : ArmState) : ArmState :=
   block base [.p936, .p940, .p944, .p948] s
@@ -118,6 +126,7 @@ def loopColumn (base : BitVec 64) (s : ArmState) : ArmState :=
 theorem loop_column_run (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
     (pc : read_pc s = base + 936#64) : run 4 s = loopColumn base s := by
+  change r .PC s = base + 936#64 at pc
   apply block_run base [.p936, .p940, .p944, .p948] s code error aligned
   simp [Follows, Op.row, Op.effect, put, next, Udivti3.compare, Udivti3.next,
     state_simp_rules, pc, BitVec.add_assoc]
@@ -134,6 +143,7 @@ def loopRowAdvance (base : BitVec 64) (s : ArmState) : ArmState :=
 theorem loop_row_advance_run (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
     (pc : read_pc s = base + 964#64) : run 3 s = loopRowAdvance base s := by
+  change r .PC s = base + 964#64 at pc
   apply block_run base [.p964, .p968, .p972] s code error aligned
   simp [Follows, Op.row, Op.effect, put, next, Udivti3.compare, Udivti3.next,
     state_simp_rules, pc, BitVec.add_assoc]

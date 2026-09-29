@@ -1,8 +1,9 @@
 import SszArm.NatMulLoopMemory
+import SszLimbMul
 
 namespace SszArm.NatMul
 
-open SszNative (LimbMul)
+open SszNative
 
 /-- A row replaces its inner words and its carry cell, retaining the suffix. -/
 theorem nativeRow_length (factor : BitVec 64) (right buffer : List (BitVec 64))

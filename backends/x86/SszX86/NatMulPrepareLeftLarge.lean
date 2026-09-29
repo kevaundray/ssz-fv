@@ -28,20 +28,29 @@ theorem prepare_left_large (e : Executable) (base : Int64) (hc : CodeAt e base)
   have initial : leftScanState s s.regs.r10.toBitVec (BitVec.ofNat 64 (words.length+1)) s.status = s := by
     rw [← counter]
     simp only [leftScanState, UInt64.ofBitVec_toBitVec]
-  rw [← initial]
+  rw [initial] at scanned
   apply scanned
   · intro flags zero
     have phase := prepare_zero_dispatch e base hc (leftScanState s 1 1 flags) (.large p words) right
       leftPointer leftPayload rightPointer rightPayload zero
-      (by simpa only [NatOperand.wordCount, NatOperand.words, Limbs.sigWords, zero]) leftAt rightAt
-    exact eventually_weaken _ _ _ _
-      (fun _ h => Prepared.rebase ⟨rfl, rfl, rfl, rfl, rfl⟩ h) phase
+      (by
+        simp only [NatOperand.wordCount, NatOperand.words, Limbs.sigWords, zero]
+        rfl) leftAt rightAt
+    exact eventually_weaken (step e) (Prepared (leftScanState s 1 1 flags) (.large p words) right base)
+      (Prepared s (.large p words) right base) _
+      (fun _ h => Prepared.rebase (s := s) (u := leftScanState s 1 1 flags)
+        ⟨rfl, rfl, rfl, rfl, rfl⟩ h) phase
   · intro nonzero flags
     have phase := prepare_scanned_dispatch e base hc
       (leftScanState s (BitVec.ofNat 64 (Limbs.sigWords words+1))
         (BitVec.ofNat 64 (Limbs.sigWords words)) flags) (.large p words) right
       leftPointer leftPayload rightPointer rightPayload rfl rfl leftAt rightAt
-    exact eventually_weaken _ _ _ _
-      (fun _ h => Prepared.rebase ⟨rfl, rfl, rfl, rfl, rfl⟩ h) phase
+    exact eventually_weaken (step e)
+      (Prepared (leftScanState s (BitVec.ofNat 64 (Limbs.sigWords words+1))
+        (BitVec.ofNat 64 (Limbs.sigWords words)) flags) (.large p words) right base)
+      (Prepared s (.large p words) right base) _
+      (fun _ h => Prepared.rebase (s := s)
+        (u := leftScanState s (BitVec.ofNat 64 (Limbs.sigWords words+1))
+          (BitVec.ofNat 64 (Limbs.sigWords words)) flags) ⟨rfl, rfl, rfl, rfl, rfl⟩ h) phase
 
 end SszX86.NatMul

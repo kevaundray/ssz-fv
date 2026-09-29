@@ -127,7 +127,7 @@ theorem advanceZero_add (hash : α → α → α) (first second : Nat) (node : �
     advanceZero hash (first + second) node =
       advanceZero hash second (advanceZero hash first node) := by
   induction first generalizing node with
-  | zero => rfl
+  | zero => simp only [Nat.zero_add, advanceZero]
   | succ first ih =>
       simp only [Nat.succ_add, advanceZero]
       exact ih (hash node node)

@@ -88,7 +88,7 @@ theorem large_error_cover {s t : ArmState} {left right : NatOperand}
 theorem large_header_read {s t : ArmState} {writes : List Span}
     {left right : NatOperand} (owned : Owned s left right)
     (frame : MemoryFrame writes s t)
-    (protected : Protected writes (r (.GPR 5#5) s).toNat 24)
+    (protection : Protected writes (r (.GPR 5#5) s).toNat 24)
     (offset : Nat) (bound : offset + 8 ≤ 24) :
     read_mem_bytes 8 (r (.GPR 5#5) s + BitVec.ofNat 64 offset) t =
       read_mem_bytes 8 (r (.GPR 5#5) s + BitVec.ofNat 64 offset) s := by
@@ -97,12 +97,12 @@ theorem large_header_read {s t : ArmState} {writes : List Span}
       (r (.GPR 5#5) s).toNat + offset := by bv_omega
   apply frame.read
   · rw [address]; omega
-  · rw [address]; exact protected.subspan offset 8 bound
+  · rw [address]; exact protection.subspan offset 8 bound
 
 theorem large_saved_frame {s u t : ArmState} {left right : NatOperand} {writes : List Span}
     (owned : Owned s left right) (saved : Saved s u)
     (frame : MemoryFrame writes u t)
-    (protected : Protected writes (r (.GPR 31#5) u).toNat 96)
+    (protection : Protected writes (r (.GPR 31#5) u).toNat 96)
     (sp : r (.GPR 31#5) t = r (.GPR 31#5) u)
     (x29 : r (.GPR 29#5) t = r (.GPR 29#5) u)
     (vectors : ∀ reg : BitVec 5, 8 ≤ reg.toNat → reg.toNat ≤ 15 →
@@ -121,7 +121,7 @@ theorem large_saved_frame {s u t : ArmState} {left right : NatOperand} {writes :
     rw [sp]
     have same := frame.read (address := r (.GPR 31#5) u + BitVec.ofNat 64 offset)
       (bytes := 8) (by rw [address]; have := space.savedBound; omega)
-      (by rw [address]; exact protected.subspan offset 8 bound)
+      (by rw [address]; exact protection.subspan offset 8 bound)
     exact same.trans (saved.words reg offset member)
   · intro reg low high
     exact (vectors reg low high).trans (saved.vectors reg low high)

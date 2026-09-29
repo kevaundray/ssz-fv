@@ -81,8 +81,8 @@ theorem prepare_left_small (e : Executable) (base : Int64) (hc : CodeAt e base)
         · exact ⟨rfl, rfl, rfl, rfl, rfl⟩
         · exact leftPointer
         · exact leftPayload
-        · simpa only [SszNative.NatMul.lowWord, SszNative.NatAdd.lowWord, NatOperand.words,
-            List.getElem?_cons_zero, Option.getD_some] using rightPayload
+        · change s.regs.r8.toBitVec = r
+          exact rightPayload
         · rfl
 
 end SszX86.NatMul

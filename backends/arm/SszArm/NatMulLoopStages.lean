@@ -6,6 +6,12 @@ abbrev loopInnerChanged : List (BitVec 5) := [0#5, 1#5, 15#5, 16#5, 17#5, 18#5]
 abbrev loopOuterChanged : List (BitVec 5) :=
   [0#5, 1#5, 11#5, 12#5, 13#5, 14#5, 15#5, 16#5, 17#5, 18#5]
 
+private theorem stage_vectors (base : BitVec 64) (ops : List Op)
+    (s : ArmState) (reg : BitVec 5) :
+    r (.SFP reg) (block base ops s) = r (.SFP reg) s := by
+  exact NatMulStateFold.preserves (fun t (op : Op) => op.effect base t)
+    (r (.SFP reg)) ops s (fun op _ t => op.sfp base t reg)
+
 theorem loop_guard_stable (base : BitVec 64) (s : ArmState) :
     LoopStable loopInnerChanged s (block base [.p680, .p684, .p688] s) := by
   constructor
@@ -15,7 +21,7 @@ theorem loop_guard_stable (base : BitVec 64) (s : ArmState) :
   · intro reg different
     simp_all [block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
   · intro reg
-    simp [block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
+    exact stage_vectors base _ s reg
 
 theorem loop_load_stable (site : LoopLoadSite) (s : ArmState) (base value : BitVec 64) :
     LoopStable loopInnerChanged s (loopLoaded site s base value) := by
@@ -47,11 +53,17 @@ theorem loop_product_frame (s : ArmState) (base : BitVec 64)
   have bound : 48 ≤ (r (.GPR 31#5) (Op.p756.effect base s)).toNat := by
     simpa [Op.effect, put, next, state_simp_rules] using stack
   have frame := high_completed_frame (Op.p756.effect base s) base bound
-  simpa [highProductCompleted, Op.effect, put, next, state_simp_rules] using frame
+  have sameStack : r (.GPR 31#5) (Op.p756.effect base s) = r (.GPR 31#5) s := by
+    simp [Op.effect, put, next, state_simp_rules]
+  intro address outside
+  have preserved := frame address (by
+    simpa only [sameStack] using outside)
+  exact preserved.trans (by simp [Op.effect, put, next, state_simp_rules])
 
 theorem loop_product_pc (s : ArmState) (base : BitVec 64)
     (pc : read_pc s = base + 756#64) :
     read_pc (highProductCompleted s base) = base + 872#64 := by
+  change r .PC s = base + 756#64 at pc
   rw [highProductCompleted, high_completed_pc]
   simp [Op.effect, put, next, state_simp_rules, pc, BitVec.add_assoc]
 
@@ -64,7 +76,7 @@ theorem loop_adds_stable (base : BitVec 64) (s : ArmState) :
   · intro reg different
     simp_all [loopAdds, block, Op.effect, put, next, state_simp_rules]
   · intro reg
-    simp [loopAdds, block, Op.effect, put, next, state_simp_rules]
+    exact stage_vectors base _ s reg
 
 theorem loop_store_stable (site : LoopStoreSite) (base : BitVec 64) (s : ArmState) :
     LoopStable loopInnerChanged s (loopStored site s base) :=
@@ -84,7 +96,7 @@ theorem loop_column_stable (base : BitVec 64) (s : ArmState) :
   · intro reg different
     simp_all [loopColumn, block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
   · intro reg
-    simp [loopColumn, block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
+    exact stage_vectors base _ s reg
 
 /-- Project before unfolding: only the four carry-chain inputs, its untouched
 column counter, and the outgoing ADDS flag are relevant. -/
@@ -96,16 +108,21 @@ theorem loop_adds_values (s : ArmState) (base a b old carry : BitVec 64)
     (r (.GPR 17#5) (loopAdds base s) +
       if r (.FLAG .C) (loopAdds base s) = 1#1 then 1#64 else 0#64).toNat =
         (SszNative.LimbMul.step a b old carry.toNat).2 := by
+  have lowValue : r (.GPR 18#5) (loopAdds base s) = a * b + carry + old := by
+    simp only [loopAdds, block, List.foldl_cons, List.foldl_nil]
+    simp [Op.effect, put, next, state_simp_rules, low, incoming, previous]
+  have highValue : r (.GPR 17#5) (loopAdds base s) =
+      NatMulProduct.high a b + NatMulProduct.carryWord (a * b) carry := by
+    simp only [loopAdds, block, List.foldl_cons, List.foldl_nil]
+    simp [Op.effect, put, next, state_simp_rules, low, high, incoming, zero,
+      NatMulProduct.carryWord]
+  have flagValue : r (.FLAG .C) (loopAdds base s) =
+      (AddWithCarry (a * b + carry) old 0#1).2.c := by
+    simp only [loopAdds, block, List.foldl_cons, List.foldl_nil]
+    simp [Op.effect, put, next, state_simp_rules, low, incoming, previous]
   have arithmetic := NatMulProduct.step_eq_adc_carry_first a b old carry
-  have first := NatMulArithmetic.carry_result (a * b) carry 0#1
-  have last := NatMulArithmetic.carry_result (a * b + carry) old 0#1
-  rw [arithmetic]
-  simp only [NatMulArithmetic.carry_result, BitVec.setWidth_zero, BitVec.add_zero]
-  constructor
-  · simp [loopAdds, block, Op.effect, put, next, state_simp_rules, low, high, previous, incoming]
-  · simp only [loopAdds, block, Op.effect, put, next, state_simp_rules,
-      low, high, previous, incoming, zero, BitVec.add_zero]
-    rw [← NatMulProduct.carryWord_eq_cset]
-    rfl
+  simp only [NatMulArithmetic.carry_result, BitVec.setWidth_zero, BitVec.add_zero] at arithmetic
+  rw [lowValue, highValue, flagValue, ← NatMulProduct.carryWord_eq_cset]
+  exact ⟨(congrArg Prod.fst arithmetic).symm, (congrArg Prod.snd arithmetic).symm⟩
 
 end SszArm.NatMul

@@ -14,7 +14,10 @@ theorem stack_member (s : ArmState) (operand : SszNative.NatOperand) (factor : B
 theorem Owned.scan_source {s : ArmState} {pointer factor : BitVec 64}
     {words : List (BitVec 64)} (owned : Owned s (.large pointer words) factor) :
     NatCompare.Source s pointer words := by
-  refine ⟨by have := owned.stackBound; omega, owned.operandAt.2.2.1, ?_⟩
+  refine ⟨by
+    have stack := owned.stackBound
+    arm_word_nf at stack ⊢
+    omega, owned.operandAt.2.2.1, ?_⟩
   by_cases empty : words = []
   · exact Or.inl empty
   · right
@@ -26,7 +29,7 @@ theorem Owned.scan_source {s : ArmState} {pointer factor : BitVec 64}
       omega
     · have apart := separate _ (stack_member s (.large pointer words) factor)
       have stack := owned.stackBound
-      simp only [Prod.fst, Prod.snd] at apart
+      arm_word_nf at apart stack ⊢
       omega
 
 theorem Owned.scan_words {s : ArmState} {pointer factor : BitVec 64}
@@ -57,8 +60,7 @@ theorem identity_ready (s : ArmState) (base : BitVec 64) (operand : SszNative.Na
     have hu1 : r (.GPR 1#5) u = 0#64 := (huk _).trans owned.pointer
     have hu2 : r (.GPR 2#5) u = word := (huk _).trans owned.payload
     let t := block base [.p100] u
-    have hpc : r .PC u = base + 100#64 := hu100
-    have hf : Follows base [.p100] u := by simp [Follows, Op.row, hpc]
+    have hf : Follows base [.p100] u := ⟨hu100, trivial⟩
     have ht : run 1 u = t := block_run base [.p100] u
       (huf.code hc) (huf.error.trans he) (huf.aligned ha) hf
     refine ⟨fuel + 1, t, ?_, huf.trans (scan_pure_frame base [.p100] u (by decide)), Or.inr ?_⟩

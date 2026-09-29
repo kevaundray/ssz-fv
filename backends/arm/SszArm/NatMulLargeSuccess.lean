@@ -21,7 +21,7 @@ theorem large_success_return (s u v : ArmState) (base : BitVec 64)
     ∃ fuel t, run fuel v = t ∧ Post s t left right := by
   have sp := ready.sp.trans start.frame.sp
   have workFrame := (allocated.reserve_cover owned start.frame).frame memory
-  have prefix := (start.frame.memoryFor (outcome s left right)).trans
+  have initialFrame := (start.frame.memoryFor (outcome s left right)).trans
     (allocated.work_cover.frame workFrame)
   have saved := large_saved_frame owned start.frame.saved workFrame
     (allocated.work_saved owned start.frame.sp) ready.sp ready.x29
@@ -35,8 +35,8 @@ theorem large_success_return (s u v : ArmState) (base : BitVec 64)
   have loopCover := allocated.work_cover.trans (allocated.loop_cover owned sp ready.pointer)
   have loopOwned : LoopEntryOwned v left right (r (.GPR 5#5) s) := by
     refine ⟨allocated.loop_space owned sp ready.pointer,
-      NatAdd.operand_at_preserved prefix left owned.leftAt owned.leftOwned,
-      NatAdd.operand_at_preserved prefix right owned.rightAt owned.rightOwned,
+      NatAdd.operand_at_preserved initialFrame left owned.leftAt owned.leftOwned,
+      NatAdd.operand_at_preserved initialFrame right owned.rightAt owned.rightOwned,
       large_operand_cover loopCover left owned.leftOwned,
       large_operand_cover loopCover right owned.rightOwned,
       owned.arenaBound, allocated.loop_arena owned sp ready.pointer,
@@ -95,7 +95,7 @@ theorem large_success_return (s u v : ArmState) (base : BitVec 64)
       (by rw [SszNative.NatMul.writtenWords_length]; exact allocated.physical)
       allocated.nonnull allocated.aligned allocated.addressBound
       (loopReady.written reservation rfl) freshReturn
-  have frame := prefix.trans ((allocated.work_cover.frame loopWorkFrame).trans
+  have frame := initialFrame.trans ((allocated.work_cover.frame loopWorkFrame).trans
     (((large_local_cover s (outcome s left right)).trans returnCover).frame tailFrame))
   have cursorReturn := large_header_read owned tailFrame (returnCover.protected owned.arenaLocal) 16 (by decide)
   have cursor : read_mem_bytes 8 (r (.GPR 5#5) s + 16#64) t = BitVec.ofNat 64 reservation.used := by
@@ -111,7 +111,7 @@ theorem large_success_return (s u v : ArmState) (base : BitVec 64)
     · simpa only [allocated.model] using written
     · rw [cursor, allocated.model]
       simp only [NatArithmetic.committed, BitVec.toNat_ofNat, Nat.mod_eq_of_lt allocated.usedBound]
-    · simpa only [BitVec.ofNat_zero, BitVec.add_zero] using header 0 (by decide)
+    · simpa only [BitVec.add_zero] using header 0 (by decide)
     · exact header 8 (by decide)
 
 end SszArm.NatMul

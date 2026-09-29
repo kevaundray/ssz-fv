@@ -64,9 +64,9 @@ theorem round_completed_index (s : ArmState) (base : BitVec 64)
     (separate : (roundAddress s).toNat + 8 ≤ (r (.GPR 31#5) s).toNat - 48 ∨
       (r (.GPR 31#5) s).toNat ≤ (roundAddress s).toNat) :
     r (.GPR 13#5) (roundCompleted s base) = r (.GPR 16#5) s := by
-  rw [roundCompleted, round_tail_index, round_store_effect s base stack physical separate]
-  simpa only [storeMemory, NatCompare.saved, state_simp_rules] using
-    round_added_registers s base stack 16#5 (by decide) (by decide)
+  rw [roundCompleted, round_tail_index,
+    round_stored_field s base stack physical separate (.GPR 16#5) (by decide)]
+  exact round_added_registers s base stack 16#5 (by decide) (by decide)
 
 theorem round_completed_pc (s : ArmState) (base : BitVec 64)
     (stack : 48 ≤ (r (.GPR 31#5) s).toNat)
@@ -75,9 +75,10 @@ theorem round_completed_pc (s : ArmState) (base : BitVec 64)
       (r (.GPR 31#5) s).toNat ≤ (roundAddress s).toNat) :
     read_pc (roundCompleted s base) =
       if r (.GPR 9#5) s = r (.GPR 16#5) s then base + 1464#64 else base + 812#64 := by
-  rw [roundCompleted, round_tail_pc, round_store_effect s base stack physical separate]
-  simp only [storeMemory, NatCompare.saved, state_simp_rules]
-  rw [round_added_registers s base stack 9#5 (by decide) (by decide),
+  rw [roundCompleted, round_tail_pc,
+    round_stored_field s base stack physical separate (.GPR 9#5) (by decide),
+    round_stored_field s base stack physical separate (.GPR 16#5) (by decide),
+    round_added_registers s base stack 9#5 (by decide) (by decide),
     round_added_registers s base stack 16#5 (by decide) (by decide)]
 
 /-- Exact spill and single output-cell frame, plus the word actually stored. -/
@@ -105,13 +106,13 @@ theorem round_completed_memory (s : ArmState) (base : BitVec 64)
     (by rw [address]; exact physical)
   have mem : (roundCompleted s base).mem = (storeMemory (roundAdded s base)).mem := by
     rw [roundCompleted, round_tail_memory, round_store_effect s base stack physical separate]
-    rfl
+    simp only [ArmState.mem_w_eq_mem]
   constructor
   · intro a outside
     rw [mem]
     refine (after a ?_).trans (before a ?_)
     · intro span member
-      simp only [List.mem_cons, List.mem_singleton] at member
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
       rcases member with rfl | rfl
       · have h := outside ((r (.GPR 31#5) s).toNat - 48, 48) (by simp)
         simp only [Prod.fst, Prod.snd] at h ⊢
@@ -121,10 +122,13 @@ theorem round_completed_memory (s : ArmState) (base : BitVec 64)
     · intro span member
       simp only [List.mem_singleton] at member
       exact outside span (by simp only [List.mem_cons, member, true_or])
-  · rw [Memory.mem_eq_iff_read_mem_bytes_eq.mp mem, ← address,
-      stored_word _ (by rw [address]; exact physical)]
-    rw [roundCompleted, round_tail_registers _ _ 18#5 (by decide) (by decide),
-      round_store_effect s base stack physical separate]
-    simp only [storeMemory, NatCompare.saved, state_simp_rules]
+  · have observed := stored_word (roundAdded s base) (by rw [address]; exact physical)
+    rw [address] at observed
+    have value : r (.GPR 18#5) (roundCompleted s base) =
+        r (.GPR 18#5) (roundAdded s base) := by
+      rw [roundCompleted, round_tail_registers _ _ 18#5 (by decide) (by decide),
+        round_stored_field s base stack physical separate (.GPR 18#5) (by decide)]
+    exact (Memory.mem_eq_iff_read_mem_bytes_eq.mp mem 8 (roundAddress s)).trans
+      (observed.trans value.symm)
 
 end SszArm.NatMulWord

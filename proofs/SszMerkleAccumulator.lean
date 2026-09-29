@@ -67,12 +67,31 @@ theorem bounded_refuses_before_hashing (hash : α → α → α) (zero : α)
     (chunks : Array α) (limit : Option NatOperand) (reason : Error)
     (refused : boundedDepth chunks.size limit = .error reason) :
     bounded hash zero chunks limit = .error reason := by
-  simp [bounded, refused]
+  unfold bounded
+  rw [refused]
+  all_goals rfl
 
 theorem finish_refuses_before_hashing (hash : α → α → α) (zero : α)
     (state : Accumulator α) (limit : Option NatOperand) (reason : Error)
     (refused : boundedDepth state.count limit = .error reason) :
     finish hash zero state limit = .error reason := by
-  simp [finish, refused]
+  unfold finish
+  rw [refused]
+  all_goals rfl
+
+/-- Even noncanonical capacities are returned unchanged on the first error. -/
+theorem bounded_undersized (hash : α → α → α) (zero : α) (chunks : Array α)
+    (capacity : NatOperand) (undersize : capacity.value < chunks.size) :
+    bounded hash zero chunks (some capacity) =
+      .error (.merkleizeLimit (.small (BitVec.ofNat 64 chunks.size)) capacity) :=
+  bounded_refuses_before_hashing hash zero chunks (some capacity) _
+    (boundedDepth_error chunks.size capacity undersize)
+
+theorem finish_undersized (hash : α → α → α) (zero : α) (state : Accumulator α)
+    (capacity : NatOperand) (undersize : capacity.value < state.count) :
+    finish hash zero state (some capacity) =
+      .error (.merkleizeLimit (.small (BitVec.ofNat 64 state.count)) capacity) :=
+  finish_refuses_before_hashing hash zero state (some capacity) _
+    (boundedDepth_error state.count capacity undersize)
 
 end SszNative.MerkleAccumulator

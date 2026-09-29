@@ -853,3 +853,67 @@ audit_native
     return _EMIT_IMAGE_ORDER.replace(
         "import SszArm.EmitImpl", "import SszArm.NatMulCalls\nimport ProofAudit", 1
     ) + "\n".join(declarations)
+
+
+def sha_source(image):
+    """Bind SHA's linked instructions, runtime helpers, and exact table literals."""
+    from sha_binding import LIST_BINDING_HEADER, list_binding, validate
+
+    validate("arm", image)
+    root = image["root_address"]
+    groups = []
+    for key, name, program in (
+            ("sha_compress", "Compress", "SszArm.Hash.compressProgram"),
+            ("sha_finalize", "Finalize", "SszArm.Hash.finalizeProgram"),
+            ("sha_combine", "Combine", "SszArm.Hash.combineProgram"),
+            ("memcpy", "Memcpy", None), ("memset", "Memset", None)):
+        body = image["bodies"][key]
+        _validate_rows(body["rows"], bytes.fromhex(body["raw"]))
+        groups.append((name, body["rows"], root + body["offset"], program))
+    declarations = _ordered_image_declarations(
+        groups, flat_programs={group[3] for group in groups if group[3]}, part_size=50)
+    declarations.append(LIST_BINDING_HEADER)
+    for name, _, base, program in groups:
+        if program is not None:
+            address = (f"({root}#64 + SszArm.Hash.{name.lower()}Offset)"
+                       if name != "Combine" else f"{root}#64")
+            declarations.append(f"""
+theorem bound{name}CodeAt (s : ArmState) :
+    SszArm.Hash.RowsAt {{s with program := bound}} {address} {program} := by
+  change ∀ row ∈ {program},
+    bound.find? ({address} + BitVec.ofNat 64 row.1) = some row.2
+  rw [show {address} = {base}#64 from by decide, ← actual{name}_eq]
+  exact {name.lower()}_lookup
+""")
+        else:
+            count = len(image["bodies"][name.lower()]["rows"])
+            declarations.append(f"""
+theorem bound{name}CodeAt (s : ArmState) :
+    SszArm.CodeAt {{s with program := bound}} {base}#64 SszArm.{name}.program := by
+  change ∀ k (hk : k < SszArm.{name}.program.length),
+    bound.find? ({base}#64 + BitVec.ofNat 64 (4 * k)) = some SszArm.{name}.program[k]
+  have checked : ∀ k : Fin {count},
+      (4 * k.val, SszArm.{name}.program[k.val]) ∈ actual{name} := by decide
+  intro k hk
+  exact {name.lower()}_lookup _ (checked ⟨k, hk⟩)
+""")
+    for name in ("initial", "rounds"):
+        table = image["tables"][name]
+        literals = [str(byte) for byte in bytes.fromhex(table["raw"])]
+        table_declarations, _ = list_binding(
+            f"actual{name.title()}Table", "UInt8", f"SszArm.Hash.{name}Table", literals)
+        declarations.extend(table_declarations)
+        declarations.append(
+            f"example : {root}#64 + SszArm.Hash.{name}Offset = "
+            f"{root + table['offset']}#64 := by decide")
+    declarations.append(f"""
+theorem SszArm.HashBinding.closureAt (s : ArmState) :
+    SszArm.Hash.CodeAt {{s with program := bound}} {root}#64 := by
+  refine ⟨boundCompressCodeAt s, boundFinalizeCodeAt s, boundCombineCodeAt s, ?_, ?_⟩
+  · exact boundMemcpyCodeAt s
+  · exact boundMemsetCodeAt s
+audit_native
+""")
+    return _EMIT_IMAGE_ORDER.replace(
+        "import SszArm.EmitImpl", "import SszArm.HashImage\nimport ProofAudit", 1
+    ) + "\n".join(declarations)

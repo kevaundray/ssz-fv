@@ -31,6 +31,7 @@ theorem wide_runWord (operand : NatOperand) (factor low high : BitVec 64)
   have hi : ((high ++ low) >>> (64 : Nat)).setWidth 64 = high :=
     BitVec.eq_of_toNat_eq (NatToU128.append_high high low)
   simp only [large, ↓reduceIte, lo, hi]
+  rfl
 
 theorem wide_failure_runWord (operand : NatOperand) (factor low high : BitVec 64)
     (address capacity used : Nat) (nonzero : factor ≠ 0) (notone : factor ≠ 1)

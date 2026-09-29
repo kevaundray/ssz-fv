@@ -63,12 +63,14 @@ theorem high_core_run (s : ArmState) (base : BitVec 64)
   have cPC : read_pc c = base + 832#64 := by
     rw [show c = block base HighPhase.highCross.ops b from rfl, high_phase_pc, bPC]
     simp [HighPhase.ops, highCore2, BitVec.add_assoc]
-  have first := high_phase_run .digits s base code error aligned pc
-  have second := high_phase_run .lowCross a base aCode aError aAligned aPC
-  have third := high_phase_run .highCross b base bCode bError bAligned bPC
-  have fourth := high_phase_run .combine c base cCode cError cAligned cPC
+  have first : run 4 s = a := high_phase_run .digits s base code error aligned pc
+  have second : run 3 a = b := high_phase_run .lowCross a base aCode aError aAligned aPC
+  have third : run 4 b = c := high_phase_run .highCross b base bCode bError bAligned bPC
+  have fourth : run 3 c = block base highCore3 c :=
+    high_phase_run .combine c base cCode cError cAligned cPC
   change run (4 + (3 + (4 + 3))) s = _
-  rw [run_plus, first, run_plus, second, run_plus, third, fourth, high_core_split]
+  rw [high_core_split, run_plus, first, run_plus, second, run_plus, third]
+  exact fourth
 
 def highCompleted (s : ArmState) (base : BitVec 64) : ArmState :=
   block base highRestoreOps (block base highCoreOps (block base highSaveOps s))
@@ -91,11 +93,13 @@ theorem high_run (s : ArmState) (base : BitVec 64)
   have bPC : read_pc b = base + 844#64 := by
     rw [show b = block base highCoreOps a from rfl, high_core_pc, aPC]
     simp [BitVec.add_assoc]
-  have save := high_phase_run .save s base code error aligned pc
-  have restore := high_phase_run .restore b base bCode bError bAligned bPC
+  have save : run 7 s = a := high_phase_run .save s base code error aligned pc
+  have core : run 14 a = b := high_core_run a base aCode aError aAligned aPC
+  have restore : run 7 b = highCompleted s base :=
+    high_phase_run .restore b base bCode bError bAligned bPC
   change run (7 + (14 + 7)) s = _
-  rw [run_plus, save, run_plus, high_core_run a base aCode aError aAligned aPC, restore]
-  rfl
+  rw [run_plus, save, run_plus, core]
+  exact restore
 
 theorem high_completed_pc (s : ArmState) (base : BitVec 64) :
     read_pc (highCompleted s base) = read_pc s + 112#64 := by

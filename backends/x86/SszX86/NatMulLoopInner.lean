@@ -34,26 +34,26 @@ theorem inner_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   induction remaining with
   | zero => intro positive; omega
   | succ remaining ih =>
-    intro positive column words old width wordsLength oldLength bufferLength sourceLength
+    intro positive column words old columnsEnd wordsLength oldLength bufferLength sourceLength
       s factor carry carryBound rsi r10 rcx r13 r14 r15 rbx r9 r8 sourceRead oldRead next
     cases words with
     | nil => simp only [List.length_nil] at wordsLength; omega
-    | cons word words =>
+    | cons limb words =>
       cases old with
       | nil => simp only [List.length_nil] at oldLength; omega
       | cons oldWord old =>
-        let one := LimbMul.step factor word oldWord carry
+        let one := LimbMul.step factor limb oldWord carry
         have physical : leftCount+rightCount < 2^64 := physical_counts dst _ _ span
         have columnBound : column < rightCount := by omega
         have address : s.regs.r10.toBitVec + s.regs.rbx.toBitVec * 8#64 =
             dst + BitVec.ofNat 64 (8*(row+column)) := by
           rw [r10, rbx]
-          simp [BitVec.ofNat_add, BitVec.ofNat_mul, Nat.mul_add, BitVec.add_assoc, Nat.mul_comm]
+          simp [BitVec.ofNat_add, BitVec.ofNat_mul, BitVec.add_mul, BitVec.add_assoc, Nat.mul_comm]
         have sourceAddress : s.regs.rsi.toBitVec + s.regs.rbx.toBitVec * 8#64 =
             source + BitVec.ofNat 64 (8*column) := by
           rw [rsi, rbx]
           simp [BitVec.ofNat_mul, Nat.mul_comm]
-        apply inner_step_cps e base hc s word oldWord carry carryBound r9 r8
+        apply inner_step_cps e base hc s limb oldWord carry carryBound r9 r8
         · rw [r15, rbx, r14]
           exact inner_guard _ _ _ _ physical rowBound columnBound
         · rw [sourceAddress]
@@ -74,7 +74,7 @@ theorem inner_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
             bv_omega
           simp only [atEnd, ite_true]
           apply next t stable
-          · simpa [width] using index
+          · simpa [columnsEnd] using index
           · simpa [LimbMul.inner, one] using carried
           · exact tZero
           · simpa [LimbMul.inner, Large.fillMem, one] using memory

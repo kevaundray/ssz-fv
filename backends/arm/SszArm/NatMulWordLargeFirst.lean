@@ -39,6 +39,11 @@ theorem first_store_run (s : ArmState) (base : BitVec 64)
   have hpc : r .PC s = base + 592#64 := pc
   simp [firstStoreOps, Follows, Op.row, Op.effect, next, state_simp_rules, hpc, BitVec.add_assoc]
 
+theorem first_store_register (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
+    r (.GPR reg) (block base firstStoreOps s) = r (.GPR reg) s := by
+  simp only [firstStoreOps, block, List.foldl_cons, List.foldl_nil,
+    Op.effect, next, NatCompare.r_gpr_of_w_pc, r_of_write_mem_bytes]
+
 theorem first_run (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
     (pc : read_pc s = base + 480#64) : run 30 s = firstCompleted s base := by
@@ -76,19 +81,18 @@ theorem first_contract (s : ArmState) (base : BitVec 64)
   · simp only [firstCompleted, block_program, highCompleted, block_program]
   · simp only [firstCompleted, block_error, highCompleted, block_error]
   · intro reg different
-    simpa only [firstCompleted, firstStoreOps, block, List.foldl_cons, List.foldl_nil,
-      Op.effect, next, state_simp_rules] using
-      high_completed_registers .first s base stack reg different
+    rw [firstCompleted, first_store_register]
+    exact high_completed_registers .first s base stack reg different
   · intro reg
     have preserves : ∀ ops t, r (.SFP reg) (block base ops t) = r (.SFP reg) t := by
       intro ops t
       exact Reserve.block_preserves (r (.SFP reg)) base ops (fun op _ v => op.sfp base v reg) t
     simp only [firstCompleted, highCompleted, preserves]
-  · simpa only [firstCompleted, firstStoreOps, block, List.foldl_cons, List.foldl_nil,
-      Op.effect, next, state_simp_rules] using high_completed_value .first s base
+  · rw [firstCompleted, first_store_register]
+    exact high_completed_value .first s base
   · intro i
     have zero : i.val = 0 := by have := i.isLt; simp only [List.length_singleton] at this; omega
-    simp only [zero, Nat.mul_zero, BitVec.ofNat_zero, BitVec.add_zero]
+    simp only [zero, Nat.mul_zero, BitVec.add_zero]
     rw [Memory.mem_eq_iff_read_mem_bytes_eq.mp hm]
     simpa [zero] using BoolCodec.read_mem_bytes_write_mem_bytes_same
       (HighSite.first.spilled s) 8 (r (.GPR 10#5) s) (r (.GPR 11#5) s) physical

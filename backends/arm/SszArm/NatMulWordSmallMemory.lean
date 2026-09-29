@@ -9,9 +9,9 @@ open Delimited (MemoryFrame Protected Returned)
     (stack : 48 ≤ (r (.GPR 31#5) s).toNat)
     (result : SszNative.NatArithmetic.Outcome SszNative.NatOperand)
     (value : SszNative.NatOperand) (success : result.result = .ok value)
-    (address bytes : Nat) (protected : Protected (localWrites s result) address bytes) :
+    (address bytes : Nat) (protection : Protected (localWrites s result) address bytes) :
     Protected (valueWrites t) address bytes := by
-  rcases protected with empty | apart
+  rcases protection with empty | apart
   · exact Or.inl empty
   · right
     have work := apart ((r (.GPR 31#5) s).toNat - 48, 48) (small_stack_local s result)

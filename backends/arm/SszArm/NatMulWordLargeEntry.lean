@@ -26,7 +26,7 @@ theorem scan_arena {s t : ArmState} {operand : SszNative.NatOperand} {factor : B
   have address := priorFrame.header owned 0 (by decide)
   have capacity := priorFrame.header owned 8 (by decide)
   have used := priorFrame.header owned 16 (by decide)
-  simp only [BitVec.ofNat_zero, BitVec.add_zero] at address
+  simp only [BitVec.add_zero] at address
   simp only [arenaOf, address, capacity, used]
 
 theorem scan_outcome {s t : ArmState} {operand : SszNative.NatOperand} {factor : BitVec 64}
@@ -75,7 +75,7 @@ theorem scan_post {s u t : ArmState} {operand : SszNative.NatOperand} {factor : 
   · simpa only [model] using post.written
   · simpa only [priorFrame.arena, model] using post.cursor
   · have initial := priorFrame.header owned 0 (by decide)
-    simp only [BitVec.ofNat_zero, BitVec.add_zero] at initial
+    simp only [BitVec.add_zero] at initial
     simpa only [priorFrame.arena] using post.arenaBase.trans initial
   · have initial := priorFrame.header owned 8 (by decide)
     simpa only [priorFrame.arena] using post.arenaCapacity.trans initial

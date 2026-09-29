@@ -13,6 +13,7 @@ models:
 model-check: models
 	python3 scripts/check-arm-model.py
 	cd backends/arm && lake build SszArm.LogicalImmediateRegression
+	python3 scripts/check-decoder-reservation.py
 
 proofs: models
 	cd backends/x86 && lake build
@@ -36,6 +37,8 @@ binding: models
 	python3 scripts/check-emit-binding.py
 	python3 scripts/check-measure-binding.py
 	python3 scripts/check-serialize-binding.py
+	python3 scripts/check-sha-binding.py
+	python3 scripts/check-codec-binding.py
 
 smoke:
 	python3 scripts/check-uint64.py

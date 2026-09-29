@@ -1,4 +1,4 @@
-import SszArm.NatMulWordIdentityScan
+import SszArm.NatMulWordIdentityStages
 import SszNatOperandNormalization
 
 namespace SszArm.NatMulWord
@@ -30,33 +30,41 @@ theorem identity_normalize_exit (s : ArmState) (base pointer : BitVec 64)
     omega
   have hadd : BitVec.ofNat 64 (sigWords words - 1) + 1#64 = BitVec.ofNat 64 (sigWords words) := by
     bv_omega
-  have hpc : r .PC s = base + 160#64 := hp
+  have countNeOne (hne : sigWords words ≠ 1) :
+      BitVec.ofNat 64 (sigWords words) ≠ 1#64 := by bv_omega
+  let u := block base identityCountOps s
+  have hu : run 3 s = u := block_run base identityCountOps s hc he ha
+    (identity_count_follows s base hp)
+  have huf : ScanFrame s u := scan_pure_frame base identityCountOps s (by decide)
+  have hu1 : r (.GPR 1#5) u = pointer := (identity_count_pointer s base).trans h1
+  have hu2 : r (.GPR 2#5) u = BitVec.ofNat 64 (sigWords words) := by
+    rw [identity_count_payload, h8, hadd]
+  have hup : read_pc u =
+      if BitVec.ofNat 64 (sigWords words) = 1#64 then base + 172#64 else base + 180#64 := by
+    rw [identity_count_pc, h8, hadd]
   by_cases hone : sigWords words = 1
   · have hpositive : 0 < words.length := by have := sigWords_le_length words; omega
-    have hword : read_mem_bytes 8 pointer s = words[0]?.getD 0#64 := by
-      simpa using (scan_limb s pointer words 0 hpositive hs hm).2.2
-    let ops : List Op := [.p160, .p164, .p168, .p172, .p176]
-    let t := block base ops s
-    have hf : Follows base ops s := by
-      simp [ops, Follows, Op.row, Op.effect, put, next, state_simp_rules,
-        hpc, h8, hone, BitVec.add_assoc]
-    refine ⟨5, t, block_run base ops s hc he ha hf,
-      scan_pure_frame base ops s (by decide), ?_, ?_, ?_⟩
-    all_goals simp [t, ops, block, Op.effect, put, next, state_simp_rules,
-      hpc, h8, hone, h1, hword, BitVec.add_assoc,
-      SszNative.NatOperand.fromWords_pointer, SszNative.NatOperand.fromWords_payload]
+    have hu172 : read_pc u = base + 172#64 := by
+      simpa only [hone, BitVec.ofNat_eq_ofNat, ↓reduceIte] using hup
+    have hword : read_mem_bytes 8 pointer u = words[0]?.getD 0#64 := by
+      simpa only [show (BitVec.ofNat 64 0 <<< 3) = 0#64 from rfl, BitVec.add_zero] using
+        (scan_limb u pointer words 0 hpositive (huf.source _ _ hs) (huf.words _ _ hs hm)).2.2
+    let t := block base identityCanonOps u
+    have ht : run 2 u = t := block_run base identityCanonOps u
+      (huf.code hc) (huf.error.trans he) (huf.aligned ha) (identity_canon_follows u base hu172)
+    refine ⟨3 + 2, t, ?_, huf.trans (scan_pure_frame base identityCanonOps u (by decide)),
+      identity_canon_pc u base hu172, ?_, ?_⟩
+    · rw [run_plus, hu, ht]
+    · rw [identity_canon_pointer, SszNative.NatOperand.fromWords_pointer, hone]
+      rfl
+    · rw [identity_canon_payload, hu1, hword, SszNative.NatOperand.fromWords_payload, hone]
+      rfl
   · have hgt : ¬ sigWords words ≤ 1 := by omega
-    have hne : BitVec.ofNat 64 (sigWords words) ≠ 1#64 := by bv_omega
-    let ops : List Op := [.p160, .p164, .p168]
-    let t := block base ops s
-    have hf : Follows base ops s := by
-      simp [ops, Follows, Op.row, Op.effect, put, next, state_simp_rules,
-        hpc, h8, hadd, hne, BitVec.add_assoc]
-    refine ⟨3, t, block_run base ops s hc he ha hf,
-      scan_pure_frame base ops s (by decide), ?_, ?_, ?_⟩
-    all_goals simp [t, ops, block, Op.effect, put, next, state_simp_rules,
-      hpc, h8, hadd, hne, h1, BitVec.add_assoc,
-      SszNative.NatOperand.fromWords_pointer, SszNative.NatOperand.fromWords_payload, hgt]
+    have hne := countNeOne hone
+    refine ⟨3, u, hu, huf, ?_, ?_, ?_⟩
+    · simpa only [if_neg hne] using hup
+    · simpa only [SszNative.NatOperand.fromWords_pointer, if_neg hgt] using hu1
+    · simpa only [SszNative.NatOperand.fromWords_payload, if_neg hgt] using hu2
 
 /-- Exact two native return-body entrances selected by factor-one. -/
 def IdentityReady (base : BitVec 64) (operand : SszNative.NatOperand) (t : ArmState) : Prop :=
@@ -72,20 +80,15 @@ theorem identity_large (s : ArmState) (base pointer : BitVec 64)
     (h2 : r (.GPR 2#5) s = BitVec.ofNat 64 words.length)
     (hs : NatCompare.Source s pointer words) (hm : NatCompare.Words s pointer words) :
     ∃ fuel t, run fuel s = t ∧ ScanFrame s t ∧ IdentityReady base (.large pointer words) t := by
-  let ops : List Op := [.p100, .p104]
-  let u := block base ops s
-  have hpc : r .PC s = base + 100#64 := hp
-  have hf : Follows base ops s := by
-    simp [ops, Follows, Op.row, Op.effect, put, next, state_simp_rules,
-      hpc, h1, hn, BitVec.add_assoc]
-  have hu : run 2 s = u := block_run base ops s hc he ha hf
-  have huf := scan_pure_frame base ops s (by decide)
-  have hup : read_pc u = base + 108#64 := by
-    simp [u, ops, block, Op.effect, put, next, state_simp_rules, h1, hn, BitVec.add_assoc]
-  have hu1 : r (.GPR 1#5) u = pointer := by
-    simp [u, ops, block, Op.effect, put, next, state_simp_rules, h1]
+  let u := block base identityInitOps s
+  have nonzero : r (.GPR 1#5) s ≠ 0#64 := by rw [h1]; exact hn
+  have hu : run 2 s = u := block_run base identityInitOps s hc he ha
+    (identity_init_follows s base hp nonzero)
+  have huf : ScanFrame s u := scan_pure_frame base identityInitOps s (by decide)
+  have hup : read_pc u = base + 108#64 := identity_init_pc s base nonzero
+  have hu1 : r (.GPR 1#5) u = pointer := (identity_init_pointer s base).trans h1
   have hu9 : r (.GPR 9#5) u = BitVec.ofNat 64 words.length - 1#64 := by
-    simp [u, ops, block, Op.effect, put, next, state_simp_rules, h2]
+    rw [identity_init_index, h2]
   obtain ⟨fuel, t, ht, htf, ht1, ht2, htp, ht8⟩ := identity_scan base pointer words words.length u
     (Nat.le_refl _) (huf.code hc) (huf.error.trans he) (huf.aligned ha) hup hu1 hu9
     (huf.source _ _ hs) (huf.words _ _ hs hm)

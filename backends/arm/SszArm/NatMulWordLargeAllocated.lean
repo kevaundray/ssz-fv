@@ -29,6 +29,9 @@ theorem allocated_run (s u : ArmState) (base raw factor : BitVec 64)
     ∃ fuel t, run fuel s = t ∧ Post s t (.large raw rawWords) factor := by
   let operand : SszNative.NatOperand := .large raw rawWords
   let count := operand.wordCount
+  have countLarge : 1 < count := large
+  have operandPointer : operand.pointer = raw := rfl
+  have operandWords : operand.words = rawWords := rfl
   let reservation : SszNative.Arena.Reservation :=
     ⟨(arenaOf s).base + SszNative.Arena.start (arenaOf s).base (arenaOf s).used,
       SszNative.Arena.finish (arenaOf s).base (arenaOf s).used (count + 1)⟩
@@ -51,7 +54,7 @@ theorem allocated_run (s u : ArmState) (base raw factor : BitVec 64)
     change count ≤ rawWords.length at h
     omega
   have firstWord : read_mem_bytes 8 (r (.GPR 1#5) u) u = rawWords[0]?.getD 0#64 := by
-    rw [currentOwned.pointer]
+    rw [currentOwned.pointer, operandPointer]
     simpa using (scan_limb u raw rawWords 0 positiveRaw currentOwned.scan_source currentOwned.scan_words).2.2
   let c := block base Reserve.firstOps u
   have setupRun : run 7 u = c := Reserve.first_run u base (priorFrame.code code)
@@ -102,11 +105,16 @@ theorem allocated_run (s u : ArmState) (base raw factor : BitVec 64)
   have separateD : Protected (NatMul.loopWrites (r (.GPR 31#5) d) pointer (count + 1))
       raw.toNat (8 * rawWords.length) := by
     have inputOwnership : Protected (writesFor s (committed reservation (SszNative.NatMul.wordWritten operand factor)))
-        raw.toNat (8 * rawWords.length) := by simpa only [model] using owned.inputOwned
-    have protected := protected_subset inputOwnership
+        raw.toNat (8 * rawWords.length) := by
+      have protection := owned.inputOwned
+      change Protected (writesFor s (outcome s operand factor))
+        raw.toNat (8 * rawWords.length) at protection
+      rw [model] at protection
+      exact protection
+    have inputProtection := protected_subset inputOwnership
       (loop_writes_subset s d reservation (SszNative.NatMul.wordWritten operand factor)
         space.pointerBound firstABI.sp)
-    simpa only [SszNative.NatMul.wordWritten_length] using protected
+    simpa only [SszNative.NatMul.wordWritten_length] using inputProtection
   have loopSpace : NatMul.LoopSpace (r (.GPR 31#5) d) pointer (count + 1) := by
     simpa only [firstABI.sp] using space.stack
   have head : LoopHeadAt d base operand.pointer pointer factor operand.words count 1 := by
@@ -119,13 +127,14 @@ theorem allocated_run (s u : ArmState) (base raw factor : BitVec 64)
     · exact (firstPost.registers 9#5 (by decide)).trans
         ((Reserve.first_registers u base 9#5 (by decide)).trans
           ((prior.frame.registers 9#5 (by decide)).trans countReg))
-    · simpa only [Nat.sub_self, BitVec.ofNat_zero] using
+    · simpa only [Nat.sub_self] using
         (firstPost.registers 13#5 (by decide)).trans setup.2.2.2.1
     · rw [firstPost.registers 15#5 (by decide), setup.2.2.2.2.2.2.1, nextPointer]
   have currentFirst : NatCompare.Words d pointer [operand.words[0]?.getD 0#64 * factor] := by
-    simpa only [output, firstLow] using firstPost.words
+    simpa only [output, firstLow, operandWords] using firstPost.words
   have carry : r (.GPR 14#5) d = NatMulProduct.high (operand.words[0]?.getD 0#64) factor := by
-    rw [firstPost.carry, firstInput, setupABI.registers 3#5 (by decide), owned.factorRegister]
+    rw [firstPost.carry, firstInput, setupABI.registers 3#5 (by decide),
+      owned.factorRegister, operandWords]
   have biasD : r (.GPR 8#5) d = -BitVec.ofNat 64 (8 * count) :=
     (firstPost.registers 8#5 (by decide)).trans
       ((Reserve.first_registers u base 8#5 (by decide)).trans

@@ -1,5 +1,6 @@
 import SszArm.NatMulWordLoopFrame
 import SszArm.NatMulWordScanFrame
+import SszArm.WordNormalize
 
 namespace SszArm.NatMulWord
 
@@ -38,7 +39,8 @@ theorem loop_head_pc (s : ArmState) (base : BitVec 64) :
       if (r (.GPR 13#5) s + 1#64).toNat < (r (.GPR 2#5) s).toNat
       then base + 600#64 else base + 824#64 := by
   simp [loopHead, loopHeadOps, block, Op.effect, put, next, Udivti3.compare,
-    Udivti3.next, state_simp_rules, Udivti3.cmp_carry, Nat.not_le]
+    Udivti3.next, state_simp_rules, Udivti3.cmp_carry]
+  simp only [← Nat.not_lt, ite_not]
 
 theorem loop_head_stable (s : ArmState) (base : BitVec 64) :
     LoopStable s (loopHead s base) := by
@@ -47,6 +49,46 @@ theorem loop_head_stable (s : ArmState) (base : BitVec 64) :
     exact loop_head_registers s base reg (by simp_all)
   · intro reg
     exact loop_block_vectors base loopHeadOps s reg
+
+private theorem input_loaded_gpr (s : ArmState) (base value : BitVec 64) (reg : BitVec 5) :
+    r (.GPR reg) (loaded .input s base value) =
+      if reg = 17#5 then value else r (.GPR reg) s := by
+  simp only [loaded, LoadSite.destination, NatCompare.r_gpr_of_w_pc,
+    NatCompare.r_gpr_of_w_gpr, NatCompare.saved, r_of_write_mem_bytes]
+
+private theorem input_loaded_field (s : ArmState) (base value : BitVec 64)
+    (field : StateField) (pc : field ≠ .PC) (destination : field ≠ .GPR 17#5) :
+    r field (loaded .input s base value) = r field s := by
+  simp only [loaded, LoadSite.destination, r_of_w_different pc,
+    r_of_w_different destination, NatCompare.saved, r_of_write_mem_bytes]
+
+private theorem input_loaded_program (s : ArmState) (base value : BitVec 64)
+    (stack : 16 ≤ (r (.GPR 31#5) s).toNat) :
+    (loaded .input s base value).program = s.program := by
+  simpa only [loaded, w_program, LoadSite.scratch] using
+    (NatCompare.saved_frame s 9#5 stack).program
+
+private theorem input_loaded_pc (s : ArmState) (base value : BitVec 64) :
+    read_pc (loaded .input s base value) = base + 632#64 := by
+  simp only [loaded, read_pc, r_of_w_same, LoadSite.start] <;> arm_word_nf
+
+private theorem input_loaded_memory (s : ArmState) (base value : BitVec 64) :
+    (loaded .input s base value).mem = (NatCompare.saved s 9#5).mem := by
+  simp only [loaded, ArmState.mem_w_eq_mem, LoadSite.scratch]
+
+private theorem loop_zero_gpr (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
+    r (.GPR reg) (block base [.p824, .p828] s) =
+      if reg = 17#5 then 0#64 else r (.GPR reg) s := by
+  simp only [block, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
+    NatCompare.r_gpr_of_w_pc, NatCompare.r_gpr_of_w_gpr] <;> arm_word_nf
+
+private theorem loop_zero_pc (s : ArmState) (base : BitVec 64) :
+    read_pc (block base [.p824, .p828] s) = base + 632#64 := by
+  simp only [block, List.foldl_cons, List.foldl_nil, Op.effect, read_pc, r_of_w_same]
+
+private theorem loop_zero_memory (s : ArmState) (base : BitVec 64) :
+    (block base [.p824, .p828] s).mem = s.mem := by
+  simp only [block, List.foldl_cons, List.foldl_nil, Op.effect, put, next, ArmState.mem_w_eq_mem]
 
 /-- Both native choices at812: the indexed load uses the postincremented raw
 pointer, and out-of-range access follows824/828 without reading memory. -/
@@ -65,8 +107,8 @@ theorem loop_input_runs (s : ArmState) (base pointer : BitVec 64)
       (∀ reg : BitVec 5, reg ≠ 16#5 → reg ≠ 17#5 → r (.GPR reg) t = r (.GPR reg) s) ∧
       MemoryFrame [((r (.GPR 31#5) s).toNat - 48, 48)] s t := by
   let u := loopHead s base
-  have stable := loop_head_stable s base
-  have sp := stable.sp
+  have stable : LoopStable s u := loop_head_stable s base
+  have sp : r (.GPR 31#5) u = r (.GPR 31#5) s := stable.sp
   have nextIndex : r (.GPR 13#5) s + 1#64 = BitVec.ofNat 64 index := by
     rw [indexReg]
     have : index - 1 + 1 = index := by omega
@@ -79,13 +121,15 @@ theorem loop_input_runs (s : ArmState) (base pointer : BitVec 64)
   have indexU : r (.GPR 16#5) u = BitVec.ofNat 64 index :=
     (loop_head_index s base).trans nextIndex
   have before := loop_head_run s base code error aligned pc
-  have pure := loop_head_memory s base
-  have keepU := loop_head_registers s base
+  have pure : u.mem = s.mem := loop_head_memory s base
+  have keepU : ∀ reg : BitVec 5, reg ≠ 16#5 → r (.GPR reg) u = r (.GPR reg) s :=
+    loop_head_registers s base
   by_cases inside : index < words.length
   · have upc : read_pc u = base + 600#64 := by
       rw [loop_head_pc, nextNat, lengthNat, if_pos inside]
     have address : LoadSite.input.address u = pointer + (BitVec.ofNat 64 index <<< 3) := by
-      simp only [LoadSite.address, loop_head_registers _ _ _ (by decide), pointerReg, indexReg]
+      change r (.GPR 1#5) u + (r (.GPR 13#5) u <<< 3) = _
+      rw [keepU 1#5 (by decide), keepU 13#5 (by decide), pointerReg, indexReg]
       bv_omega
     have observed := scan_limb s pointer words index inside source current
     have physical : (LoadSite.input.address u).toNat + 8 ≤ 2^64 := by
@@ -103,20 +147,23 @@ theorem loop_input_runs (s : ArmState) (base pointer : BitVec 64)
     have keep : ∀ reg : BitVec 5, reg ≠ 16#5 → reg ≠ 17#5 →
         r (.GPR reg) t = r (.GPR reg) s := by
       intro reg h16 h17
-      simpa only [t, loaded, LoadSite.destination, NatCompare.saved, state_simp_rules,
-        h17, ↓reduceIte] using keepU reg h16
+      exact (show r (.GPR reg) t = r (.GPR reg) u by
+        rw [input_loaded_gpr, if_neg h17]).trans (keepU reg h16)
     have finalStable : LoopStable s t := by
       refine ⟨?_, ?_, ?_, ?_⟩
-      · simp only [t, loaded, NatCompare.saved, state_simp_rules, stable.program]
-      · simp only [t, loaded, NatCompare.saved, state_simp_rules, stable.error]
+      · exact (input_loaded_program u base _ (by rw [sp]; exact source.1)).trans stable.program
+      · exact (input_loaded_field u base _ .ERR (by decide) (by decide)).trans stable.error
       · intro reg different
         exact keep reg (by simp_all) (by simp_all)
       · intro reg
-        simpa only [t, loaded, NatCompare.saved, state_simp_rules] using stable.vectors reg
+        exact (input_loaded_field u base _ (.SFP reg)
+          (by intro h; cases h) (by intro h; cases h)).trans (stable.vectors reg)
     refine ⟨3 + 8, t, by rw [run_plus, before, hr], finalStable, ?_, ?_, ?_, keep, ?_⟩
-    · simp [t, loaded, LoadSite.start, state_simp_rules]
-    · simpa [t, loaded, LoadSite.destination, NatCompare.saved, state_simp_rules] using indexU
-    · simp [t, loaded, LoadSite.destination, state_simp_rules]
+    · exact input_loaded_pc u base _
+    · exact (show r (.GPR 16#5) t = r (.GPR 16#5) u by
+        rw [input_loaded_gpr, if_neg (by decide)]).trans indexU
+    · exact (show r (.GPR 17#5) t = words[index]?.getD 0#64 by
+        rw [input_loaded_gpr, if_pos rfl])
     · intro a outside
       have apart := outside ((r (.GPR 31#5) s).toNat - 48, 48) (by simp)
       have savedFrame := NatCompare.saved_frame u 9#5 (by rw [sp]; exact source.1)
@@ -124,7 +171,8 @@ theorem loop_input_runs (s : ArmState) (base pointer : BitVec 64)
         rw [sp]
         simp only [Prod.fst, Prod.snd] at apart
         omega)
-      simpa only [t, loaded, state_simp_rules] using preserved.trans (congrFun pure a)
+      exact (congrFun (input_loaded_memory u base _) a).trans
+        (preserved.trans (congrFun pure a))
   · have upc : read_pc u = base + 824#64 := by
       rw [loop_head_pc, nextNat, lengthNat, if_neg inside]
     have zeroRun : run 2 u = block base [.p824, .p828] u := by
@@ -136,19 +184,22 @@ theorem loop_input_runs (s : ArmState) (base pointer : BitVec 64)
     have keep : ∀ reg : BitVec 5, reg ≠ 16#5 → reg ≠ 17#5 →
         r (.GPR reg) t = r (.GPR reg) s := by
       intro reg h16 h17
-      simpa [t, block, Op.effect, put, next, state_simp_rules, h17] using keepU reg h16
+      exact (show r (.GPR reg) t = r (.GPR reg) u by
+        rw [loop_zero_gpr, if_neg h17]).trans (keepU reg h16)
     have finalStable : LoopStable s t := by
-      refine ⟨by simp [t, stable.program], by simp [t, stable.error], ?_, ?_⟩
+      refine ⟨(block_program _ _ _).trans stable.program,
+        (block_error _ _ _).trans stable.error, ?_, ?_⟩
       · intro reg different
         exact keep reg (by simp_all) (by simp_all)
       · intro reg
         exact (loop_block_vectors _ _ _ _).trans (stable.vectors reg)
     refine ⟨3 + 2, t, by rw [run_plus, before, zeroRun], finalStable, ?_, ?_, ?_, keep, ?_⟩
-    · simp [t, block, Op.effect, put, next, state_simp_rules]
-    · simpa [t, block, Op.effect, put, next, state_simp_rules] using indexU
-    · simp [t, block, Op.effect, put, next, state_simp_rules,
-        List.getElem?_eq_none (by omega : words.length ≤ index)]
+    · exact loop_zero_pc u base
+    · exact (show r (.GPR 16#5) t = r (.GPR 16#5) u by
+        rw [loop_zero_gpr, if_neg (by decide)]).trans indexU
+    · rw [loop_zero_gpr, if_pos rfl,
+        List.getElem?_eq_none (by omega : words.length ≤ index), Option.getD_none]
     · intro a _
-      simpa [t, block, Op.effect, put, next, state_simp_rules] using congrFun pure a
+      exact congrFun ((loop_zero_memory u base).trans pure) a
 
 end SszArm.NatMulWord

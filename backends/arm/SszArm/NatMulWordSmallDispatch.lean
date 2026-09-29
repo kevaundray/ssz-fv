@@ -28,16 +28,31 @@ theorem small_dispatch_high (s : ArmState) (base : BitVec 64) :
     r (.GPR 9#5) (smallDispatch s base) = r (.GPR 9#5) s := by
   simp [smallDispatch, block, Op.effect, put, next, state_simp_rules]
 
+private theorem small_product_memory (s : ArmState) (base : BitVec 64) :
+    (Op.p1040.effect base s).mem = s.mem := by
+  exact (ArmState.mem_w_eq_mem (.GPR 8)
+    (r (.GPR 2#5) s * r (.GPR 3#5) s) (next s)).trans
+    (ArmState.mem_w_eq_mem .PC (read_pc s + 4#64) s)
+
+private theorem small_branch_memory (s : ArmState) (base : BitVec 64) :
+    (Op.p1044.effect base s).mem = s.mem := by
+  exact ArmState.mem_w_eq_mem .PC
+    (if r (.GPR 9#5) s ≠ 0#64 then base + 1132#64 else base + 1048#64) s
+
 theorem small_dispatch_frame (s : ArmState) (base : BitVec 64) :
     SmallFrame s (smallDispatch s base) := by
   refine ⟨⟨block_program _ _ _, block_error _ _ _, ?_, ?_⟩, ?_⟩
   · intro reg keep
     have different : reg ≠ 8#5 := by
-      simp_all only [List.mem_cons, List.not_mem_nil, or_false, not_or]
+      intro equal
+      apply keep
+      subst reg
+      decide
     simp [smallDispatch, block, Op.effect, put, next, state_simp_rules, different]
   · intro reg
     simp [smallDispatch, block, Op.effect, put, next, state_simp_rules]
   · intro a _
-    simp [smallDispatch, block, Op.effect, put, next, state_simp_rules]
+    exact congrFun ((small_branch_memory (Op.p1040.effect base s) base).trans
+      (small_product_memory s base)) a
 
 end SszArm.NatMulWord

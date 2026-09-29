@@ -182,7 +182,7 @@ theorem reservation_loop_runs (before s : ArmState) (base arena : BitVec 64)
       (uv.2.1.trans owned.rightPointer)
       (uv.2.2.1.trans owned.leftPointer)
       (uv.2.2.2.1.trans owned.leftPayload)
-      (by simpa only [Nat.mul_zero, BitVec.ofNat_zero, BitVec.add_zero] using uv.2.2.2.2.1)
+      (by simpa only [Nat.mul_zero, BitVec.add_zero] using uv.2.2.2.2.1)
       uv.2.2.2.2.2
       (by rw [uf.registers _ (by decide), rightLength]; exact countWord)
       (uf.registers _ (by decide))

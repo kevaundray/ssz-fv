@@ -64,9 +64,9 @@ theorem product_finish_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     omega
   apply Product.product_cps e base hc t lp rp (BitVec.ofNat 64 r.pointer) lw rw leftAt rightAt hl hr
   · simpa only [pointerNat, length] using bounds.2.2.2.2.2
-  · simpa only [length] using allocated_operand_apart s (.large lp lw) (.large rp rw) (.large lp lw)
+  · simpa only [NatAdd.Carry.Apart, length] using allocated_operand_apart s (.large lp lw) (.large rp rw) (.large lp lw)
       address capacity used ra owned owned.left_at owned.left_owned r allocated
-  · simpa only [length] using allocated_operand_apart s (.large lp lw) (.large rp rw) (.large rp rw)
+  · simpa only [NatAdd.Carry.Apart, length] using allocated_operand_apart s (.large lp lw) (.large rp rw) (.large rp rw)
       address capacity used ra owned owned.right_at owned.right_owned r allocated
   · rw [stackNat]
     have bound := owned.return_bound

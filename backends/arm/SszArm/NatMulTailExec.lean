@@ -28,7 +28,7 @@ theorem tail_checkpoint_run (s u : ArmState) (base : BitVec 64)
   have wordAligned : CheckSPAlignment v :=
     block_aligned base RestorePath.tail.ops u (frame.aligned aligned)
   have wordPC : read_pc v = base + wordOffset + BitVec.ofNat 64 NatMulWord.entry := by
-    simpa only [NatMulWord.entry, BitVec.ofNat_zero, BitVec.add_zero] using vpc
+    simpa only [NatMulWord.entry, BitVec.add_zero] using vpc
   obtain ⟨fuel, t, execution, post⟩ := NatMulWord.program_correct v (base + wordOffset)
     operand factor wordCode.word (tailFrame.error.trans error) wordAligned wordOwned wordPC
   have restoreRun : run 8 u = v := restore_run .tail u base (frame.code code.body)

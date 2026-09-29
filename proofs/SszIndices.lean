@@ -1,0 +1,19 @@
+import SszNatShiftSemantics
+import SszNatShiftResources
+import SszIndicesArithmeticSemantic
+import SszIndicesArithmeticInitialization
+import SszIndicesArithmeticOperationResources
+import SszIndicesArithmeticShiftPhysical
+import SszIndicesProgressiveSemantic
+import SszIndicesProgressiveResources
+import SszIndicesFrontierSemantic
+import SszIndicesFrontierResources
+import SszIndicesPathsRefinementGeneralized
+import SszIndicesPathsResources
+import SszIndicesPathsCursor
+import SszIndicesPathsPhysical
+import SszIndicesPinnedAntichain
+
+/- Shared source-level generalized-index, frontier, ordinal descriptor/path,
+and Nat shift models and refinements. This module adds no axioms or operational
+wrappers and does not claim an ISA execution refinement. -/

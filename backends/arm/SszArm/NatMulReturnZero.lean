@@ -20,8 +20,12 @@ private theorem zero_word_prefix (s : ArmState) (base : BitVec 64) :
   have effects : zeroReturnOps.map (Op.effect base) =
       wordZeroOps.map (NatMulWord.Op.effect base) := by
     simp only [zeroReturnOps, wordZeroOps, NatMulWord.valueOps, NatMulWord.StatusPath.ops,
-      List.take, List.append, List.map_cons, List.map_nil, Op.effect, NatMulWord.Op.effect,
-      put, next, NatMulWord.put, NatMulWord.next]
+      List.take, List.cons_append, List.nil_append, List.map_cons, List.map_nil,
+      List.cons.injEq, and_true]
+    repeat' apply And.intro
+    all_goals
+      funext t
+      rfl
   simpa only [zeroReturnBody, block, NatMulWord.block, List.foldl_map] using
     congrArg (fun fs : List (ArmState → ArmState) => fs.foldl (fun t f => f t) s) effects
 
@@ -30,12 +34,22 @@ original restore sequence. -/
 theorem zero_return_erased (s : ArmState) (base : BitVec 64) :
     w .PC 0#64 (zeroReturnBody s base) =
       w .PC 0#64 (NatMulWord.valueResult .zero base s) := by
-  rw [zero_word_prefix]
+  have append (xs ys : List NatMulWord.Op) (t : ArmState) :
+      NatMulWord.block base (xs ++ ys) t =
+        NatMulWord.block base ys (NatMulWord.block base xs t) := by
+    simp only [NatMulWord.block, List.foldl_append]
   have split : NatMulWord.valueOps .zero ++ NatMulWord.StatusPath.ops .zero =
       wordZeroOps ++ [.p96] := rfl
-  simp only [NatMulWord.valueResult, NatMulWord.statusResult, NatMulWord.valueBody,
-    NatMulWord.block, ← List.foldl_append, split, List.foldl_append,
-    List.foldl_cons, List.foldl_nil, NatMulWord.Op.effect, state_simp_rules]
+  have leaf : NatMulWord.valueResult .zero base s =
+      NatMulWord.block base [.p96] (NatMulWord.block base wordZeroOps s) := by
+    unfold NatMulWord.valueResult NatMulWord.statusResult NatMulWord.valueBody
+    rw [← append, split, append]
+  have tail (t : ArmState) :
+      w .PC 0#64 t = w .PC 0#64 (NatMulWord.block base [.p96] t) := by
+    simp only [NatMulWord.block, List.foldl_cons, List.foldl_nil,
+      NatMulWord.Op.effect, state_simp_rules]
+  rw [zero_word_prefix, leaf]
+  exact tail _
 
 theorem zero_return_body_run (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
@@ -64,7 +78,8 @@ theorem zero_return_body_registers (s : ArmState) (base : BitVec 64)
     (space : ReturnSpace s (r (.GPR 0#5) s)) (reg : BitVec 5) :
     r (.GPR reg) (zeroReturnBody s base) = r (.GPR reg) s := by
   have same := congrArg (r (.GPR reg)) (zero_return_erased s base)
-  simp only [state_simp_rules] at same
+  rw [r_of_w_different (show StateField.GPR reg ≠ .PC by intro h; cases h),
+    r_of_w_different (show StateField.GPR reg ≠ .PC by intro h; cases h)] at same
   exact same.trans (NatMulWord.value_registers .zero s base space.word reg)
 
 theorem zero_return_body_image (s : ArmState) (base : BitVec 64)

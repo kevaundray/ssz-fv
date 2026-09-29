@@ -1,7 +1,19 @@
 import SszX86.NatMulWordSmallComplete
+import SszX86.WordNormalize
 
 namespace SszX86.NatMulWord
 open SszNative
+
+private theorem unsigned_zero_high (factor : BitVec 64) :
+    BitVec.ofInt 64 (((0#64).unsigned * factor.unsigned) >>> 64) = 0#64 := by
+  change productHigh (0#64) factor = 0#64
+  simp only [productHigh_eq, BitVec.toNat_zero, Nat.zero_mul, Nat.zero_div]
+
+private theorem product_state_zero (s : MachineData) (zero : s.regs.r9.toBitVec = 0#64)
+    (flags : StatusFlags) :
+    productState s flags = {s with regs := {s.regs with rax := 0, rdx := 0}, status := flags} := by
+  simp (config := {instances := true}) only [productState, productHigh, zero,
+    BitVec.zero_mul, unsigned_zero_high, WordNormalize.numeral]
 
 private theorem empty_product_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     (s : MachineData) (zero : s.regs.r9.toBitVec = 0#64) (P : MachineState → Prop)
@@ -9,6 +21,7 @@ private theorem empty_product_cps (e : Executable) (base : Int64) (hc : CodeAt e
     Eventually (step e) P (s, base+516) := by
   have target := hc.targets ("natMulWord_u407", 407) (by decide)
   have widthDifferent : (Width.W64 == Width.W8) = false := by decide
+  have zeroReg : s.regs.r9 = 0 := UInt64.toBitVec_inj.mp zero
   natmulword_step 4:8 using hc
   natmulword_step 4:9 using hc
   simp only [widthDifferent, Bool.false_eq_true, ↓reduceIte]
@@ -16,7 +29,8 @@ private theorem empty_product_cps (e : Executable) (base : Int64) (hc : CodeAt e
   all_goals
     natmulword_step 4:10 using hc
     constructor <;> natmulword_step 4:11 using hc
-    all_goals simpa [zero, productHigh, productState, StatusFlags.from_result, target, Effects.All] using next _
+    all_goals simpa [product_state_zero s zero, zero, zeroReg, unsigned_zero_high,
+      StatusFlags.from_result, target, Effects.All] using next _
 
 /-- A physically empty Large takes the distinct 516/519/522/525 sequence,
 without inventing a readable word zero. -/

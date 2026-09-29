@@ -22,7 +22,7 @@ theorem large_run (s : ArmState) (base : BitVec 64)
     (entryFrame.jointCode code) (entryFrame.error.trans error) (entryFrame.aligned aligned)
     start.pc (by rw [start.count owned]; omega)
     (ReturnSpace.of_owned owned entryFrame.saved).stack
-    (by simpa only [BitVec.ofNat_zero, BitVec.add_zero] using start.header owned 0 (by decide))
+    (by simpa only [BitVec.add_zero] using start.header owned 0 (by decide))
     (start.header owned 8 (by decide)) (start.header owned 16 (by decide))
     (by rw [entryFrame.arena]; exact owned.arenaBound) (start.header_stack owned)
     owned.arenaStorage (start.cursor_separate owned largeLeft largeRight)

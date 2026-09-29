@@ -1,4 +1,20 @@
 import ProofAudit
+import SszMerkleWordsActive
+import SszMerkleAccumulatorRefinement
+import SszMerkleProgressiveRefinement
+import SszTypedArena
+import SszCodecMeasureProofs
+import SszCodecMeasureResources
+import SszCodecMeasureOrder
+import SszCodecEmitProofs
+import SszCodecDecodeRefinement
+import SszCodecDecodeResourcesPhysical
+import SszCodecDecodeResourcesPrefix
+import SszHashStreamPublic
+import SszHashLayoutIndexedRefinement
+import SszHashLayoutResources
+import SszWordAutomation
+import SszArm.WordNormalize
 import SszDivision
 import SszDivisionBits
 import SszLimbs
@@ -25,6 +41,7 @@ import SszBitVector
 import SszBitVectorMemory
 import SszSerializeResources
 import SszNatMul
+import SszArm.NatMulWordProofs
 import SszCodecTypesProofs
 import SszFixedSizeProofs
 import SszFixedSizeOrder
@@ -321,6 +338,7 @@ import SszArm.UintTails
 #print axioms SszNative.NatMul.runWord_value
 #print axioms SszNative.NatMul.run_resources
 #print axioms SszNative.NatMul.failure_unchanged
+#print axioms SszArm.NatMulWord.program_correct
 #print axioms SszNative.Codec.Value.erase_toPrimitive
 #print axioms SszNative.Codec.Desc.eraseFields_zip
 #print axioms SszNative.Codec.Desc.eraseVariants_zip
@@ -335,5 +353,74 @@ import SszArm.UintTails
 #print axioms SszNative.FixedSize.bitWidth_rounded
 #print axioms SszNative.FixedSize.measureFields_add_error
 #print axioms SszNative.FixedSize.measureFixed_mul_error
+
+#print axioms SszNative.MerkleWords.lengthWord_eq_upstream
+#print axioms SszNative.MerkleWords.lengthWord_truncation
+#print axioms SszNative.MerkleWords.read_lengthWord_exact
+#print axioms SszNative.MerkleWords.activeFieldsWord_eq_upstream
+#print axioms SszNative.MerkleWords.activeFieldsWord_truncation
+
+#print axioms SszNative.MerkleAccumulator.pushNode_occupied
+#print axioms SszNative.MerkleAccumulator.accumulate_occupied
+#print axioms SszNative.MerkleAccumulator.rootAtDepth_correct
+#print axioms SszNative.MerkleAccumulator.bounded_refines
+#print axioms SszNative.MerkleAccumulator.finishDepth_refines
+
+#print axioms SszNative.TypedArena.aligned_bounds
+#print axioms SszNative.TypedArena.reserve_cursor_bounds
+#print axioms SszNative.TypedArena.reserve_u64
+#print axioms SszNative.TypedArena.reserve_forty
+
+#print axioms SszNative.CodecMeasure.measure_refines
+#print axioms SszNative.CodecMeasure.encodedSize_refines
+#print axioms SszNative.CodecMeasure.measure_cursorSafe
+#print axioms SszNative.CodecMeasure.measure_planFree
+#print axioms SszNative.CodecMeasure.measure_nonretained
+#print axioms SszNative.CodecMeasure.measureParts_reservation_first
+#print axioms SszNative.CodecMeasure.measure_leading_le_size
+
+#print axioms SszNative.MerkleProgressive.pushNode_invariant
+#print axioms SszNative.MerkleProgressive.finish_correct
+#print axioms SszNative.MerkleProgressive.progressive_refines
+#print axioms SszNative.MerkleProgressive.finish_refines
+
+#print axioms SszNative.HashStream.update_represents
+#print axioms SszNative.HashStream.update_length_first
+#print axioms SszNative.HashStream.stateMemory_chaining
+#print axioms SszNative.HashStream.finalize_effects_safe
+#print axioms SszNative.HashStream.hash_eq
+#print axioms SszNative.HashStream.combine_eq
+#print axioms SszNative.HashStream.finalize_segmentation
+
+#print axioms SszNative.CodecEmit.serialize_refines
+#print axioms SszNative.CodecEmit.serialize_output
+#print axioms SszNative.CodecEmit.serialize_failure_unchanged
+#print axioms SszNative.CodecEmit.serializeAlloc_refines
+#print axioms SszNative.CodecEmit.serializeAlloc_output
+#print axioms SszNative.CodecEmit.serializeAlloc_resources
+#print axioms SszNative.CodecEmit.serializeAlloc_reservation_order
+#print axioms SszNative.CodecEmit.serialize_no_private
+
+#print axioms SszNative.CodecDecode.run_refines
+#print axioms SszNative.CodecDecode.run_no_badRepresentation
+#print axioms SszNative.CodecDecode.decode_success
+#print axioms SszNative.CodecDecode.decode_rejection
+#print axioms SszNative.CodecDecode.run_physical
+#print axioms SszNative.CodecDecode.run_cursorSafe
+#print axioms SszNative.CodecDecode.run_preserves_earlier_values
+#print axioms SszNative.CodecDecode.decodeArray_failure_memory
+#print axioms SszNative.CodecDecode.decodeEntries_recursive_failure_memory
+
+#print axioms SszNative.HashLayout.layout_refines
+#print axioms SszNative.HashLayout.hashTreeRoot_refines
+#print axioms SszNative.HashLayout.hashTreeRoot_refinement_exact
+#print axioms SszNative.HashLayout.hashTreeRoot_uint_oversized
+#print axioms SszNative.HashLayout.indexedRoot_refines
+#print axioms SszNative.HashLayout.indexedRoot_layoutChunksAt
+#print axioms SszNative.HashLayout.layout_trace
+#print axioms SszNative.HashLayout.hashTreeRoot_trace
+#print axioms SszNative.HashLayout.indexedRoot_trace
+#print axioms SszNative.HashLayout.hashTreeRoot_cursorSafe
+#print axioms SszNative.HashLayout.indexedRoot_cursorSafe
 
 audit_native

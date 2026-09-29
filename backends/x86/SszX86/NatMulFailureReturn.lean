@@ -21,7 +21,7 @@ theorem error_finish_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   apply error_publish_cps e base hc t
   · simpa only [OutputMapped, memory, output] using
       pushed_mapped s s.regs.rdi.toBitVec 72 owned.output_mapped
-  apply return_cps e base hc s _ ra stack
+  apply return_cps e base hc s {t with dmem := errorMem t.dmem t.regs.rdi.toBitVec} ra stack
   · simpa only [memory, output] using work.saved owned
   · exact simd
   · simpa only [memory, output] using (work.to_frame owned.stack_low).return_slot owned
@@ -47,7 +47,7 @@ theorem count_error_finish_cps (e : Executable) (base : Int64) (hc : CodeAt e ba
   apply count_error_publish_cps e base hc t
   · simpa only [OutputMapped, memory, output] using
       pushed_mapped s s.regs.rdi.toBitVec 72 owned.output_mapped
-  apply return_cps e base hc s _ ra stack
+  apply return_cps e base hc s {t with dmem := countErrorMem t.dmem t.regs.rdi.toBitVec} ra stack
   · simpa only [memory, output] using work.saved owned
   · exact simd
   · simpa only [memory, output] using (work.to_frame owned.stack_low).return_slot owned

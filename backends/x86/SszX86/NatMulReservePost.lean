@@ -1,4 +1,5 @@
 import SszX86.NatMulReserve
+import SszWordAutomation
 
 namespace SszX86.NatMul.Reservation
 open UintCodec
@@ -28,7 +29,8 @@ theorem initialized_frame (s : MachineData) (address used : BitVec 64)
     rcases inside with output | stack
     · apply outside
       exact Or.inr (Or.inl (by
-        simpa [initializedState, preparedState, allocatedState, reservedState, countState] using output))
+        simpa [initializedState, preparedState, allocatedState, reservedState, countState,
+          UInt64.toBitVec_ofNat'] using output))
     · exact outside (Or.inr (Or.inr stack))
   rw [post.frame a helperOutside]
   apply prepared_frame (allocatedState s address used guardFlags) a
@@ -66,11 +68,14 @@ theorem initialized_registers (s : MachineData) (base : Int64) (address used : B
   simp only [initializedState, MemsetCall.callState, Emit.callState, preparedState,
     allocatedState, reservedState, countState, Reg64s.get64,
     UInt64.toBitVec_ofBitVec, UInt64.toBitVec_ofNat'] at *
-  refine ⟨by simpa using pc, UInt64.toBitVec_inj.mp (by simpa using rsp), zmms,
-    r12, r13, r10, rcx, ?_, ?_, r15, ?_, ?_⟩
-  · simpa only [UInt64.toBitVec_ofBitVec] using congrArg UInt64.toBitVec rbp
-  · simpa only [UInt64.toBitVec_ofBitVec] using congrArg UInt64.toBitVec r14
-  · simpa only [UInt64.toBitVec_ofBitVec, UInt64.toBitVec_ofNat'] using congrArg UInt64.toBitVec rbx
-  · simpa only [UInt64.toBitVec_ofBitVec, UInt64.toBitVec_ofNat'] using congrArg UInt64.toBitVec rax
+  have rspRestored : t.1.regs.rsp.toBitVec = s.regs.rsp.toBitVec := by
+    rw [rsp]
+    ssz_word
+  refine ⟨by simpa using pc,
+    UInt64.toBitVec_inj.mp rspRestored, zmms,
+    UInt64.toBitVec_inj.mp r12, UInt64.toBitVec_inj.mp r13,
+    UInt64.toBitVec_inj.mp r10, UInt64.toBitVec_inj.mp rcx,
+    rbp, r14, UInt64.toBitVec_inj.mp r15, rbx, ?_⟩
+  exact congrArg UInt64.toBitVec rax
 
 end SszX86.NatMul.Reservation

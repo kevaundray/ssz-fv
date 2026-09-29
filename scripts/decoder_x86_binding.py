@@ -7,7 +7,10 @@ import json
 import re
 
 CONDITIONAL = {"je", "jne", "jb", "ja", "jae", "jbe", "jl", "jle"}
-REG64 = {"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp"} | {f"r{i}" for i in range(8, 16)}
+REG_CODE = {name: code for code, name in enumerate((
+    "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
+    "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"))}
+REG64 = set(REG_CODE)
 REG32 = {f"e{name[1:]}": name for name in REG64 if not name[1:].isdigit()}
 REG32.update({f"r{i}d": f"r{i}" for i in range(8, 16)})
 REG8 = {"al": "rax", "bl": "rbx", "cl": "rcx", "dl": "rdx",
@@ -23,6 +26,7 @@ NOPS = {
     ("nopl", "0x0(%rax)", "0f1f8000000000"),
     ("nopw", "0x0(%rax,%rax,1)", "660f1f440000"),
     ("nopl", "0x0(%rax,%rax,1)", "0f1f440000"),
+    ("nopl", "0x0(%rax,%rax,1)", "0f1f840000000000"),
     ("nopw", "0x0(%rax,%rax,1)", "660f1f840000000000"),
 }
 
@@ -53,7 +57,10 @@ def expression(row, label_prefix=""):
     if mnemonic == "jmpq" and operands.startswith("*"):
         registers = {"*%rax": ("rax", b"\xff\xe0"),
                      "*%rcx": ("rcx", b"\xff\xe1"),
-                     "*%rdx": ("rdx", b"\xff\xe2")}
+                     "*%rdx": ("rdx", b"\xff\xe2"),
+                     "*%rdi": ("rdi", b"\xff\xe7"),
+                     "*%r8": ("r8", b"\x41\xff\xe0"),
+                     "*%r10": ("r10", b"\x41\xff\xe2")}
         form = registers.get(operands)
         if form is None or encoded != form[1]:
             raise ValueError(f"unsupported indirect dispatcher jump: {row}")
@@ -69,9 +76,35 @@ def expression(row, label_prefix=""):
             raise ValueError(f"unrecognized architectural nop: {row}")
         return f"[.instr (.regular .W64 .W64 (.nop {row['width']}))]"
     if mnemonic == "incl":
-        if operands != "%edi" or encoded != b"\xff\xc7":
+        register = operands.removeprefix("%")
+        if not operands.startswith("%") or register not in REG32:
+            raise ValueError(f"unsupported increment operand: {row}")
+        target = REG32[register]
+        code = REG_CODE[target]
+        expected = (b"\x41" if code >= 8 else b"") + bytes([0xff, 0xc0 + code % 8])
+        if encoded != expected:
             raise ValueError(f"unsupported increment encoding: {row}")
-        return "[.instr (.regular .W64 .W32 (.inc (.reg (.low .rdi .W32))))]"
+        return f"[.instr (.regular .W64 .W32 (.inc (.reg (.low .{target} .W32))))]"
+    if mnemonic in ("bswap", "bswapq", "bswapl"):
+        register = operands.removeprefix("%")
+        if not operands.startswith("%") or register not in REG64 | REG32.keys():
+            raise ValueError(f"unsupported byte-swap operand: {row}")
+        width = 64 if register in REG64 else 32
+        if (mnemonic == "bswapq" and width != 64) or (mnemonic == "bswapl" and width != 32):
+            raise ValueError(f"byte-swap width mismatch: {row}")
+        target = register if width == 64 else REG32[register]
+        code = REG_CODE[target]
+        rex = (0x48 if width == 64 else 0x40) | int(code >= 8)
+        prefix = bytes([rex]) if width == 64 or code >= 8 else b""
+        expected = prefix + bytes([0x0f, 0xc8 + code % 8])
+        if encoded != expected:
+            raise ValueError(f"byte-swap encoding mismatch: {row}")
+        return f"[.instr (.regular .W64 .W{width} (.bswap (.low .{target} .W{width})))]"
+    if mnemonic == "movzwl":
+        if operands != "0x2(%r14),%edx" or encoded != b"\x41\x0f\xb7\x56\x02":
+            raise ValueError(f"unsupported word-extension encoding: {row}")
+        return ("[.instr (.regular .W64 .W32 (.movzx (.reg (.low .rdx .W32)) "
+                "(.mem (w := .W16) {base := some (.reg .r14), idx := none, disp := .int64 2})))]")
     if mnemonic == "movzbl":
         registers = re.fullmatch(r"%([a-z0-9]+),%([a-z0-9]+)", operands)
         if registers is not None:
@@ -113,22 +146,28 @@ def expression(row, label_prefix=""):
                 f"(.mem (w := .W64) {address})))]")
     if mnemonic == "movslq":
         forms = {
-            "(%rcx,%rax,4),%rax": ("rcx", "rax", b"\x48\x63\x04\x81"),
-            "(%rdx,%rcx,4),%rcx": ("rdx", "rcx", b"\x48\x63\x0c\x8a"),
-            "(%rdi,%rdx,4),%rdx": ("rdi", "rdx", b"\x48\x63\x14\x97"),
+            "(%rcx,%rax,4),%rax": ("rcx", "rax", "rax", b"\x48\x63\x04\x81"),
+            "(%rdx,%rcx,4),%rcx": ("rdx", "rcx", "rcx", b"\x48\x63\x0c\x8a"),
+            "(%rdi,%rdx,4),%rdx": ("rdi", "rdx", "rdx", b"\x48\x63\x14\x97"),
+            "(%r9,%r8,4),%r8": ("r9", "r8", "r8", b"\x4f\x63\x04\x81"),
+            "(%r8,%rax,4),%rax": ("r8", "rax", "rax", b"\x49\x63\x04\x80"),
+            "(%rax,%r8,4),%rdi": ("rax", "r8", "rdi", b"\x4a\x63\x3c\x80"),
+            "(%rsi,%rdi,4),%r10": ("rsi", "rdi", "r10", b"\x4c\x63\x14\xbe"),
+            "(%rsi,%r9,4),%r10": ("rsi", "r9", "r10", b"\x4e\x63\x14\x8e"),
         }
         form = forms.get(operands)
-        if form is None or encoded != form[2]:
+        if form is None or encoded != form[3]:
             raise ValueError(f"unsupported signed dispatcher table load: {row}")
-        base, target, _ = form
+        base, index, target, _ = form
         return (f"[.instr (.regular .W64 .W64 (.movsx (.reg .{target}) "
-                f"(.mem (w := .W32) {{base := some (.reg .{base}), idx := some ⟨.{target}, .W32⟩}})))]")
+                f"(.mem (w := .W32) {{base := some (.reg .{base}), idx := some ⟨.{index}, .W32⟩}})))]")
     if mnemonic == "leaq" and "%rip" in operands:
-        match = re.fullmatch(r"(-?0x[0-9a-f]+|-?[0-9]+)\(%rip\),%(rcx|rdx|rdi)(?:#[0-9a-f]+<[^>]+>)?", operands)
-        if match is None or len(encoded) != 7:
-            raise ValueError(f"unsupported RIP-relative dispatcher address: {row}")
+        match = re.fullmatch(r"(-?0x[0-9a-f]+|-?[0-9]+)\(%rip\),%([a-z0-9]+)(?:#[0-9a-f]+<[^>]+>)?", operands)
+        if match is None or len(encoded) != 7 or match[2] not in REG64:
+            raise ValueError(f"unsupported RIP-relative address: {row}")
         displacement, target = int(match[1], 0), match[2]
-        prefix = {"rcx": b"\x48\x8d\x0d", "rdx": b"\x48\x8d\x15", "rdi": b"\x48\x8d\x3d"}[target]
+        code = REG_CODE[target]
+        prefix = bytes([0x48 | (4 if code >= 8 else 0), 0x8d, 5 + 8 * (code % 8)])
         if encoded[:3] != prefix:
             raise ValueError(f"RIP-relative destination disagrees with bytes: {row}")
         if displacement != int.from_bytes(encoded[3:], "little", signed=True):
@@ -141,14 +180,14 @@ def expression(row, label_prefix=""):
             raise ValueError(f"unsupported base-less address: {row}")
         address = f"{{ base := none, idx := some ⟨.{match[2]}, .W64⟩, disp := .int64 ({int(match[1] or '0', 0)}) }}"
         return f"[.instr (.regular .W64 .W64 (.lea (.low .{match[3]} .W64) {address}))]"
-    if mnemonic in {"cmovaq", "cmovneq", "cmovaeq"}:
+    if mnemonic in {"cmovaq", "cmovneq", "cmovaeq", "cmovnel"}:
         # Kraken infers the width from the registers, after the condition code.
         mnemonic = mnemonic[:-1]
     if mnemonic in {"cmpq", "cmpb", "cmpl", "movq", "movl", "movw", "movb", "testq", "testl", "testb",
-                    "addq", "addl", "subq", "andq", "andl", "andb", "orq", "orb", "xorq", "xorl", "xorb",
+                    "addq", "addl", "subq", "subl", "andq", "andl", "andb", "orq", "orl", "orb", "xorq", "xorl", "xorb",
                     "shlq", "shll", "shlb", "shrq", "shrb", "shldq", "shrdq", "leaq", "leal", "decq", "popq", "retq", "setb", "sete", "setne",
-                    "seta", "sbbb", "sbbq", "pushq", "shrl", "movabsq", "adcq", "cmova", "setl",
-                    "negq", "notb", "setae", "cmovne", "cmovae", "imulq", "mulq"}:
+                    "seta", "sbbb", "sbbq", "pushq", "shrl", "movabsq", "adcq", "adcl", "cmova", "setl",
+                    "negq", "negl", "negb", "notq", "notl", "notb", "setae", "cmovne", "cmovae", "imulq", "mulq", "roll", "rorq", "rorl"}:
         if not re.fullmatch(r"[%a-z0-9(),$x+-]*", operands):
             raise ValueError(f"unsupported operand syntax: {row}")
         return f"parse({json.dumps(mnemonic + ' ' + operands)})"
@@ -979,3 +1018,160 @@ theorem SszX86.NatMulBinding.closureAt :
   ⟨boundNatMulCodeAt, boundNatMulWordCodeAt, boundMemsetCodeAt⟩
 audit_native
 """
+
+
+def sha_source(image):
+    """Bind SHA at its real linked addresses with bounded structural certificates."""
+    from decoder_x86_image import bounded_image
+    from sha_binding import LIST_BINDING_HEADER, list_binding, validate
+
+    validate("x86", image)
+    root = image["root_address"]
+    origin = root + image["origin"]
+    span = bytes.fromhex(image["span"])
+    segments, image_labels, components = [], [], []
+    cursor = origin
+    for key in ("sha_compress", "sha_finalize", "sha_combine", "memcpy", "memset"):
+        body = image["bodies"][key]
+        base, raw = root + body["offset"], bytes.fromhex(body["raw"])
+        prefix = key.replace("sha_", "hash_") + "_"
+        names, expressions, pieces, positions = _image_parts(body["rows"], raw, prefix)
+        for at, source in zip(range(cursor, base, 256),
+                              _byte_segments(span[cursor - origin:base - origin])):
+            segments.append((at, min(256, base - at), source))
+        if key in ("memcpy", "memset"):
+            expected = ([(9, "copy_bulk"), (33, "copy_tail"), (38, "copy_byte"), (56, "copy_done")]
+                        if key == "memcpy" else
+                        [(27, "bulk27"), (44, "tail44"), (49, "byte49"), (62, "done62")])
+            if names != [(f"{prefix}u{pc}", pc) for pc, _ in expected]:
+                raise ValueError(f"unexpected SHA {key} labels")
+            for pc, name in expected:
+                pieces = [piece.replace(f"{prefix}u{pc}", name) for piece in pieces]
+            names = [(name, pc) for pc, name in expected]
+        segments.extend((base + pc, width, source)
+                        for (pc, width), source in zip(positions, pieces))
+        image_labels.extend((name, base + pc) for name, pc in names)
+        components.append((key, base, body["rows"], names, expressions))
+        cursor = base + len(raw)
+    if cursor != origin + len(span):
+        raise ValueError("SHA closure does not cover its pinned extent")
+    declarations, locations = bounded_image(segments, image_labels, origin=origin)
+    declarations.append(LIST_BINDING_HEADER)
+    for key, base, rows, names, expressions in components:
+        stem = key.removeprefix("sha_").title()
+        if key in ("memcpy", "memset"):
+            namespace = "SszX86.Emit" if key == "memcpy" else "SszX86.NatMul.MemsetCall"
+            facts = []
+            for row in rows:
+                pc = base + row["pc"]
+                fact = f"bound{stem}Row{row['pc']}"
+                facts.append(fact)
+                declarations.append(f"""
+theorem {fact} :
+    bound.directivesAtAddress ({pc} : Int64) =
+      (SszX86.{key}Executable {base}).directivesAtAddress ({pc} : Int64) := by
+  rw [show ({pc} : Int64) = Int64.ofNat {pc} from by decide]
+  rw [imageFocus{locations[pc]} (Int64.ofNat {pc}) (by decide) (by decide)]
+  simp (config := {{instances := true}}) only [SszX86.{key}Executable,
+    SszX86.{key}Layout, SszX86.{key}Program, Kraken.Layout.apply,
+    Kraken.Executable.directivesAtAddress, List.mapIdx_cons, List.mapIdx_nil,
+    Kraken.Executable.withAddresses] <;> decide
+""")
+            declarations.append(f"""
+theorem bound{stem}Fetch :
+    (SszX86.{key}Executable {base}).withAddresses.all (fun row =>
+      decide (bound.directivesAtAddress row.1 =
+        (SszX86.{key}Executable {base}).directivesAtAddress row.1)) = true := by
+  simp (config := {{instances := true}}) [SszX86.{key}Executable,
+    SszX86.{key}Layout, SszX86.{key}Program, Kraken.Layout.apply,
+    Kraken.Executable.withAddresses, {', '.join(facts)}]
+theorem bound{stem}Targets : {namespace}.{key}Labels.all (fun name =>
+    decide (bound.labels.label name =
+      (SszX86.{key}Executable {base}).labels.label name)) = true := by
+  simp (config := {{instances := true}}) only [boundLabel, Executable.labels,
+    SszX86.{key}Executable, SszX86.{key}Layout, SszX86.{key}Program,
+    Kraken.Layout.apply, List.mapIdx_cons, List.mapIdx_nil,
+    Kraken.Executable.withAddresses] <;> decide
+theorem bound{stem}CodeAt : {namespace}.{stem}CodeAt bound {base} := by
+  apply {namespace}.{stem}CodeAt.of_rows
+  · intro row member
+    exact of_decide_eq_true (List.all_eq_true.mp bound{stem}Fetch row member)
+  · intro name member
+    exact of_decide_eq_true (List.all_eq_true.mp bound{stem}Targets name member)
+""")
+            continue
+        namespace = f"SszX86.Hash.{stem}"
+        row_declarations, chunks = list_binding(
+            f"actual{stem}", "(Nat × Nat × Program)", f"{namespace}.program", expressions)
+        declarations.extend(row_declarations)
+        checks = []
+        for number, at in enumerate(range(0, len(rows), 32)):
+            chunk, check = chunks[number], f"bound{stem}Chunk{number}Fetch"
+            checks.append(check)
+            facts = []
+            for row, expr in zip(rows[at:at + 32], expressions[at:at + 32]):
+                pc = base + row["pc"]
+                fact = f"bound{stem}Row{row['pc']}"
+                facts.append(fact)
+                declarations.append(f"""
+theorem {fact} :
+    bound.directivesAtAddress ({base} + Int64.ofNat {row['pc']}) =
+      SszX86.Hash.directives {namespace}.labels {expr} := by
+  rw [show ({base} : Int64) + Int64.ofNat {row['pc']} = Int64.ofNat {pc} from by decide]
+  rw [imageFocus{locations[pc]} (Int64.ofNat {pc}) (by decide) (by decide)]
+  decide
+""")
+            branches = "\n".join(f"  · exact decide_eq_true {fact}" for fact in facts)
+            declarations.append(f"""
+theorem {check} : {chunk}.all (fun row =>
+    decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
+      SszX86.Hash.directives {namespace}.labels row)) = true := by
+  apply List.all_eq_true.mpr
+  intro row member
+  simp only [{chunk}, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with {' | '.join('rfl' for _ in facts)}
+{branches}
+""")
+        labels_literal = ", ".join(f"({json.dumps(name)}, {pc})" for name, pc in names)
+        declarations.append(f"""
+example : {namespace}.labels = [{labels_literal}] := by decide
+theorem bound{stem}Targets : {namespace}.labels.all (fun item =>
+    decide (bound.labels.label item.1 = {base} + Int64.ofNat item.2)) = true := by
+  simp only [boundLabel]
+  decide
+theorem bound{stem}CodeAt : {namespace}.CodeAt bound {base} := by
+  constructor
+  · have checked : actual{stem}.all (fun row =>
+        decide (bound.directivesAtAddress ({base} + Int64.ofNat row.1) =
+          SszX86.Hash.directives {namespace}.labels row)) = true := by
+      simp only [actual{stem}, List.all_append, {', '.join(checks)}, Bool.and_true]
+    intro row member
+    rw [← actual{stem}_eq] at member
+    exact of_decide_eq_true (List.all_eq_true.mp checked row member)
+  · intro item member
+    exact of_decide_eq_true (List.all_eq_true.mp bound{stem}Targets item member)
+""")
+    for name in ("initial", "rounds"):
+        table = image["tables"][name]
+        table_declarations, _ = list_binding(
+            f"actual{name.title()}Table", "UInt8", f"SszX86.Hash.{name}Bytes",
+            [str(byte) for byte in bytes.fromhex(table["raw"])])
+        declarations.extend(table_declarations)
+        declarations.append(
+            f"example : SszX86.Hash.{name}Address {root} = "
+            f"BitVec.ofNat 64 {root + table['offset']} := by decide")
+    declarations.append(f"""
+theorem SszX86.HashBinding.closureAt : SszX86.Hash.LinkedCode bound {root} := by
+  refine ⟨?_, boundCombineCodeAt, ?_, ?_, ?_⟩
+  · exact boundFinalizeCodeAt
+  · exact boundCompressCodeAt
+  · exact boundMemcpyCodeAt
+  · exact boundMemsetCodeAt
+audit_native
+""")
+    return """import SszX86.HashContracts
+import SszX86.LinkedImage
+import SszX86.LinkedImageSequential
+import ProofAudit
+open Kraken.X64.Parser SszX86.LinkedImage
+""" + "\n".join(declarations)

@@ -1,4 +1,5 @@
 import SszArm.NatMulWordReserveGuards
+import SszArm.WordNormalize
 
 namespace SszArm.NatMulWord.Reserve
 
@@ -134,13 +135,20 @@ theorem header_checks_runs (width : Width) (words : Nat) (s : ArmState)
                   (guard_registers .large .finish c base 15#5 (by decide))
               have alignedWord : r (.GPR 15#5) c =
                   (r (.GPR 14#5) b + 7#64) &&& 18446744073709551608#64 := by
-                simpa only [Width.alignedReg, Width.addressReg] using ec.1
+                have actual := ec.1
+                simp only [Width.alignedReg, Width.addressReg] at actual
+                arm_word_nf at actual ⊢
+                exact actual
               have addressValue : (r (.GPR 14#5) b).toNat = address.toNat + used.toNat := by
-                simpa only [Width.addressReg] using (congrArg BitVec.toNat baddress).trans addressNat
+                have actual := (congrArg BitVec.toNat baddress).trans addressNat
+                simp only [Width.addressReg] at actual
+                arm_word_nf at actual ⊢
+                exact actual
               rw [ep, alignedWord]
               have rounding := SszNative.Arena.mask_rounding (r (.GPR 14#5) b)
                 (by rw [addressValue]; exact roundOK)
               rw [show (~~~(7 : BitVec 64)) = 18446744073709551608#64 by decide] at rounding
+              arm_word_nf at rounding addressValue ⊢
               rw [rounding, addressValue, SszNative.Arena.start_pointer]
           · apply header_failure width words positive s e base address capacity used re
             · have hepc := ee.2

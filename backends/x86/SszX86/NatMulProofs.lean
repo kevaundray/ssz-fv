@@ -14,16 +14,19 @@ theorem mul_correct (e : Executable) (base : Int64) (hc : CodeAt e base)
     (s : MachineData) (left right : NatOperand) (address capacity used ra : BitVec 64)
     (owned : Owned s left right address capacity used ra) :
     Eventually (step e) (Post s left right address capacity used ra) (s, base) := by
+  have helperOffset : Int64.ofNat wordOffset = (832 : Int64) := by decide
   apply eventually_trans (step e) (Prepared (bodyState s) left right base)
     (Post s left right address capacity used ra) _
     (entry_prepares e base hc s left right address capacity used ra owned)
   rintro ⟨t, pc⟩ prepared
   cases prepared with
   | zero empty frame pcEq =>
+    dsimp only at pcEq
     rw [pcEq]
     exact zero_finish_cps e base hc s t left right address capacity used ra owned empty
       frame.memory frame.output (frame.stack.trans (body_stack s)) frame.simd
   | word_left leftNonzero rightOne frame pointer payload factor pcEq =>
+    dsimp only at pcEq
     rw [pcEq]
     apply tailcall_cps e base hc s t left (SszNative.NatMul.lowWord right)
       frame.memory frame.output (frame.stack.trans (body_stack s)) frame.arena
@@ -34,11 +37,12 @@ theorem mul_correct (e : Executable) (base : Int64) (hc : CodeAt e base)
       (SszNative.NatMul.lowWord right) address capacity used ra helperOwned
     have same := SszNative.NatMul.run_right_one left right address.toNat capacity.toNat used.toNat
       leftNonzero rightOne
-    simpa only [wordOffset] using eventually_weaken (step e)
+    simpa only [helperOffset] using eventually_weaken (step e)
       (NatMulWord.Post u left (SszNative.NatMul.lowWord right) address capacity used ra)
       (Post s left right address capacity used ra) (u, base+832)
       (fun _ post => TailState.post owned tail same post) helperRun
   | word_right leftOne rightNonzero rightNotOne frame pointer payload factor pcEq =>
+    dsimp only at pcEq
     rw [pcEq]
     apply tailcall_cps e base hc s t right (SszNative.NatMul.lowWord left)
       frame.memory frame.output (frame.stack.trans (body_stack s)) frame.arena
@@ -49,11 +53,12 @@ theorem mul_correct (e : Executable) (base : Int64) (hc : CodeAt e base)
       (SszNative.NatMul.lowWord left) address capacity used ra helperOwned
     have same := SszNative.NatMul.run_left_one left right address.toNat capacity.toNat used.toNat
       leftOne rightNonzero rightNotOne
-    simpa only [wordOffset] using eventually_weaken (step e)
+    simpa only [helperOffset] using eventually_weaken (step e)
       (NatMulWord.Post u right (SszNative.NatMul.lowWord left) address capacity used ra)
       (Post s left right address capacity used ra) (u, base+832)
       (fun _ post => TailState.post owned tail same post) helperRun
   | counted leftMany rightMany ready pcEq =>
+    dsimp only at pcEq
     rw [pcEq]
     exact large_finish_cps e base hc memsetCode s t left right address capacity used ra owned
       leftMany rightMany ready

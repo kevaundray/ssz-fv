@@ -17,7 +17,7 @@ theorem prepared_cursor (s : MachineData)
     simpa only [memmove_addr_add] using equal.symm
   unfold preparedMem cursorMem
   rw [BoolCodec.load_store_disjoint _ _ _ _ _ _
-      (by simpa using separated 0 (by decide)),
+      (by word_simpa [Large.Disjoint] using separated 0 (by decide)),
     BoolCodec.load_store_disjoint _ _ _ _ _ _ (separated 32 (by decide)),
     BoolCodec.load_store_disjoint _ _ _ _ _ _ (separated 16 (by decide))]
   exact Measure.Bits.stored_word_load _ _ _

@@ -1,4 +1,4 @@
-import SszArm.NatMulDispatchFrame
+import SszArm.NatMulDispatchTailStages
 
 namespace SszArm.NatMul
 
@@ -30,21 +30,25 @@ theorem left_one_prepare (s : ArmState) (base : BitVec 64) (left : List (BitVec 
         omega
       have load := memory ⟨0, positive⟩
       simpa [small, List.getElem?_eq_getElem positive] using And.intro nonzero load
-  let ops : List Op := if r (.GPR 1#5) s = 0#64 then
-      [.p384, .p396, .p400, .p404, .p408]
-    else [.p384, .p388, .p392, .p396, .p400, .p404, .p408]
-  let t := block base ops s
-  have hpc : r .PC s = base + 384#64 := hp
-  have follows : Follows base ops s := by
+  let ops := leftSelectOps (r (.GPR 1#5) s)
+  let u := block base ops s
+  have selectRun : run ops.length s = u := block_run base ops s hc he ha
+    (left_select_follows s base (left[0]?.getD 0#64) hp low)
+  have selectFrame : ScanFrame s u := scan_pure_frame base ops s (by
     by_cases small : r (.GPR 1#5) s = 0#64 <;>
-      simp only [small, ↓reduceIte] at low <;>
-      simp [ops, small, Follows, Op.row, Op.effect, put, next, state_simp_rules,
-        hpc, low, BitVec.add_assoc]
-  refine ⟨ops.length, t, block_run base ops s hc he ha follows,
-    dispatch_pure_frame base ops s (by dsimp only [ops]; split <;> decide), ?_, ?_, ?_, ?_⟩
-  all_goals by_cases small : r (.GPR 1#5) s = 0#64 <;>
-    simp only [small, ↓reduceIte] at low <;>
-    simp [t, ops, small, block, Op.effect, put, next, state_simp_rules, low]
+      simp only [ops, leftSelectOps, small, ↓reduceIte] <;> decide)
+  obtain ⟨selected, pc⟩ : r (.GPR 8#5) u = left[0]?.getD 0#64 ∧
+      read_pc u = base + 396#64 := left_select_values s base _ low
+  let t := block base [.p396, .p400, .p404, .p408] u
+  have swapRun : run 4 u = t := block_run base [.p396, .p400, .p404, .p408] u
+    (selectFrame.code hc) (selectFrame.error.trans he) (selectFrame.aligned ha)
+    (left_swap_follows u base pc)
+  obtain ⟨finalPC, final1, final2, final3⟩ := left_swap_values u base
+  refine ⟨ops.length + 4, t, ?_,
+    selectFrame.dispatch.trans (dispatch_pure_frame base [.p396, .p400, .p404, .p408] u (by decide)),
+    finalPC, final1.trans (selectFrame.registers 3#5 (by decide)),
+    final2.trans (selectFrame.registers 4#5 (by decide)), final3.trans selected⟩
+  rw [run_plus, selectRun, swapRun]
 
 /-- The left-one test is reached only after the right-one test has failed. -/
 theorem dispatch_left_count (s : ArmState) (base : BitVec 64)
@@ -61,25 +65,25 @@ theorem dispatch_left_count (s : ArmState) (base : BitVec 64)
     ∃ fuel t, run fuel s = t ∧ DispatchFrame s t ∧ DispatchExit s t base left right := by
   have bound : sigWords left < 2^64 :=
     Nat.lt_of_le_of_lt (sigWords_le_length left) ho.length_bound
-  have flag : ((AddWithCarry (r (.GPR 21#5) s) (~~~(1#64)) 1#1).2.z = 1#1) ↔
-      sigWords left = 1 := by
-    rw [Udivti3.cmp_zero, h21]
+  have countOne : (r (.GPR 21#5) s = 1#64) ↔ sigWords left = 1 := by
+    rw [h21]
     constructor <;> intro h <;> bv_omega
   let u := block base [.p376, .p380] s
-  have hpc : r .PC s = base + 376#64 := hp
-  have hu : run 2 s = u := block_run base _ s hc he ha (by
-    simp [Follows, Op.row, Op.effect, Udivti3.compare, Udivti3.next,
-      state_simp_rules, hpc, BitVec.add_assoc])
-  have huf : ScanFrame s u := scan_pure_frame base _ s (by decide)
+  have hu : run 2 s = u := block_run base [.p376, .p380] s hc he ha
+    (count_branch_follows s base true hp)
+  have huf : ScanFrame s u := scan_pure_frame base [.p376, .p380] s (by decide)
+  have keep : ∀ reg : BitVec 5, r (.GPR reg) u = r (.GPR reg) s :=
+    count_branch_registers s base true
+  have currentPC : read_pc u = base + (if r (.GPR 21#5) s = 1#64 then 384#64 else 412#64) :=
+    count_branch_pc s base true
   have hup : read_pc u = base + (if sigWords left = 1 then 384#64 else 412#64) := by
-    by_cases one : sigWords left = 1 <;>
-      simp [u, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules, flag, one]
+    simpa only [countOne] using currentPC
   by_cases one : sigWords left = 1
   · have hou : NatCompare.Operand u (r (.GPR 1#5) u) (r (.GPR 2#5) u) left := by
       simpa only [huf.registers 1#5 (by decide), huf.registers 2#5 (by decide)] using
         huf.operand _ _ _ ho
     have rawu : r (.GPR 8#5) u = r (.GPR 2#5) u := by
-      simpa [u, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules] using raw
+      rw [keep 8#5, keep 2#5, raw]
     obtain ⟨fuel, t, ht, htf, htp, ht1, ht2, ht3⟩ := left_one_prepare u base left
       (huf.code hc) (huf.error.trans he) (huf.aligned ha) (by simpa [one] using hup) hou one rawu
     refine ⟨2 + fuel, t, ?_, huf.dispatch.trans htf, ?_⟩
@@ -90,11 +94,9 @@ theorem dispatch_left_count (s : ArmState) (base : BitVec 64)
   · refine ⟨2, u, hu, huf.dispatch, ?_⟩
     simp only [DispatchExit, leftNonzero, rightNonzero, rightNotOne, one,
       false_or, ↓reduceIte]
-    refine ⟨by simpa [one] using hup, huf.raw, ?_, ?_, ?_, ?_⟩
-    · simpa [u, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules] using h21
-    · simpa [u, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules] using h22
-    · simpa [u, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules] using raw
-    · simpa [u, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules] using h9
+    exact ⟨by simpa only [one, ↓reduceIte] using hup, huf.raw,
+      (keep 21#5).trans h21, (keep 22#5).trans h22,
+      (keep 8#5).trans raw, (keep 9#5).trans h9⟩
 
 /-- The right-one route's final MOV, before any prologue restore. -/
 theorem right_one_prepare (s : ArmState) (base : BitVec 64)
@@ -104,9 +106,7 @@ theorem right_one_prepare (s : ArmState) (base : BitVec 64)
     run 1 s = t ∧ DispatchFrame s t ∧ read_pc t = base + 232#64 ∧
       r (.GPR 1#5) t = r (.GPR 1#5) s ∧ r (.GPR 2#5) t = r (.GPR 2#5) s ∧
       r (.GPR 3#5) t = r (.GPR 4#5) s := by
-  have hpc : r .PC s = base + 228#64 := hp
-  refine ⟨block_run base _ s hc he ha (by simp [Follows, Op.row, hpc]),
-    dispatch_pure_frame base _ s (by decide), ?_, ?_, ?_, ?_⟩
-  all_goals simp [block, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
+  exact ⟨block_run base [.p228] s hc he ha ⟨hp, trivial⟩,
+    dispatch_pure_frame base [.p228] s (by decide), right_prepare_values s base hp⟩
 
 end SszArm.NatMul

@@ -1,4 +1,5 @@
 import SszX86.NatMulWordLargeMemoryInitializedState
+import SszX86.MeasureBitsStored
 
 namespace SszX86.NatMulWord.LargeMemory
 open SszNative UintCodec
@@ -116,7 +117,7 @@ theorem initialized (original current : MachineData) (operand : NatOperand)
       some (Arena.start address.toNat used.toNat : Int) := by
     have stored := Measure.Bits.stored_word_load lowMem ((original.regs.rsp.toBitVec-64)+8#64)
       (BitVec.ofNat 64 (Arena.start address.toNat used.toNat))
-    simpa only [startNat] using stored
+    simpa only [prefixMem, lowMem, cursorMem, startNat] using stored
   refine ⟨memory, work, ?_, operand_preserved original operand factor address capacity used ra owned _
     (work.to_frame owned.stack_low), mappedAfter _ _ (pushed_mapped original _ _ owned.output_mapped),
     mappedAfter _ _ initialFree, mappedAfter _ _ destination, mappedAfter _ _ initialLocals, ?_, ?_, ?_⟩
@@ -136,7 +137,7 @@ theorem initialized (original current : MachineData) (operand : NatOperand)
         rw [length] at finish
         simp only [List.length_singleton]
         omega)
-    have first := written ⟨0, by decide⟩
+    have first := written ⟨0, by simp only [List.length_singleton]; decide⟩
     change widthLoad (Large.fillMem (prefixMem original operand factor address used r)
       (BitVec.ofNat 64 r.pointer) 0 [low operand factor]) (BitVec.ofNat 64 r.pointer).toNat 8 =
       some (low operand factor).toNat at first

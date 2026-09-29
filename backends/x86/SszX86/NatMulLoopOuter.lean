@@ -41,7 +41,7 @@ theorem outer_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   induction remaining with
   | zero => intro positive; omega
   | succ remaining ih =>
-    intro positive row left buffer width leftLength bufferLength s stackSpan stackApart
+    intro positive row left buffer rowsEnd leftLength bufferLength s stackSpan stackApart
       rsi r10 r12 r13 r14 r15 locals leftRead rightRead bufferRead hmapped next
     cases left with
     | nil => simp only [List.length_nil] at leftLength; omega
@@ -68,6 +68,7 @@ theorem outer_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       cases updatedEq : updated with
       | nil => simp only [updatedEq, List.length_nil] at updateLength; omega
       | cons first rest =>
+        have updatedWords : LimbMul.nativeRow factor right buffer = first::rest := updatedEq
         have updatedRead' : ReadAt t.dmem dst row (first::rest) := by
           simpa only [updatedEq] using updatedRead
         have restLength : row+1+rest.length = leftCount+right.length := by
@@ -84,7 +85,7 @@ theorem outer_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
           apply next t stable
           · simpa only [done] using tPointer
           · simpa only [done] using tIndex
-          · simpa [LimbMul.nativeRows, leftEmpty, ← updated, updatedEq] using updatedRead'
+          · simpa [LimbMul.nativeRows, leftEmpty, updatedWords] using updatedRead'
           · exact rowFrame
           · exact tMapped
         · have again : row+1 ≠ leftCount := by omega
@@ -110,7 +111,7 @@ theorem outer_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
           · have head := updatedRead'.head
             rw [← finalFrame.head (by omega)] at head
             have combined := ReadAt.cons head finalRead
-            simpa [LimbMul.nativeRows, ← updated, updatedEq] using combined
+            simpa [LimbMul.nativeRows, updatedWords] using combined
           · exact rowFrame.trans (finalFrame.widen (by omega) (by omega))
           · exact finalMapped
 

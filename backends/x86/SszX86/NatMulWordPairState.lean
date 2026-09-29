@@ -76,7 +76,7 @@ theorem first_product_bridge (s : MachineData) (first : BitVec 64)
     simpa only [firstStep, ← UInt64.toNat_toBitVec, BitVec.ofNat_toNat, BitVec.setWidth_eq]
       using arithmetic.2
   simp only [firstCarriedState, loopProductState, firstFetchedState, firstProducedState,
-    UInt64.toBitVec_ofBitVec, low, high, UInt64.ofBitVec_ofNat]
+    WordNormalize.ofNat, UInt64.toBitVec_ofBitVec, low, high]
 
 theorem first_store_bridge (s : MachineData) (first : BitVec 64) (flags : StatusFlags) :
     firstStoredState (firstProducedState s first flags) = pairFirstStoredState s first flags := by
@@ -92,8 +92,8 @@ theorem second_product_bridge (s : MachineData) (first second : BitVec 64)
   have arithmetic := word_carry_step second s.regs.rcx.toBitVec (firstStep s first).2 bound
   rw [step_comm] at arithmetic
   simp only [secondCarriedState, loopProductState, secondFetchedState, pairFirstStoredState,
-    firstProducedState, secondProducedState, secondStep, UInt64.toBitVec_ofBitVec,
-    UInt64.toBitVec_ofNat, arithmetic.1, arithmetic.2, UInt64.ofBitVec_ofNat]
+    firstProducedState, secondProducedState, secondStep, WordNormalize.ofNat,
+    UInt64.toBitVec_ofBitVec, arithmetic.1, arithmetic.2]
 
 theorem second_store_bridge (s : MachineData) (first second : BitVec 64) (flags : StatusFlags) :
     secondStoredState (secondProducedState s first second flags) = unrolledState s first second flags := by

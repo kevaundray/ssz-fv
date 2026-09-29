@@ -13,7 +13,7 @@ theorem reserve_small {s t : ArmState} (priorFrame : Reserve.Prefix s t)
   refine ⟨⟨priorFrame.frame.program, priorFrame.frame.error, ?_, priorFrame.frame.vectors⟩, ?_⟩
   · intro reg keep
     apply priorFrame.frame.registers
-    simp_all only [List.mem_cons, List.not_mem_nil, or_false, not_or]
+    simp_all only [List.mem_cons, List.not_mem_nil, or_false, not_or, not_false_eq_true]
   · intro a outside
     have outer := outside ((r (.GPR 31#5) s).toNat - 48, 48) (by simp)
     apply priorFrame.memoryFrame (by omega) a
@@ -28,7 +28,7 @@ theorem setup_abi (s : ArmState) (base : BitVec 64) :
   refine ⟨block_program _ _ _, block_error _ _ _, ?_, ?_⟩
   · intro reg keep
     apply Reserve.first_registers s base reg
-    simp_all only [List.mem_cons, List.not_mem_nil, or_false, not_or]
+    simp_all only [List.mem_cons, List.not_mem_nil, or_false, not_or, not_false_eq_true]
   · intro reg
     exact Reserve.block_preserves (r (.SFP reg)) base Reserve.firstOps
       (fun op _ t => op.sfp base t reg) s

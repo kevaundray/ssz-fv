@@ -44,7 +44,7 @@ theorem activation_operand (s : ArmState)
       rcases protectedSlot with empty | separate
       · left; apply List.eq_nil_of_length_eq_zero; omega
       · right
-        have apart := separate _ (by simp)
+        have apart := separate ((r (.GPR 31#5) (activated s)).toNat - 16, 16) (by simp)
         change pointer.toNat + 8 * words.length ≤ (r (.GPR 31#5) (activated s)).toNat - 16 ∨
           (r (.GPR 31#5) (activated s)).toNat ≤ pointer.toNat
         omega

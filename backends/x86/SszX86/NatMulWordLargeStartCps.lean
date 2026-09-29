@@ -25,7 +25,7 @@ theorem large_start_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     rfl
   have physical : operand.words.length+1 < 2^64 := by
     cases operand with
-    | small limb => decide
+    | small limb => change 1+1 < 2^64; decide
     | large pointer words => have := owned.operand_at.2.2.1; change words.length+1 < 2^64; omega
   have localMapped : Large.Mapped (pushedMem s) (s.regs.rsp.toBitVec-64) 16 := by
     intro i hi
@@ -35,10 +35,19 @@ theorem large_start_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   have destinationFirst : Large.Mapped (pushedMem s) (BitVec.ofNat 64 r.pointer) 8 := by
     have sub := Delimited.Reservation.mapped_subrange (pushedMem s) (BitVec.ofNat 64 r.pointer)
       (8*(SszNative.NatMul.runWord operand factor address.toNat capacity.toNat used.toNat).written.length)
-      0 8 destinationMapped (by rw [model, SszNative.NatMul.wordWritten_length]; omega)
+      0 8 destinationMapped (by
+        rw [model]
+        change 0+8 ≤ 8*(SszNative.NatMul.wordWritten operand factor).length
+        rw [SszNative.NatMul.wordWritten_length]
+        omega)
     simpa only [BitVec.add_zero] using sub
   apply commit_cursor_cps e base hc
-  · exact ⟨used.toNat, by simpa only [LargeReservation.reservedState, ready.memory, ready.arena] using header.2.2⟩
+  · refine ⟨used.toNat, ?_⟩
+    have cursorHeader := header.2.2
+    change Mem.loadInt (pushedMem s) (s.regs.r8.toBitVec+16#64) 8 = some (used.toNat : Int) at cursorHeader
+    change Mem.loadInt current.dmem (current.regs.r8.toBitVec+16#64) 8 = some (used.toNat : Int)
+    rw [ready.memory, ready.arena]
+    exact cursorHeader
   apply initial_product_cps e base hc (LargeMemory.cursorState current address used guardFlags)
     (SszNative.NatMul.lowWord operand)
     (LargeMemory.cursor_low_load s current operand factor address capacity used ra owned ready large r reserved model guardFlags)
@@ -46,7 +55,9 @@ theorem large_start_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   have initialized := LargeMemory.initialized s current operand factor address capacity used ra owned ready r reserved model guardFlags mulFlags
   apply initial_stores_cps e base hc
   · have transported := LargeMemory.cursor_mapped s current operand factor address capacity used ready r reserved guardFlags _ _ localMapped
-    simpa only [LargeMemory.productState, initialProductState, ready.sp] using transported
+    change Large.Mapped (LargeMemory.cursorState current address used guardFlags).dmem current.regs.rsp.toBitVec 16
+    rw [ready.sp]
+    exact transported
   · have transported := LargeMemory.cursor_mapped s current operand factor address capacity used ready r reserved guardFlags _ _ destinationFirst
     have geometry := ((Arena.reserve_eq_some_iff_checks _ _ _ _ (by omega) r).mp reserved).2
     have pointer : (LargeMemory.productState current operand address used guardFlags mulFlags).regs.r14.toBitVec+
@@ -54,7 +65,9 @@ theorem large_start_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       change address+(UInt64.ofNat (Arena.start address.toNat used.toNat)).toBitVec = _
       rw [UInt64.toBitVec_ofNat', geometry]
       simp only [BitVec.ofNat_add, BitVec.ofNat_toNat, BitVec.setWidth_eq]
-    simpa only [pointer] using transported
+    rw [pointer]
+    change Large.Mapped (LargeMemory.cursorState current address used guardFlags).dmem (BitVec.ofNat 64 r.pointer) 8
+    exact transported
   apply start_loop_cps e base hc _ (large_loop_many s current operand factor address used ready large physical guardFlags mulFlags)
   intro loopFlags
   exact next mulFlags loopFlags initialized

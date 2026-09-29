@@ -1,4 +1,5 @@
 import SszArm.NatMulWordReturnValues
+import SszArm.WordNormalize
 
 namespace SszArm.NatMulWord
 
@@ -40,7 +41,10 @@ theorem zero_correct (s : ArmState) (base : BitVec 64) (operand : SszNative.NatO
   have dispatch := zero_dispatch_run s base code error aligned
     (by simpa [entry] using pc) owned.factorRegister
   have uOwned : ReturnOwned u := by
-    simpa only [ReturnOwned, u, zero_dispatch_register] using owned.return_owned
+    refine ⟨?_, ?_, ?_⟩
+    · simpa only [u, zero_dispatch_register] using owned.return_owned.stack
+    · simpa only [u, zero_dispatch_register] using owned.return_owned.output
+    · simpa only [u, zero_dispatch_register] using owned.return_owned.separate
   have uCode : CodeAt u base := by
     simpa only [u, zeroDispatch, CodeAt, block_program] using code
   have uError : read_err u = .None := (block_error _ _ _).trans error
@@ -94,7 +98,10 @@ theorem zero_correct (s : ArmState) (base : BitVec 64) (operand : SszNative.NatO
       · intro reg low high
         rw [body.2.1.vectors reg low high]
         simp [u, zeroDispatch, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
-    · simpa only [model, SszNative.NatArithmetic.unchanged, output] using body.2.2.1
+    · have result := body.2.2.1
+      simp only [model, SszNative.NatArithmetic.unchanged, output, t] at result ⊢
+      arm_word_nf at result ⊢
+      exact result
     · intro reservation allocation
       simp [model, SszNative.NatArithmetic.unchanged] at allocation
     · rw [cursor, model]

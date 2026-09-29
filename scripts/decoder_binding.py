@@ -64,6 +64,82 @@ FUNCTIONS = {
         "x86": "_ZN13ssz_fv_native5codec9serialize17h73686b9835ba9d12E",
         "arm": "_ZN13ssz_fv_native5codec9serialize17h0d728b7a742b35d3E",
     },
+    "measure_parts": {
+        "x86": "_ZN13ssz_fv_native5codec13measure_parts17he5c844ee13389e6aE",
+        "arm": "_ZN13ssz_fv_native5codec13measure_parts17h3804244188cbc0c8E",
+    },
+    "measure_child": {
+        "x86": "_ZN13ssz_fv_native5codec13measure_parts28_$u7b$$u7b$closure$u7d$$u7d$17h373c75853d801feeE",
+        "arm": "_ZN13ssz_fv_native5codec13measure_parts28_$u7b$$u7b$closure$u7d$$u7d$17hbcad779f9c302ea9E",
+    },
+    "emit_parts": {
+        "x86": "_ZN13ssz_fv_native5codec10emit_parts17hb772d37971238413E",
+        "arm": "_ZN13ssz_fv_native5codec10emit_parts17h64cc0a69cd66c152E",
+    },
+    "is_fixed": {
+        "x86": "_ZN13ssz_fv_native6schema8is_fixed17hd8d910a9f41be136E",
+        "arm": "_ZN13ssz_fv_native6schema8is_fixed17h55046d992f15b227E",
+    },
+    "measure_fixed": {
+        "x86": "_ZN13ssz_fv_native6schema13measure_fixed17h4fa86dcaf9bd6583E",
+        "arm": "_ZN13ssz_fv_native6schema13measure_fixed17hd34cfd77f8373849E",
+    },
+    "decode_fixed": {
+        "x86": "_ZN13ssz_fv_native5codec12decode_fixed17h3f666c8e8472e7e0E",
+        "arm": "_ZN13ssz_fv_native5codec12decode_fixed17hd268ce61b5ac9b5fE",
+    },
+    "decode_offsets": {
+        "x86": "_ZN13ssz_fv_native5codec14decode_offsets17h6fac02bf9c6f9009E",
+        "arm": "_ZN13ssz_fv_native5codec14decode_offsets17h3986df5c439cd32dE",
+    },
+    "decode_list": {
+        "x86": "_ZN13ssz_fv_native5codec11decode_list17h2353dfe59d6a29a4E",
+        "arm": "_ZN13ssz_fv_native5codec11decode_list17h1123a2f8d52877c5E",
+    },
+    "read_offset": {
+        "x86": "_ZN13ssz_fv_native5codec11read_offset17h0da3b64779397175E",
+        "arm": "_ZN13ssz_fv_native5codec11read_offset17h14742c7c7578f3fcE",
+    },
+    "bounded": {
+        "x86": "_ZN13ssz_fv_native5codec7bounded17hf9278acab7ca6324E",
+        "arm": "_ZN13ssz_fv_native5codec7bounded17haa64e3a0177cad3fE",
+    },
+    "nat_cmp_usize": {
+        "x86": "_ZN13ssz_fv_native3nat3Nat9cmp_usize17h9ed8a0ac7ca8d0ffE",
+        "arm": "_ZN13ssz_fv_native3nat3Nat9cmp_usize17h857d9c8293a9444eE",
+    },
+    "plan_singleton": {
+        "x86": "_ZN13ssz_fv_native5arena5Arena10slice_with17haa66d122e32a3a4fE",
+        "arm": "_ZN13ssz_fv_native5arena5Arena10slice_with17h0d5d48f70484df3cE",
+    },
+    "decode_struct_values": {
+        "x86": "_ZN13ssz_fv_native5arena5Arena10slice_with17h146db97d48ae213eE",
+        "arm": "_ZN13ssz_fv_native5arena5Arena10slice_with17h0ed27805c5c943ffE",
+    },
+    "sha_compress": {
+        "x86": "_ZN13ssz_fv_native4hash8compress17h8a841109f2045706E",
+        "arm": "_ZN13ssz_fv_native4hash8compress17h2f0506da629ca044E",
+    },
+    "sha_finalize": {
+        "x86": "_ZN13ssz_fv_native4hash6Sha2568finalize17h9f92626b8c567611E",
+        "arm": "_ZN13ssz_fv_native4hash6Sha2568finalize17hc45a056ca54f57abE",
+    },
+    "sha_combine": {
+        "x86": "_ZN13ssz_fv_native4hash7combine17hd199d01286f21673E",
+        "arm": "_ZN13ssz_fv_native4hash7combine17hf6cdc4c975350651E",
+    },
+    "slice_index_fail": {
+        "x86": "_ZN4core5slice5index16slice_index_fail17h3a8dac974e40bbe0E",
+        "arm": "_ZN4core5slice5index16slice_index_fail17ha11ebec75b83c110E",
+    },
+    "panic_bounds_check": {
+        "x86": "_ZN4core9panicking18panic_bounds_check17h238ef7d9b41c88d7E",
+        "arm": "_ZN4core9panicking18panic_bounds_check17hfe133fc96452b1cfE",
+    },
+    "panic_on_ord_violation": {
+        "x86": "_ZN4core5slice4sort6shared9smallsort22panic_on_ord_violation17h2989703bbf0af21dE",
+        "arm": "_ZN4core5slice4sort6shared9smallsort22panic_on_ord_violation17h3e94085727ccf329E",
+    },
     "memcpy": {"x86": "memcpy", "arm": "memcpy"},
     "memset": {"x86": "memset", "arm": "memset"},
 }

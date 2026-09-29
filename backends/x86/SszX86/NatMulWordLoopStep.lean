@@ -1,5 +1,5 @@
 import SszX86.NatMulWordMath
-import SszX86.DelimitedRetain
+import SszX86.WordNormalize
 
 namespace SszX86.NatMulWord
 open UintCodec
@@ -56,8 +56,7 @@ theorem first_carry_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   natmulword_step 3:30 using hc
   natmulword_step 3:31 using hc
   natmulword_step 4:0 using hc
-  simpa [firstCarriedState, Udivti3.addFlags, StatusFlags.from_result, BitVec.add_comm,
-    UInt64.add_comm, Nat.add_comm, Delimited.uint64_literal, -UInt64.ofNat_one] using next _
+  word_simpa [firstCarriedState] using next _
 
 theorem second_carry_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     (s : MachineData) (P : MachineState → Prop)
@@ -66,8 +65,7 @@ theorem second_carry_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   natmulword_step 3:16 using hc
   natmulword_step 3:17 using hc
   natmulword_step 3:18 using hc
-  simpa [secondCarriedState, Udivti3.addFlags, StatusFlags.from_result, BitVec.add_comm,
-    UInt64.add_comm, Nat.add_comm, Delimited.uint64_literal, -UInt64.ofNat_one] using next _
+  word_simpa [secondCarriedState] using next _
 
 def firstStoredState (s : MachineData) : MachineData :=
   {s with

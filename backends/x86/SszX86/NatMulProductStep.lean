@@ -30,46 +30,50 @@ theorem InnerStable.trans {a b c : MachineData} (ab : InnerStable a b) (bc : Inn
 
 /-- One bounded original iteration realizes exactly the checked limb recurrence. -/
 theorem inner_step_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
-    (s : MachineData) (word old : BitVec 64) (carry : Nat) (carryBound : carry < 2^64)
+    (s : MachineData) (limb old : BitVec 64) (carry : Nat) (carryBound : carry < 2^64)
     (carryReg : s.regs.r9.toBitVec = BitVec.ofNat 64 carry) (zeroHigh : s.regs.r8 = 0)
     (inside : (s.regs.r15.toBitVec + s.regs.rbx.toBitVec).toNat < s.regs.r14.toBitVec.toNat)
     (wordLoad : Mem.loadInt s.dmem (s.regs.rsi.toBitVec + s.regs.rbx.toBitVec * 8#64) 8 =
-      some (word.toNat : Int))
+      some (limb.toNat : Int))
     (oldLoad : Mem.loadInt s.dmem (s.regs.r10.toBitVec + s.regs.rbx.toBitVec * 8#64) 8 =
       some (old.toNat : Int))
     (P : MachineState → Prop)
     (next : ∀ t, InnerStable s t →
       t.regs.rbx.toBitVec = s.regs.rbx.toBitVec + 1 →
-      t.regs.r9.toBitVec = BitVec.ofNat 64 (LimbMul.step s.regs.rcx.toBitVec word old carry).2 →
+      t.regs.r9.toBitVec = BitVec.ofNat 64 (LimbMul.step s.regs.rcx.toBitVec limb old carry).2 →
       t.regs.r8 = 0 →
       t.dmem = Mem.storeInt s.dmem (s.regs.r10.toBitVec + s.regs.rbx.toBitVec * 8#64)
-        8 (LimbMul.step s.regs.rcx.toBitVec word old carry).1.toInt →
+        8 (LimbMul.step s.regs.rcx.toBitVec limb old carry).1.toInt →
       Eventually (step e) P (t,
         if s.regs.rbx.toBitVec + 1 = s.regs.r13.toBitVec then base + 627 else base + 576)) :
     Eventually (step e) P (s, base + 576) := by
-  have arithmetic := NatMulWord.add_carry_step s.regs.rcx.toBitVec word old carry carryBound
+  have arithmetic := NatMulWord.add_carry_step s.regs.rcx.toBitVec limb old carry carryBound
   apply guard_cps e base hc s inside P
   intro guardFlags
-  apply multiply_cps e base hc _ word wordLoad P
+  apply multiply_cps e base hc (guardedState s guardFlags) limb wordLoad P
   intro mulFlags
-  apply add_carry_cps e base hc _ zeroHigh P
+  apply add_carry_cps e base hc
+    (multipliedState (guardedState s guardFlags) limb mulFlags) zeroHigh P
   intro carryFlags
-  apply update_cps e base hc _ old oldLoad P
+  apply update_cps e base hc
+    (carriedState (multipliedState (guardedState s guardFlags) limb mulFlags) carryFlags)
+    old oldLoad P
   intro updateFlags
   apply advance_cps e base hc _ P
   intro advanceFlags
   apply next
   · exact ⟨rfl,rfl,rfl,rfl,rfl,rfl,rfl,rfl,rfl,rfl,rfl⟩
   · rfl
-  · simpa [advancedState, updatedState, updatedCarry, carriedState, carriedHigh,
-      carriedLow, multipliedState, guardedState, carryReg, rawHigh, NatMulWord.productHigh,
-      Udivti3.addFlags_cf, Nat.add_comm, BitVec.add_comm] using arithmetic.2
+  · word_simpa [advancedState, updatedState, updatedCarry, carriedState, carriedHigh,
+      carriedLow, multipliedState, guardedState, carryReg, rawHigh, NatMulWord.productHigh]
+      using arithmetic.2
   · rfl
   · have low : updatedWord
-        (carriedState (multipliedState (guardedState s guardFlags) word mulFlags) carryFlags) old =
-        (LimbMul.step s.regs.rcx.toBitVec word old carry).1 := by
-      simpa [updatedWord, carriedState, carriedLow, multipliedState, guardedState,
-        carryReg, BitVec.add_comm] using arithmetic.1
-    simpa [advancedState, updatedState, carriedState, multipliedState, guardedState, low]
+        (carriedState (multipliedState (guardedState s guardFlags) limb mulFlags) carryFlags) old =
+        (LimbMul.step s.regs.rcx.toBitVec limb old carry).1 := by
+      word_simpa [updatedWord, carriedState, carriedLow, multipliedState, guardedState, carryReg]
+        using arithmetic.1
+    exact congrArg (fun lowWord : BitVec 64 =>
+      Mem.storeInt s.dmem (s.regs.r10.toBitVec + s.regs.rbx.toBitVec * 8#64) 8 lowWord.toInt) low
 
 end SszX86.NatMul.Product

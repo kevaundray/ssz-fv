@@ -39,7 +39,8 @@ theorem large_count_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       rw [pointer] at first
       rw [input, retained.memory, ← frame.memory]
       simpa only [SszNative.NatMul.lowWord, SszNative.NatAdd.lowWord, NatOperand.words,
-        List.getElem?_eq_getElem nonempty, Option.getD_some, Nat.mul_zero, BitVec.add_zero] using first
+        List.getElem?_eq_getElem nonempty, Option.getD_some, Nat.mul_zero, BitVec.add_zero,
+        Fin.getElem_fin] using first
     apply small_multiply_cps e base hc s _ (.large p words) factor address capacity used ra
       owned nonzero notone small
     · exact ⟨retained.memory, retained.sp, retained.output, retained.arena, retained.simd⟩
@@ -64,18 +65,20 @@ theorem large_count_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
         apply empty_multiply_cps e base hc s _ (.large p words) factor address capacity used ra
           owned nonzero notone small
         · exact ⟨frame.memory, frame.sp, frame.output, frame.arena, frame.simd⟩
-        · simp only [SszNative.NatMul.lowWord, SszNative.NatAdd.lowWord, NatOperand.words,
-            emptyWords, List.getElem?_nil, Option.getD_none, UInt64.toBitVec_ofNat]
+        · simp (config := {instances := true}) only
+            [SszNative.NatMul.lowWord, SszNative.NatAdd.lowWord, NatOperand.words,
+              emptyWords, List.getElem?_nil, Option.getD_none, UInt64.toBitVec_ofNat,
+              WordNormalize.bitvecNumeral]
         · exact factorReg
         · rfl
       · intro nonempty flags'
         have lengthPositive : 0 < words.length := by
-          by_contra none
-          have lengthZero : words.length = 0 := by omega
-          apply nonempty
-          change t.regs.r9.toBitVec = 0#64
-          rw [payload, lengthZero]
-          rfl
+          by_cases lengthZero : words.length = 0
+          · apply False.elim
+            apply nonempty
+            change t.regs.r9.toBitVec = 0#64
+            rw [payload, lengthZero]
+          · omega
         exact loadScalar _ ⟨frame.memory, frame.sp, frame.output, frame.arena, frame.simd⟩
           pointer factorReg small lengthPositive
     · intro positive flags

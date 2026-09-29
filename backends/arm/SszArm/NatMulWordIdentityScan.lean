@@ -97,8 +97,7 @@ theorem identity_scan (base pointer : BitVec 64) (words : List (BitVec 64)) :
       simpa [BitVec.ofNat_add, BitVec.add_sub_cancel] using h9
     obtain ⟨hu, huf, hu1, hu2, hu9, hu8, hup⟩ :=
       identity_scan_round s base pointer words n hc he ha hp h1 h9' (by omega) hs hm
-    generalize stateEq : identityRound s base (words[n]?.getD 0#64) = u at
-      hu huf hu1 hu2 hu9 hu8 hup
+    generalize stateEq : identityRound s base (words[n]?.getD 0#64) = u at hu huf hu1 hu2 hu9 hu8 hup
     by_cases hz : words[n]?.getD 0#64 = 0#64
     · obtain ⟨fuel, t, ht, htf, ht1, ht2, htp, ht8⟩ := ih u (by omega)
         (huf.code hc) (huf.error.trans he) (huf.aligned ha)

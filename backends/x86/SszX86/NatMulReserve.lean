@@ -1,6 +1,7 @@
 import SszX86.NatMulReserveCount
 import SszX86.NatMulReserveCommit
 import SszX86.MeasureBitsStored
+import SszX86.WordNormalize
 
 namespace SszX86.NatMul.Reservation
 open SszNative
@@ -30,7 +31,7 @@ private theorem destination (s : MachineData) (address used : BitVec 64)
     (guardFlags fillFlags : StatusFlags) :
     (preparedState (allocatedState s address used guardFlags) fillFlags).regs.rdi.toBitVec =
       address + BitVec.ofNat 64 (Arena.start address.toNat used.toNat) := by
-  simp [preparedState, allocatedState, reservedState, countState]
+  simp [preparedState, allocatedState, reservedState, countState, UInt64.toBitVec_ofNat']
 
 private theorem byte_count (s : MachineData) (address used : BitVec 64)
     (guardFlags fillFlags : StatusFlags) (bound : total s < 2^64) :
@@ -64,8 +65,15 @@ theorem runs (e : Executable) (base : Int64) (hc : CodeAt e base)
     have fits' : Arena.start address.toNat used.toNat + 8 * total s ≤ capacity.toNat := fits
     have freeOffset : used + BitVec.ofNat 64 (Arena.start address.toNat used.toNat - used.toNat) =
         BitVec.ofNat 64 (Arena.start address.toNat used.toNat) := by
-      have word : used = BitVec.ofNat 64 used.toNat := by simp
-      rw [word, ← BitVec.ofNat_add, Nat.add_sub_of_le startLow]
+      have usedWord : used = BitVec.ofNat 64 used.toNat := by simp
+      calc
+        used + BitVec.ofNat 64 (Arena.start address.toNat used.toNat - used.toNat) =
+            BitVec.ofNat 64 used.toNat +
+              BitVec.ofNat 64 (Arena.start address.toNat used.toNat - used.toNat) :=
+          congrArg (fun value => value +
+            BitVec.ofNat 64 (Arena.start address.toNat used.toNat - used.toNat)) usedWord
+        _ = BitVec.ofNat 64 (Arena.start address.toNat used.toNat) := by
+          rw [← BitVec.ofNat_add, Nat.add_sub_of_le startLow]
     have hm : Large.Mapped s.dmem
         (address + BitVec.ofNat 64 (Arena.start address.toNat used.toNat)) (8 * total s) := by
       have sub := Delimited.Reservation.mapped_subrange s.dmem (address + used)
@@ -75,11 +83,11 @@ theorem runs (e : Executable) (base : Int64) (hc : CodeAt e base)
     have stack : Large.Mapped s.dmem s.regs.rsp.toBitVec 40 := by
       have sub := Delimited.Reservation.mapped_subrange s.dmem (s.regs.rsp.toBitVec - 8#64)
         48 8 40 storage.stack (by decide)
-      simpa using sub
+      simpa only [BitVec.sub_add_cancel] using sub
     have slot : Large.Mapped s.dmem (s.regs.rsp.toBitVec - 8#64) 8 := by
       exact fun i hi => storage.stack i (by omega)
     have arena := Measure.Bits.load_mapped s.dmem (s.regs.r9.toBitVec + 16#64) 8 _ header.used_load
-    apply prepare_cps e base hc _ _ stack arena
+    apply prepare_cps e base hc (allocatedState s address used guardFlags) _ stack arena
     intro fillFlags
     have buffer := prepared_mapped (allocatedState s address used guardFlags) _ (8 * total s) hm
     have slot' := prepared_mapped (allocatedState s address used guardFlags) _ 8 slot
@@ -95,8 +103,12 @@ theorem runs (e : Executable) (base : Int64) (hc : CodeAt e base)
     have run := MemsetCall.runs e base hc helper
       (preparedState (allocatedState s address used guardFlags) fillFlags) (8 * total s)
       (byte_count s address used guardFlags fillFlags bound) zero lengthBound
-      (by simpa only [destination] using buffer) slot'
-      (by simpa only [destination] using apart)
+      (by
+        rw [destination]
+        simpa only [preparedState] using buffer) slot'
+      (by
+        rw [destination]
+        word_simpa [preparedState, allocatedState, reservedState, countState] using apart)
     apply eventually_weaken (step e) _ _ _ _ run
     intro final post
     exact Or.inr ⟨bound, r, reserved, guardFlags, fillFlags, post⟩

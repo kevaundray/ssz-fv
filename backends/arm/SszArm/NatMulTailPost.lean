@@ -6,7 +6,7 @@ theorem TailFrame.post {s u t : ArmState} {left right : SszNative.NatOperand}
     (frame : TailFrame s u) (owned : Owned s left right)
     (operand : SszNative.NatOperand) (factor : BitVec 64)
     (model : outcome s left right = SszNative.NatMul.runWord operand factor
-      (arenaOf s).base (arenaOf s).capacity (arenaOf s).used)
+      (SszArm.NatMul.arenaOf s).base (SszArm.NatMul.arenaOf s).capacity (SszArm.NatMul.arenaOf s).used)
     (post : NatMulWord.Post u t operand factor) : Post s t left right := by
   have result : NatMulWord.outcome u operand factor = outcome s left right := by
     unfold NatMulWord.outcome
@@ -23,7 +23,7 @@ theorem TailFrame.post {s u t : ArmState} {left right : SszNative.NatOperand}
   · simpa only [result] using post.written
   · simpa only [result, frame.arena] using post.cursor
   · have initial : read_mem_bytes 8 (r (.GPR 4#5) u) u = read_mem_bytes 8 (r (.GPR 5#5) s) s := by
-      simpa only [BitVec.ofNat_zero, BitVec.add_zero] using frame.header owned 0 (by decide)
+      simpa only [BitVec.add_zero] using frame.header owned 0 (by decide)
     simpa only [frame.arena] using post.arenaBase.trans initial
   · have initial : read_mem_bytes 8 (r (.GPR 4#5) u + 8#64) u =
         read_mem_bytes 8 (r (.GPR 5#5) s + 8#64) s := by

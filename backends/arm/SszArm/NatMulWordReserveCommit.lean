@@ -100,6 +100,7 @@ theorem wide_commit_memory (s : ArmState) (base : BitVec 64)
       (widePointer s) (r (.GPR 8#5) s) (r (.GPR 9#5) s) payload
     rcases hi with hi | hi
     · simp only [widthLoad, hi, Nat.mul_zero, Nat.add_zero, BitVec.ofNat_toNat]
+      arm_word_nf
       rw [reads]
       unfold wideCommitMemory
       rw [pair, BoolCodec.read_mem_bytes_write_mem_bytes_disjoint _ 8 8 _ _ _

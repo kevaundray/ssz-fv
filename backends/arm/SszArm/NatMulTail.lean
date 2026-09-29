@@ -29,7 +29,10 @@ theorem word_branch_run (s : ArmState) (base : BitVec 64)
     let v := block base [.p228] u
     have currentFrame : EntryFrame s v := frame.dispatch owned.stackBound prepareFrame
     have factor : r (.GPR 3#5) v = SszNative.NatMul.lowWord right := by
-      simpa only [SszNative.NatMul.lowWord, SszNative.NatAdd.lowWord] using v3.trans u4
+      have value : r (.GPR 3#5) v = _ := v3.trans u4
+      simp only [SszNative.NatMul.lowWord, SszNative.NatAdd.lowWord]
+      arm_word_nf at value ⊢
+      exact value
     have model : outcome s left right = SszNative.NatMul.runWord left (SszNative.NatMul.lowWord right)
         (arenaOf s).base (arenaOf s).capacity (arenaOf s).used :=
       SszNative.NatMul.run_right_one left right _ _ _ leftNonzero rightOne
@@ -45,7 +48,10 @@ theorem word_branch_run (s : ArmState) (base : BitVec 64)
     simp only [notRight, count, ↓reduceIte] at exit
     obtain ⟨upc, u1, u2, u3⟩ := exit
     have factor : r (.GPR 3#5) u = SszNative.NatMul.lowWord left := by
-      simpa only [SszNative.NatMul.lowWord, SszNative.NatAdd.lowWord] using u3
+      have value := u3
+      simp only [SszNative.NatMul.lowWord, SszNative.NatAdd.lowWord]
+      arm_word_nf at value ⊢
+      exact value
     have model : outcome s left right = SszNative.NatMul.runWord right (SszNative.NatMul.lowWord left)
         (arenaOf s).base (arenaOf s).capacity (arenaOf s).used :=
       SszNative.NatMul.run_left_one left right _ _ _ leftOne rightNonzero rightOne

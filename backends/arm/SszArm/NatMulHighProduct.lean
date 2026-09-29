@@ -14,7 +14,8 @@ theorem high_product_run (s : ArmState) (base : BitVec 64)
   have tError : read_err t = .None := (Op.error _ _ _).trans error
   have tAligned : CheckSPAlignment t := Op.aligned _ _ _ aligned
   have tPC : read_pc t = base + 760#64 := by
-    simp [t, Op.effect, put, next, state_simp_rules, pc, BitVec.add_assoc]
+    have pcRead : r .PC s = base + 756#64 := pc
+    simp [t, Op.effect, put, next, state_simp_rules, pcRead, BitVec.add_assoc]
   change run (28 + 1) s = _
   rw [run, step s base .p756 code pc error aligned,
     high_run t base tCode tError tAligned tPC]

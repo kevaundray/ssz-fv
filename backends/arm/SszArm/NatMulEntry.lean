@@ -16,13 +16,13 @@ theorem entry_dispatch (s : ArmState) (base : BitVec 64)
   have operands := activated_operands owned
   have firstPC : read_pc (activated s) = base + 28#64 := by
     rw [activated_pc, pc]
-    simp only [entry, BitVec.ofNat_zero, BitVec.add_zero]
+    simp only [entry, BitVec.add_zero]
   obtain ⟨fuel, t, execution, scan, exit⟩ := dispatch (activated s) base left.words right.words
     (first.code code) (first.error.trans error) (first.aligned aligned) firstPC operands.1 operands.2
   have frame := first.dispatch owned.stackBound scan
   refine ⟨7 + fuel, t, ?_, frame, ?_, ?_, ?_⟩
   · rw [run_plus, save_run s base code error aligned
-      (by simpa only [entry, BitVec.ofNat_zero, BitVec.add_zero] using pc), execution]
+      (by simpa only [entry, BitVec.add_zero] using pc), execution]
   · simpa only [DispatchExit, RawArgs,
       activated_registers s 1#5 (by decide), activated_registers s 2#5 (by decide),
       activated_registers s 3#5 (by decide), activated_registers s 4#5 (by decide)] using exit

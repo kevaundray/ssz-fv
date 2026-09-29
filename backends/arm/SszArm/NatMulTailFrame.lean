@@ -58,14 +58,14 @@ theorem TailFrame.local_covered {s t : ArmState} (frame : TailFrame s t)
       List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl
     · exact ⟨((r (.GPR 31#5) s).toNat - 144, 144), by simp [localWrites, value], by omega, by omega⟩
-    · exact ⟨((r (.GPR 0#5) s).toNat, 16), by simp [localWrites, value], le_rfl, le_rfl⟩
-    · exact ⟨((r (.GPR 0#5) s).toNat + 64, 4), by simp [localWrites, value], le_rfl, le_rfl⟩
+    · exact ⟨((r (.GPR 0#5) s).toNat, 16), by simp [localWrites, value], Nat.le_refl _, Nat.le_refl _⟩
+    · exact ⟨((r (.GPR 0#5) s).toNat + 64, 4), by simp [localWrites, value], Nat.le_refl _, Nat.le_refl _⟩
   | error error =>
     simp only [NatMulWord.localWrites, value, frame.sp, frame.output,
       List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
     · exact ⟨((r (.GPR 31#5) s).toNat - 144, 144), by simp [localWrites, value], by omega, by omega⟩
-    · exact ⟨((r (.GPR 0#5) s).toNat, 68), by simp [localWrites, value], le_rfl, le_rfl⟩
+    · exact ⟨((r (.GPR 0#5) s).toNat, 68), by simp [localWrites, value], Nat.le_refl _, Nat.le_refl _⟩
 
 theorem covers_append_same {large small : List Delimited.Span}
     (cover : BitVector.Covers large small) (extra : List Delimited.Span) :
@@ -74,7 +74,7 @@ theorem covers_append_same {large small : List Delimited.Span}
   rcases List.mem_append.mp member with before | after
   · obtain ⟨outer, member, low, high⟩ := cover span before
     exact ⟨outer, List.mem_append_left _ member, low, high⟩
-  · exact ⟨span, List.mem_append_right _ after, le_rfl, le_rfl⟩
+  · exact ⟨span, List.mem_append_right _ after, Nat.le_refl _, Nat.le_refl _⟩
 
 theorem TailFrame.writes_covered {s t : ArmState} (frame : TailFrame s t)
     (result : SszNative.NatArithmetic.Outcome SszNative.NatOperand) :

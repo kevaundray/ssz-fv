@@ -34,7 +34,7 @@ theorem ReadAt.fill_prefix (m : DataMem) (dst : BitVec 64) (index : Nat)
         (8*(index+j.val)+k) off span (by omega) (by omega) eq
       omega
     rw [same]
-    simpa [List.getElem_append_right low, List.getElem_drop, Nat.add_sub_of_le high] using old
+    simpa [List.getElem_append_right high, List.getElem_drop, Nat.add_sub_of_le high] using old
 
 theorem nativeRow_length (factor : BitVec 64) (right buffer : List (BitVec 64))
     (inside : right.length+1 ≤ buffer.length) :

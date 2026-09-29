@@ -13,7 +13,7 @@ theorem initialized_pointer (s : MachineData) (address capacity used : BitVec 64
   have geometry := ((Arena.reserve_eq_some_iff_checks _ _ _ _ positive r).mp reserved).2
   rw [geometry]
   simp [initializedState, preparedState, allocatedState, reservedState,
-    BitVec.ofNat_add, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+    UInt64.toBitVec_ofNat', BitVec.ofNat_add, BitVec.ofNat_toNat, BitVec.setWidth_eq]
 
 /-- The store's end cursor consumes the full zero-filled product, including
 high words that normalization will later omit from the returned representation. -/
@@ -25,7 +25,7 @@ theorem initialized_end (s : MachineData) (address capacity used : BitVec 64)
   have geometry := ((Arena.reserve_eq_some_iff_checks _ _ _ _ positive r).mp reserved).2
   rw [geometry]
   simp only [allocatedState, reservedState, counted_nat s s.status bound,
-    UInt64.toBitVec_ofNat', Arena.Reservation.used]
+    UInt64.toBitVec_ofNat', Arena.finish]
 
 /-- The right scan leaves one minus its significant count in R10; the actual
 SUB at 452 therefore caches total minus one, not total. -/
@@ -38,6 +38,7 @@ theorem initialized_last_index (s : MachineData) (address used : BitVec 64)
   simp only [initializedState, preparedState, allocatedState, reservedState, countState,
     UInt64.toBitVec_ofBitVec, right]
   unfold total at *
+  simp only [← UInt64.toNat_toBitVec] at positive bound ⊢
   bv_omega
 
 end SszX86.NatMul.Reservation

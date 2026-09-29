@@ -59,7 +59,7 @@ theorem bitLength_le_iff (number depth : Nat) :
   · subst number
     have positive : 0 < 2 ^ depth := Nat.pow_pos (by decide)
     simp [bitLength, positive]
-  · rw [bitLength, if_neg empty]
+  · simp only [bitLength, empty, ↓reduceIte]
     have logarithm := Nat.log2_lt (n := number) (k := depth) empty
     omega
 
@@ -67,9 +67,9 @@ theorem depthForCount_le_iff (count depth : Nat) :
     depthForCount count ≤ depth ↔ count ≤ 2 ^ depth := by
   by_cases small : count ≤ 1
   · have positive : 0 < 2 ^ depth := Nat.pow_pos (by decide)
-    simp only [depthForCount, if_pos small]
+    simp only [depthForCount, small, ↓reduceIte]
     omega
-  · rw [depthForCount, if_neg small, bitLength_le_iff]
+  · simp only [depthForCount, small, ↓reduceIte, bitLength_le_iff]
     omega
 
 theorem depthForCount_eq_depthFor (count : Nat) :
@@ -95,10 +95,11 @@ theorem capacityDepth_eq_depthFor (capacity : NatOperand) :
   · by_cases power : capacity.value = 2 ^ capacity.value.log2
     · calc
         capacityDepth capacity = capacity.value.log2 := by
-          simp [capacityDepth, bitLength, empty, power]
-        _ = Ssz.depthFor capacity.value := by
-          conv_rhs => rw [power]
-          rw [Ssz.depthFor_pow]
+          simp only [capacityDepth, bitLength, empty, ↓reduceIte]
+          split <;> omega
+        _ = Ssz.depthFor capacity.value :=
+          (Ssz.depthFor_pow capacity.value.log2).symm.trans
+            (congrArg Ssz.depthFor power.symm)
     · have upper : Ssz.depthFor capacity.value ≤ capacity.value.log2 + 1 :=
         Ssz.depthFor_le_of_le_two_pow (Nat.le_of_lt (Nat.lt_log2_self))
       have lowerPower : 2 ^ capacity.value.log2 < capacity.value := by
@@ -108,7 +109,7 @@ theorem capacityDepth_eq_depthFor (capacity : NatOperand) :
         have widened : 2 ^ capacity.value.log2 < 2 ^ Ssz.depthFor capacity.value :=
           Nat.lt_of_lt_of_le lowerPower (Ssz.le_two_pow_depthFor capacity.value)
         exact (Nat.pow_lt_pow_iff_right (by decide : 1 < 2)).mp widened
-      simp only [capacityDepth, bitLength, if_neg empty, if_neg power, Nat.sub_zero]
+      simp only [capacityDepth, bitLength, empty, power, ↓reduceIte, Nat.sub_zero]
       omega
 
 theorem finishDepth_undersize_iff (count depth : Nat) :
@@ -166,7 +167,7 @@ theorem boundedDepth_adequate (count depth : Nat) (limit : Option NatOperand)
   | some capacity =>
     by_cases undersize : capacity.value < count
     · simp [boundedDepth, undersize] at success
-    · simp only [boundedDepth, if_neg undersize, Except.ok.injEq] at success
+    · simp only [boundedDepth, undersize, ↓reduceIte, Except.ok.injEq] at success
       subst depth
       rw [capacityDepth_eq_depthFor]
       exact Nat.le_trans (by omega) (Ssz.le_two_pow_depthFor capacity.value)

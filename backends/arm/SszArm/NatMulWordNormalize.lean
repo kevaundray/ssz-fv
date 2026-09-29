@@ -27,7 +27,7 @@ theorem NormalizeOwned.source {s : ArmState} {pointer : BitVec 64}
     have apart := separate ((r (.GPR 31#5) s).toNat - 16, 16)
       (by simp [valueWrites, NatAdd.valueWrites])
     have stack := owned.returns.stack
-    simp only [Prod.fst, Prod.snd] at apart
+    arm_word_nf at apart stack ⊢
     omega
 
 theorem NormalizeOwned.current_at {s : ArmState} {pointer : BitVec 64}
@@ -37,22 +37,22 @@ theorem NormalizeOwned.current_at {s : ArmState} {pointer : BitVec 64}
   refine ⟨owned.positive, owned.aligned, owned.physical, ?_⟩
   intro i
   have word := congrArg (fun w : BitVec 64 => some w.toNat) (current i)
-  simpa only [widthLoad, BitVec.ofNat_add, BitVec.ofNat_toNat] using word
+  simpa only [widthLoad, BitVec.ofNat_add, BitVec.ofNat_toNat, BitVec.setWidth_eq] using word
 
 /-- Exact successful result and writable footprint. The frame preserves the
 arena cursor, complete original input extents (including redundant zeros), all
 allocation bytes, and output padding whenever those extents are protected.
 Only the descriptor pair, status32, and actual sixteen-byte spill are writable. -/
 structure NormalizedReturn (s t : ArmState) (pointer : BitVec 64)
-    (words : List (BitVec 64)) : Prop where
+    (limbs : List (BitVec 64)) : Prop where
   returned : Returned s t
   image : SszNative.NatArithmetic.AddResultAt (widthLoad t)
-    (r (.GPR 0#5) s).toNat (.ok (SszNative.NatOperand.fromWords pointer words))
+    (r (.GPR 0#5) s).toNat (.ok (SszNative.NatOperand.fromWords pointer limbs))
   frame : MemoryFrame (valueWrites s) s t
-  words : NatCompare.Words t pointer words
+  words : NatCompare.Words t pointer limbs
   registers : ∀ reg : BitVec 5, reg ∉ [8#5, 9#5, 12#5] →
     r (.GPR reg) t = r (.GPR reg) s
-  spills : read_mem_bytes 8 (r (.GPR 31#5) s - 16#64) t = normalizeSpill s pointer words ∧
+  spills : read_mem_bytes 8 (r (.GPR 31#5) s - 16#64) t = normalizeSpill s pointer limbs ∧
     read_mem_bytes 8 (r (.GPR 31#5) s - 16#64 + 8#64) t = pointer
   padding : ∀ a : BitVec 64,
     (((r (.GPR 0#5) s).toNat + 16 ≤ a.toNat ∧ a.toNat < (r (.GPR 0#5) s).toNat + 64) ∨
@@ -101,7 +101,7 @@ theorem normalize_run_contract (s : ArmState) (base pointer : BitVec 64)
     · intro i
       apply BitVec.eq_of_toNat_eq
       have word := Option.some.inj (rawFinal.2.2.2 i)
-      simpa only [widthLoad, BitVec.ofNat_add, BitVec.ofNat_toNat] using word
+      simpa only [widthLoad, BitVec.ofNat_add, BitVec.ofNat_toNat, BitVec.setWidth_eq] using word
     · intro reg keep
       exact (value_registers path u base (huf.owned owned.returns) reg).trans (huf.registers reg keep)
     · simpa only [huf.sp, hu9, hu10] using spills

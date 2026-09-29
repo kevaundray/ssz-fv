@@ -2,10 +2,10 @@
 import json
 
 
-def bounded_image(segments, labels):
-    """Keep real bytes while bounding every concrete address/label computation."""
+def bounded_image(segments, labels, *, origin=0):
+    """Keep real bytes and their origin while bounding address/label computation."""
     groups = []
-    cursor = 0
+    cursor = origin
     for pc, width, source in segments:
         if pc != cursor or width < 0:
             raise ValueError("noncontiguous executable segments")
@@ -75,14 +75,14 @@ theorem imageTailLabels{index} : labelTable imageRowsTail{index} = imageLabelsTa
   exact labelTable_append_of_eq imageRows{index} imageRowsTail{following}
     imageLabels{index} imageLabelsTail{following} imageLabelsOk{index} imageTailLabels{following}
 """)
-    declarations.append("""
-noncomputable def bound : Executable := (0, imageCodeTail0)
+    declarations.append(f"""
+noncomputable def bound : Executable := (Int64.ofNat {origin}, imageCodeTail0)
 theorem boundRows : bound.withAddresses = imageRowsTail0 := imageTailAt0
 theorem boundLabel (name : String) : bound.labels.label name =
     (findTableLabel imageLabelsTail0 name).getD (-1) :=
   labels_of_rows_table bound imageRowsTail0 imageLabelsTail0 boundRows imageTailLabels0 name
 noncomputable def imageBefore0 : List Addressed := []
-theorem imageBeforeRange0 : InRange imageBefore0 0 0 := by decide
+theorem imageBeforeRange0 : InRange imageBefore0 {origin} {origin} := by decide
 theorem imageSplit0 : imageRowsTail0 = imageBefore0 ++ imageRowsTail0 := by rfl
 """)
     for index, (lo, hi) in enumerate(bounds):
@@ -90,7 +90,7 @@ theorem imageSplit0 : imageRowsTail0 = imageBefore0 ++ imageRowsTail0 := by rfl
             previous = index - 1
             declarations.append(f"""
 noncomputable def imageBefore{index} : List Addressed := imageBefore{previous} ++ imageRows{previous}
-theorem imageBeforeRange{index} : InRange imageBefore{index} 0 {lo} := by
+theorem imageBeforeRange{index} : InRange imageBefore{index} {origin} {lo} := by
   exact inRange_append (by decide) (by decide) imageBeforeRange{previous} imageRange{previous}
 theorem imageSplit{index} : imageRowsTail0 = imageBefore{index} ++ imageRowsTail{index} := by
   calc
@@ -103,7 +103,7 @@ theorem imageFocus{index} (pc : Int64) (hlo : {lo} ≤ pc.toBitVec.toNat)
     (hhi : pc.toBitVec.toNat < {hi}) :
     bound.directivesAtAddress pc = lookup imageRows{index} pc := by
   apply directivesAtAddress_focus bound imageBefore{index} imageRows{index} imageRowsTail{index + 1}
-    pc 0 {lo} {hi} {cursor}
+    pc {origin} {lo} {hi} {cursor}
   · rw [boundRows, imageSplit{index}]
     simp only [imageRowsTail{index}, List.append_assoc]
   · exact imageBeforeRange{index}

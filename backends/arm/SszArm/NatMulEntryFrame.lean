@@ -13,7 +13,7 @@ theorem entry_local_covered (s : ArmState)
   intro span member
   simp only [entryWrites, List.mem_cons, List.not_mem_nil, or_false] at member
   subst span
-  refine ⟨((r (.GPR 31#5) s).toNat - 144, 144), ?_, le_rfl, le_rfl⟩
+  refine ⟨((r (.GPR 31#5) s).toNat - 144, 144), ?_, Nat.le_refl _, Nat.le_refl _⟩
   cases value : result.result <;> simp [localWrites, value]
 
 theorem entry_covered (s : ArmState)

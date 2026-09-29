@@ -51,17 +51,25 @@ theorem writeLimbBytes_get (buffer : Ssz.Bytes) (start : Nat)
         Limbs.byteAt [limb] (index - start)
       else buffer[index]! := by
   induction count with
-  | zero => simp [writeLimbBytes, show ¬(start ≤ index ∧ index < start + 0) by omega]
+  | zero =>
+      simp only [writeLimbBytes,
+        show ¬(start ≤ index ∧ index < start + 0) by omega, ↓reduceIte]
   | succ count ih =>
       rw [writeLimbBytes, setByte_get _ _ _ _ (by simpa using inside)]
       by_cases last : start + count = index
       · subst index
-        rw [if_pos rfl, if_pos (by omega)]
-        simp
-      · rw [if_neg last, ih]
+        split
+        · simp only [show start ≤ start + count ∧ start + count < start + (count + 1)
+            by omega, true_and, ↓reduceIte, Nat.add_sub_cancel_left]
+        · rename_i impossible
+          exact False.elim (impossible rfl)
+      · simp only [last, ↓reduceIte]
+        rw [ih]
         by_cases covered : start ≤ index ∧ index < start + count
-        · rw [if_pos covered, if_pos (by omega)]
-        · rw [if_neg covered, if_neg (by omega)]
+        · simp only [covered, show start ≤ index ∧ index < start + (count + 1)
+            by omega, true_and, ↓reduceIte]
+        · simp only [covered, show ¬(start ≤ index ∧ index < start + (count + 1))
+            by omega, ↓reduceIte]
 
 @[simp] theorem lengthLoop_size (operand : NatOperand) (count : Nat) :
     (lengthLoop operand count).size = 32 := by
@@ -90,12 +98,15 @@ theorem lengthLoop_get (operand : NatOperand) (count index : Nat)
   | succ count ih =>
       rw [lengthLoop, writeLimbBytes_get _ _ _ _ _ (by simpa using inside)]
       by_cases earlier : index < 8 * count
-      · rw [if_neg (by omega), ih, if_pos earlier, if_pos (by omega)]
+      · simp only [show ¬(8 * count ≤ index ∧ index < 8 * count + 8) by omega,
+          ih, earlier, show index < 8 * (count + 1) by omega, ↓reduceIte]
       · by_cases copied : index < 8 * (count + 1)
-        · rw [if_pos (by omega), if_pos copied]
+        · simp only [show 8 * count ≤ index ∧ index < 8 * count + 8 by omega,
+            copied, true_and, ↓reduceIte]
           have byteIs := limb_byteAt operand.words count (index - 8 * count) (by omega)
           simpa only [show 8 * count + (index - 8 * count) = index by omega] using byteIs
-        · rw [if_neg (by omega), ih, if_neg earlier, if_neg copied]
+        · simp only [show ¬(8 * count ≤ index ∧ index < 8 * count + 8) by omega,
+            ih, earlier, copied, ↓reduceIte]
 
 @[simp] theorem lengthWord_size (operand : NatOperand) :
     (lengthWord operand).size = 32 := lengthLoop_size operand 4
@@ -122,7 +133,7 @@ theorem lengthWord_byte (operand : NatOperand) (index : Nat) (inside : index < 3
     (lengthWord operand)[index]! =
       UInt8.ofNat ((operand.value / 2 ^ (8 * index)) % 256) := by
   have copied := lengthLoop_get operand 4 index inside
-  simpa only [lengthWord, show index < 8 * 4 by omega, if_true,
+  simpa only [lengthWord, show index < 8 * 4 by omega, ↓reduceIte,
     Limbs.byteAt_eq_value, NatOperand.value] using copied
 
 private theorem uintBytes_mod (byteCount number : Nat) :

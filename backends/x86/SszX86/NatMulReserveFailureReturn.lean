@@ -17,9 +17,11 @@ theorem reservation_failure_finish_cps (e : Executable) (base : Int64) (hc : Cod
   have failure : (SszNative.NatMul.run left right address.toNat capacity.toNat used.toNat).result =
       .error .scratchExhausted := by rw [outcome]; rfl
   have out : t.regs.rdi = s.regs.rdi :=
-    (failed.1.2 .rdi (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).trans output
+    (UInt64.toBitVec_inj.mp
+      (failed.1.2 .rdi (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))).trans output
   have sp : t.regs.rsp = s.regs.rsp - 88 :=
-    (failed.1.2 .rsp (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).trans stack
+    (UInt64.toBitVec_inj.mp
+      (failed.1.2 .rsp (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))).trans stack
   have mem : t.dmem = pushedMem s := failed.2.1.trans memory
   have vectors : t.zmms = s.zmms := failed.1.1.trans simd
   rcases failed.2.2 with ⟨overflow, pcEq⟩ | ⟨bound, exhausted, pcEq⟩

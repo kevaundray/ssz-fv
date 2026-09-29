@@ -60,6 +60,7 @@ theorem row_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   apply initialize_cps e base hc
   intro initFlags
   let start := initializedState (fetchedState s leftPointer factor fetchFlags) initFlags
+  have startMemory : start.dmem = s.dmem := rfl
   apply inner_cps e base hc source dst (8*rightPhysical) leftCount right.length row
     sourceApart span rowBound P right.length rightPositive 0 right buffer (by omega) rfl
     (by omega) (by omega) (by omega) start factor 0 (by decide)
@@ -73,7 +74,7 @@ theorem row_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   · rfl
   · rfl
   · exact rightRead
-  · simpa using bufferRead
+  · simpa only [startMemory, Nat.add_zero] using bufferRead
   intro t stable _ tCarry _ tMemory
   have tr15 : t.regs.r15.toBitVec = BitVec.ofNat 64 row := by
     rw [stable.r15]
@@ -86,7 +87,8 @@ theorem row_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     exact r14
   have trsp : t.regs.rsp = s.regs.rsp := stable.rsp
   have memory : t.dmem = Large.fillMem s.dmem dst row
-      (LimbMul.inner right.length factor right buffer 0).1 := by simpa [start] using tMemory
+      (LimbMul.inner right.length factor right buffer 0).1 := by
+    simpa only [startMemory, Nat.add_zero] using tMemory
   have frame : BufferFrame s.dmem t.dmem dst.toNat (8*(leftCount+right.length)) := by
     rw [memory]
     exact fill_buffer_frame _ _ _ _ _ span (by rw [LimbMul.inner_length]; omega)
@@ -103,7 +105,7 @@ theorem row_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   · have address : dst + (t.regs.r15.toBitVec + t.regs.r13.toBitVec) * 8#64 =
         dst + BitVec.ofNat 64 (8*(row+right.length)) := by
       rw [tr15, tr13]
-      simp [BitVec.ofNat_add, BitVec.ofNat_mul, Nat.mul_comm]
+      simp [BitVec.ofNat_add, BitVec.ofNat_mul, BitVec.mul_comm]
     simpa [carryGuardedState, address] using
       Large.mapped_load t.dmem dst (8*(leftCount+right.length)) (8*(row+right.length)) 8
         tMapped (by omega)
@@ -118,8 +120,7 @@ theorem row_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   have endTest : (t.regs.r11 = t.regs.r12) ↔ row+1 = leftCount := by
     rw [← UInt64.toBitVec_inj, tr11, tr12]
     bv_omega
-  simp only [carryStoredState, carryGuardedState] at endTest ⊢
-  rw [endTest]
+  simp (config := {instances := true}) only [carryStoredState, carryGuardedState, endTest]
   apply next
   · exact ⟨stable.rsi,stable.r12,stable.r13,stable.r14,stable.rbp,stable.rsp,stable.zmms⟩
   · simp only [outerAdvancedState, UInt64.toBitVec_ofBitVec, stable.r10]
@@ -130,6 +131,6 @@ theorem row_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   · rw [LimbMul.row, NatAdd.Carry.fill_append]
     simp only [LimbMul.inner_length, Large.fillMem]
     simp [outerAdvancedState, memory, tCarry, tr15, tr13, BitVec.ofNat_add,
-      BitVec.ofNat_mul, Nat.mul_comm]
+      BitVec.ofNat_mul, BitVec.mul_comm]
 
 end SszX86.NatMul.Product

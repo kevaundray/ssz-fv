@@ -20,7 +20,7 @@ theorem program_correct (s : ArmState) (base : BitVec 64)
   by_cases one : factor = 1#64
   · subst factor
     exact identity_run s base operand code error aligned
-      (by simpa only [entry, BitVec.ofNat_zero, BitVec.add_zero] using pc) owned
+      (by simpa only [entry, BitVec.add_zero] using pc) owned
   by_cases small : operand.wordCount ≤ 1
   · exact small_run s base operand factor code error aligned owned pc zero one small
   · exact large_run s base operand factor code error aligned owned pc zero one (by omega)

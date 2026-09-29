@@ -50,7 +50,11 @@ theorem high_completed_aligned (site : HighSite) (s : ArmState) (base : BitVec 6
 
 @[simp] theorem round_added_pc (s : ArmState) (base : BitVec 64) :
     read_pc (roundAdded s base) = read_pc s + 120#64 := by
-  simp [roundAdded, Op.effect, put, next, state_simp_rules, round_high_pc, BitVec.add_assoc]
+  have nextPC (t : ArmState) :
+      read_pc (Op.p748.effect base t) = read_pc t + 4#64 := by
+    simp [Op.effect, put, next, state_simp_rules]
+  rw [roundAdded, nextPC, round_high_pc]
+  simp [BitVec.add_assoc]
 
 @[simp] theorem round_stored_pc (s : ArmState) (base : BitVec 64) :
     read_pc (roundStored s base) = read_pc s + 152#64 := by
@@ -72,6 +76,8 @@ theorem round_run (s : ArmState) (base : BitVec 64)
   have lowAligned := Op.aligned .p632 base s aligned
   have lowPC : read_pc (roundLow s base) = base + 636#64 := by
     rw [round_low_pc, pc]; simp [BitVec.add_assoc]
+  have highRun : run 28 (roundLow s base) = roundHigh s base :=
+    high_run .loop (roundLow s base) base lowCode lowError lowAligned lowPC
   have highCode : CodeAt (roundHigh s base) base := by
     simpa only [CodeAt, roundHigh, high_completed_program] using lowCode
   have highError : read_err (roundHigh s base) = .None := by
@@ -89,6 +95,8 @@ theorem round_run (s : ArmState) (base : BitVec 64)
   have addedAligned := Op.aligned .p748 base (roundHigh s base) highAligned
   have addedPC : read_pc (roundAdded s base) = base + 752#64 := by
     rw [round_added_pc, pc]; simp [BitVec.add_assoc]
+  have storeRun : run 8 (roundAdded s base) = roundStored s base :=
+    store_run (roundAdded s base) base addedCode addedError addedAligned addedPC
   have storedCode : CodeAt (roundStored s base) base := by
     simpa only [CodeAt, roundStored, block_program] using addedCode
   have storedError : read_err (roundStored s base) = .None := by
@@ -101,10 +109,7 @@ theorem round_run (s : ArmState) (base : BitVec 64)
     unfold roundFuel
     omega
   rw [amount, run_plus, round_low_run s base code error aligned pc,
-    run_plus, high_run .loop (roundLow s base) base lowCode lowError lowAligned lowPC,
-    run_plus, addRun, run_plus,
-    store_run (roundAdded s base) base addedCode addedError addedAligned addedPC,
-    round_tail_run (roundStored s base) base storedCode storedError storedAligned storedPC]
-  rfl
+    run_plus, highRun, run_plus, addRun, run_plus, storeRun]
+  exact round_tail_run (roundStored s base) base storedCode storedError storedAligned storedPC
 
 end SszArm.NatMulWord

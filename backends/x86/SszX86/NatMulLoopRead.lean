@@ -12,22 +12,22 @@ def ReadAt (m : DataMem) (pointer : BitVec 64) (index : Nat)
     some (words[j].toNat : Int)
 
 theorem ReadAt.head {m : DataMem} {pointer : BitVec 64} {index : Nat}
-    {word : BitVec 64} {words : List (BitVec 64)} (read : ReadAt m pointer index (word :: words)) :
-    Mem.loadInt m (pointer + BitVec.ofNat 64 (8 * index)) 8 = some (word.toNat : Int) := by
+    {limb : BitVec 64} {words : List (BitVec 64)} (read : ReadAt m pointer index (limb :: words)) :
+    Mem.loadInt m (pointer + BitVec.ofNat 64 (8 * index)) 8 = some (limb.toNat : Int) := by
   simpa using read ⟨0, by simp⟩
 
 theorem ReadAt.tail {m : DataMem} {pointer : BitVec 64} {index : Nat}
-    {word : BitVec 64} {words : List (BitVec 64)} (read : ReadAt m pointer index (word :: words)) :
+    {limb : BitVec 64} {words : List (BitVec 64)} (read : ReadAt m pointer index (limb :: words)) :
     ReadAt m pointer (index+1) words := by
   intro j
   simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
-    read ⟨j.val+1, by have := j.isLt; simp; omega⟩
+    read ⟨j.val+1, by have := j.isLt; simp⟩
 
 /-- A store before the unread suffix preserves each of its actual memory loads. -/
 theorem ReadAt.store_before {m : DataMem} {pointer : BitVec 64} {index : Nat}
     {words : List (BitVec 64)} (read : ReadAt m pointer (index+1) words)
-    (span : pointer.toNat + 8 * (index + 1 + words.length) ≤ 2^64) (word : BitVec 64) :
-    ReadAt (Mem.storeInt m (pointer + BitVec.ofNat 64 (8*index)) 8 word.toInt)
+    (span : pointer.toNat + 8 * (index + 1 + words.length) ≤ 2^64) (limb : BitVec 64) :
+    ReadAt (Mem.storeInt m (pointer + BitVec.ofNat 64 (8*index)) 8 limb.toInt)
       pointer (index+1) words := by
   intro j
   rw [BoolCodec.load_store_disjoint]
@@ -46,8 +46,8 @@ theorem ReadAt.store_disjoint {m : DataMem} {source dst : BitVec 64}
     (read : ReadAt m source start words)
     (apart : Large.Disjoint source dst sourceCapacity capacity)
     (sourceBound : 8*(start+words.length) ≤ sourceCapacity)
-    (writeBound : 8*(index+1) ≤ capacity) (word : BitVec 64) :
-    ReadAt (Mem.storeInt m (dst + BitVec.ofNat 64 (8*index)) 8 word.toInt)
+    (writeBound : 8*(index+1) ≤ capacity) (limb : BitVec 64) :
+    ReadAt (Mem.storeInt m (dst + BitVec.ofNat 64 (8*index)) 8 limb.toInt)
       source start words := by
   intro j
   rw [BoolCodec.load_store_disjoint]

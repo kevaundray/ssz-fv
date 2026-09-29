@@ -27,8 +27,9 @@ theorem checkpoint_run (s : ArmState) (base : BitVec 64) (operand : SszNative.Na
     let capacity := read_mem_bytes 8 (r (.GPR 4#5) s + 8#64) s
     let used := read_mem_bytes 8 (r (.GPR 4#5) s + 16#64) s
     have physicalCount := Reserve.physical_count_add_one s operand owned.operandAt
+    have countRegister : r (.GPR 9#5) s = BitVec.ofNat 64 operand.wordCount := countReg
     have countNat : (r (.GPR 9#5) s).toNat = operand.wordCount := by
-      rw [countReg, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+      rw [countRegister, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
     have headerStack : (r (.GPR 4#5) s).toNat + 24 ≤ (r (.GPR 31#5) s).toNat - 16 ∨
         (r (.GPR 31#5) s).toNat ≤ (r (.GPR 4#5) s).toNat := by
       rcases owned.arenaLocal with empty | separate
@@ -44,10 +45,12 @@ theorem checkpoint_run (s : ArmState) (base : BitVec 64) (operand : SszNative.Na
     rcases selected with ⟨overflow, _⟩ | ⟨countFits, selected⟩
     · omega
     · rcases selected with ⟨failed, exit⟩ | ⟨checks, exit, baseReg, startReg, finishReg, keep12, pointerReg⟩
-      · have model : outcome s operand factor = unchanged (arenaOf s).used (.error .scratchExhausted) := by
+      · have failedReserve : SszNative.Arena.reserve (arenaOf s).base (arenaOf s).capacity
+            (arenaOf s).used (operand.wordCount + 1) = none := failed
+        have model : outcome s operand factor = unchanged (arenaOf s).used (.error .scratchExhausted) := by
           unfold outcome
           rw [SszNative.NatMul.runWord_large operand factor _ _ _ nonzero notone large,
-            if_pos physicalCount, failed]
+            if_pos physicalCount, failedReserve]
         obtain ⟨lastRun, post⟩ := error_finish s u base operand factor .scratch owned
           (reserve_small prior owned.stackBound) code error aligned exit model
         exact ⟨fuel + 50, errorResult .scratch base u, by rw [run_plus, ran, lastRun], post⟩
@@ -66,7 +69,7 @@ theorem large_run (s : ArmState) (base : BitVec 64) (operand : SszNative.NatOper
     (pc : read_pc s = base + BitVec.ofNat 64 entry)
     (nonzero : factor ≠ 0#64) (notone : factor ≠ 1#64) (large : 1 < operand.wordCount) :
     ∃ fuel t, run fuel s = t ∧ Post s t operand factor := by
-  have entryPC : read_pc s = base := by simpa only [entry, BitVec.ofNat_zero, BitVec.add_zero] using pc
+  have entryPC : read_pc s = base := by simpa only [entry, BitVec.add_zero] using pc
   obtain ⟨fuel, u, ran, scan, pointer, ready⟩ :=
     general_ready s base factor operand code error aligned entryPC owned nonzero notone
   have priorFrame := scan.small owned.stackBound

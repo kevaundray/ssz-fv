@@ -14,9 +14,9 @@ theorem high_core_mem (s : ArmState) (base : BitVec 64) :
   apply NatMulStateFold.preserves (fun t op => op.effect base t) ArmState.mem highCoreOps s
   intro op member t
   simp only [highCoreOps, highCore0, highCore1, highCore2, highCore3,
-    List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with (rfl | rfl | rfl | rfl) | (rfl | rfl | rfl) |
-    (rfl | rfl | rfl | rfl) | (rfl | rfl | rfl)
+    List.mem_append, List.mem_cons, List.not_mem_nil, or_false, or_assoc] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+    rfl | rfl | rfl | rfl | rfl | rfl | rfl
   all_goals simp [Op.effect, put, next, state_simp_rules]
 
 theorem high_core_registers (s : ArmState) (base : BitVec 64)
@@ -25,9 +25,9 @@ theorem high_core_registers (s : ArmState) (base : BitVec 64)
   apply NatMulStateFold.preserves (fun t op => op.effect base t) (r (.GPR reg)) highCoreOps s
   intro op member t
   simp only [highCoreOps, highCore0, highCore1, highCore2, highCore3,
-    List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with (rfl | rfl | rfl | rfl) | (rfl | rfl | rfl) |
-    (rfl | rfl | rfl | rfl) | (rfl | rfl | rfl)
+    List.mem_append, List.mem_cons, List.not_mem_nil, or_false, or_assoc] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+    rfl | rfl | rfl | rfl | rfl | rfl | rfl
   all_goals simp_all (config := {decide := true}) [highSaved, Op.effect, put, next, state_simp_rules]
 
 theorem high_core_sp (s : ArmState) (base : BitVec 64) :
@@ -41,9 +41,9 @@ theorem high_core_pc (s : ArmState) (base : BitVec 64) :
   apply NatMulStateFold.advancing (fun t op => op.effect base t) highCoreOps s
   intro op member t
   simp only [highCoreOps, highCore0, highCore1, highCore2, highCore3,
-    List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with (rfl | rfl | rfl | rfl) | (rfl | rfl | rfl) |
-    (rfl | rfl | rfl | rfl) | (rfl | rfl | rfl)
+    List.mem_append, List.mem_cons, List.not_mem_nil, or_false, or_assoc] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+    rfl | rfl | rfl | rfl | rfl | rfl | rfl
   all_goals simp [Op.effect, put, next, state_simp_rules]
 
 theorem high_core_flags (s : ArmState) (base : BitVec 64) (flag : PFlag) :
@@ -51,9 +51,9 @@ theorem high_core_flags (s : ArmState) (base : BitVec 64) (flag : PFlag) :
   apply NatMulStateFold.preserves (fun t op => op.effect base t) (r (.FLAG flag)) highCoreOps s
   intro op member t
   simp only [highCoreOps, highCore0, highCore1, highCore2, highCore3,
-    List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with (rfl | rfl | rfl | rfl) | (rfl | rfl | rfl) |
-    (rfl | rfl | rfl | rfl) | (rfl | rfl | rfl)
+    List.mem_append, List.mem_cons, List.not_mem_nil, or_false, or_assoc] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+    rfl | rfl | rfl | rfl | rfl | rfl | rfl
   all_goals simp [Op.effect, put, next, state_simp_rules]
 
 end SszArm.NatMul

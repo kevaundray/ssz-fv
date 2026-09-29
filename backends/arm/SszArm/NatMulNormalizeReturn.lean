@@ -8,7 +8,7 @@ open Delimited (Protected MemoryFrame Returned)
 
 /-- Canonicalization retains at most the original initialized span. -/
 theorem normalized_output_owned (writes : List Delimited.Span) (pointer : BitVec 64)
-    (words : List (BitVec 64)) (protected : Protected writes pointer.toNat (8 * words.length)) :
+    (words : List (BitVec 64)) (protection : Protected writes pointer.toNat (8 * words.length)) :
     NatAdd.OperandOwned writes (SszNative.NatOperand.fromWords pointer words) := by
   have length : (trim words).length ≤ words.length := by
     rw [trim_length]
@@ -20,7 +20,7 @@ theorem normalized_output_owned (writes : List Delimited.Span) (pointer : BitVec
     | nil => simp only [SszNative.NatOperand.fromWords, trimmed, NatAdd.OperandOwned]
     | cons second rest =>
       simp only [SszNative.NatOperand.fromWords, trimmed, NatAdd.OperandOwned]
-      have sub := protected.subspan 0 (8 * (first :: second :: rest).length)
+      have sub := protection.subspan 0 (8 * (first :: second :: rest).length)
         (by simp only [trimmed] at length; omega)
       simpa only [Nat.add_zero] using sub
 
@@ -35,7 +35,7 @@ theorem normalize_return_run (entry s : ArmState) (base pointer : BitVec 64)
     (count : r (.GPR 23#5) s = BitVec.ofNat 64 words.length - 1#64)
     (source : NatCompare.Source s pointer words) (memory : NatCompare.Words s pointer words)
     (nonnull : 0 < pointer.toNat) (wordAligned : pointer.toNat % 8 = 0)
-    (protected : Protected (returnWrites s (r (.GPR 24#5) s)) pointer.toNat (8 * words.length)) :
+    (protection : Protected (returnWrites s (r (.GPR 24#5) s)) pointer.toNat (8 * words.length)) :
     ∃ fuel t, run fuel s = t ∧ Returned entry t ∧
       SszNative.NatArithmetic.AddResultAt (widthLoad t) (r (.GPR 24#5) s).toNat
         (.ok (SszNative.NatOperand.fromWords pointer words)) ∧
@@ -52,11 +52,11 @@ theorem normalize_return_run (entry s : ArmState) (base pointer : BitVec 64)
   have writes : returnWrites u (r (.GPR 24#5) u) = returnWrites s (r (.GPR 24#5) s) := by
     simp only [returnWrites, hu24, huf.sp]
   have rawAtU : (SszNative.NatOperand.large pointer words).At (widthLoad u) :=
-    NatAdd.operand_at_preserved (huf.frame (r (.GPR 24#5) s)) _ rawAt protected
+    NatAdd.operand_at_preserved (huf.frame (r (.GPR 24#5) s)) _ rawAt protection
   have ownedU : NatAdd.OperandOwned (returnWrites u (r (.GPR 24#5) u))
       (SszNative.NatOperand.fromWords pointer words) := by
     rw [writes]
-    exact normalized_output_owned _ pointer words protected
+    exact normalized_output_owned _ pointer words protection
   obtain ⟨ht, returned, image, tailFrame⟩ := output_return_run entry u base
     (huf.code code) (huf.error.trans error) (huf.aligned aligned) hup
     (huf.saved saved space) (by simpa only [hu24] using huf.space space)
@@ -68,7 +68,7 @@ theorem normalize_return_run (entry s : ArmState) (base pointer : BitVec 64)
   refine ⟨fuel + 19, outputReturned u base, ?_, returned, ?_, ?_, frame⟩
   · rw [run_plus, hu, ht]
   · simpa only [hu24] using image
-  · exact (NatAdd.operand_at_preserved frame (.large pointer words) rawAt protected).2.2.2
+  · exact (NatAdd.operand_at_preserved frame (.large pointer words) rawAt protection).2.2.2
 
 /-- Adapter for the successful loop's exact initialized allocation, not an
 assumption about the eventual returned result or its memory. -/
@@ -83,7 +83,7 @@ theorem normalize_committed_return (entry s : ArmState) (base : BitVec 64)
     (nonnull : 0 < reservation.pointer) (wordAligned : reservation.pointer % 8 = 0)
     (addressBound : reservation.pointer < 2^64)
     (initialized : SszNative.NatMemory.wordsAt (widthLoad s) reservation.pointer words)
-    (protected : Protected (returnWrites s (r (.GPR 24#5) s)) reservation.pointer (8 * words.length)) :
+    (protection : Protected (returnWrites s (r (.GPR 24#5) s)) reservation.pointer (8 * words.length)) :
     ∃ fuel t, run fuel s = t ∧ Returned entry t ∧
       SszNative.NatArithmetic.AddResultAt (widthLoad t) (r (.GPR 24#5) s).toNat
         (SszNative.NatArithmetic.committed reservation words).result ∧
@@ -93,7 +93,7 @@ theorem normalize_committed_return (entry s : ArmState) (base : BitVec 64)
     simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt addressBound]
   have source : NatCompare.Source s (BitVec.ofNat 64 reservation.pointer) words := by
     refine ⟨space.stack, by simpa only [pointerNat] using physical, ?_⟩
-    rcases protected with empty | separate
+    rcases protection with empty | separate
     · left
       apply List.eq_nil_of_length_eq_zero
       omega
@@ -111,7 +111,7 @@ theorem normalize_committed_return (entry s : ArmState) (base : BitVec 64)
     (BitVec.ofNat 64 reservation.pointer) words code error aligned pc saved space output count
     source memory (by simpa only [pointerNat] using nonnull)
     (by simpa only [pointerNat] using wordAligned)
-    (by simpa only [pointerNat] using protected)
+    (by simpa only [pointerNat] using protection)
   refine ⟨fuel, t, run, returned, image, ?_, frame⟩
   intro allocated same
   have equal : reservation = allocated := Option.some.inj same

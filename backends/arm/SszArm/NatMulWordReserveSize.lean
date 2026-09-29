@@ -1,6 +1,7 @@
 import SszArm.NatMulWordReserveHeader
 import SszArm.NatFromU128LowerBase
 import SszArm.NatCompareMemory
+import SszArm.WordNormalize
 
 namespace SszArm.NatMulWord.Reserve
 
@@ -78,17 +79,23 @@ theorem usize_exit (s : ArmState) (base : BitVec 64) :
       if (r (.GPR 9#5) s).toNat + 1 = 2^64 then base + 1632#64 else base + 328#64 := by
   have zero : (AddWithCarry (r (.GPR 9#5) s) 1#64 0#1).2.z = 1#1 ↔
       (r (.GPR 9#5) s).toNat + 1 = 2^64 := by
-    simp only [AddWithCarry, BitVec.toNat_ofNat]
-    bv_omega
+    change (if (AddWithCarry (r (.GPR 9#5) s) 1#64 0#1).1 = 0#64
+      then 1#1 else 0#1) = 1#1 ↔ _
+    rw [Udivti3.adc_value]
+    simp only [BitVec.setWidth_zero, BitVec.add_zero]
+    by_cases sum : r (.GPR 9#5) s + 1#64 = 0#64 <;> simp [sum] <;> bv_omega
   simp [block, SizeGuard.ops, Op.effect, next, state_simp_rules, zero]
 
 theorem multiply_exit (s : ArmState) (base : BitVec 64) :
     read_pc (block base SizeGuard.multiply.ops s) =
       if 2305843009213693950 < (r (.GPR 9#5) s).toNat
         then base + 1264#64 else base + 340#64 := by
+  have comparison := Udivti3.cmp_high (r (.GPR 9#5) s) 2305843009213693950#64
+  have complement : ~~~(2305843009213693950#64) = 16140901064495857665#64 := by decide
+  rw [complement] at comparison
+  simp only [BitVec.toNat_ofNat] at comparison
   simp [block, SizeGuard.ops, Op.effect, put, next, Udivti3.compare,
-    Udivti3.next, state_simp_rules, Udivti3.cmp_high]
-
+    Udivti3.next, state_simp_rules, comparison]
 theorem bytes_exit (s : ArmState) (base : BitVec 64)
     (hp : read_pc s = base + 340#64)
     (bound : (r (.GPR 9#5) s).toNat ≤ 2305843009213693950) :
@@ -98,10 +105,12 @@ theorem bytes_exit (s : ArmState) (base : BitVec 64)
   have hpc : r .PC s = base + 340#64 := hp
   constructor
   · simp [block, SizeGuard.ops, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
-  · simp only [block, SizeGuard.ops, List.foldl_cons, List.foldl_nil, Op.effect,
-      put, next, state_simp_rules, BitVec.toNat_add, BitVec.toNat_shiftLeft,
-      Nat.shiftLeft_eq, BitVec.toNat_ofNat]
-    rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
+  · have value : r (.GPR 11#5) (block base SizeGuard.bytes.ops s) =
+        (r (.GPR 9#5) s <<< 3) + 8#64 := by
+      simp only [block, SizeGuard.ops, List.foldl_cons, List.foldl_nil, Op.effect, put, next]
+      arm_state_nf
+    rw [value]
+    simp only [BitVec.toNat_add, BitVec.toNat_shiftLeft, Nat.shiftLeft_eq, BitVec.toNat_ofNat]
     omega
 
 def signOps (negative : Bool) : List Op :=
@@ -110,6 +119,45 @@ def signOps (negative : Bool) : List Op :=
 
 def signMemory (s : ArmState) : ArmState :=
   write_mem_bytes 8 (r (.GPR 31#5) s - 16#64) (r (.GPR 9#5) s) s
+
+def signTailOps (negative : Bool) : List Op :=
+  [.p356, .p360] ++
+    if negative then [.p376, .p380, .p384] else [.p364, .p368, .p372]
+
+theorem sign_split (negative : Bool) (s : ArmState) (base : BitVec 64) :
+    block base (signOps negative) s =
+      block base (signTailOps negative) (block base [.p348, .p352] s) := by
+  cases negative <;> rfl
+
+theorem sign_tail_nine (negative : Bool) (s : ArmState) (base : BitVec 64) :
+    r (.GPR 9#5) (block base (signTailOps negative) s) =
+      read_mem_bytes 8 (r (.GPR 31#5) s) s := by
+  cases negative <;>
+    simp [signTailOps, block, Op.effect, put, next, state_simp_rules]
+
+theorem sign_tail_sp (negative : Bool) (s : ArmState) (base : BitVec 64) :
+    r (.GPR 31#5) (block base (signTailOps negative) s) = r (.GPR 31#5) s + 16#64 := by
+  cases negative <;>
+    simp [signTailOps, block, Op.effect, put, next, state_simp_rules]
+
+theorem sign_tail_memory (negative : Bool) (s : ArmState) (base : BitVec 64) :
+    (block base (signTailOps negative) s).mem = s.mem := by
+  apply block_preserves (fun t => t.mem) base (signTailOps negative)
+  intro op member t
+  cases negative <;>
+    simp only [signTailOps, Bool.false_eq_true, ↓reduceIte, List.cons_append, List.nil_append,
+      List.mem_cons, List.not_mem_nil, or_false] at member
+  all_goals rcases member with rfl | rfl | rfl | rfl | rfl <;>
+    simp [Op.effect, put, next, state_simp_rules]
+
+theorem sign_tail_pc (negative : Bool) (s : ArmState) (base : BitVec 64) :
+    read_pc (block base (signTailOps negative) s) =
+      base + (if negative then 1264#64 else 388#64) := by
+  cases negative
+  · change r .PC (w .PC (base + 388#64) _) = base + 388#64
+    rw [r_of_w_same]
+  · change r .PC (w .PC (base + 1264#64) _) = base + 1264#64
+    rw [r_of_w_same]
 
 theorem sign_run (negative : Bool) (s : ArmState) (base : BitVec 64)
     (hc : CodeAt s base) (he : read_err s = .None) (ha : CheckSPAlignment s)
@@ -126,20 +174,21 @@ theorem sign_run (negative : Bool) (s : ArmState) (base : BitVec 64)
 theorem sign_registers (negative : Bool) (s : ArmState) (base : BitVec 64)
     (stack : 16 ≤ (r (.GPR 31#5) s).toNat) (reg : BitVec 5) :
     r (.GPR reg) (block base (signOps negative) s) = r (.GPR reg) s := by
+  have slot : (r (.GPR 31#5) s - 16#64).toNat + 8 ≤ 2^64 := by bv_omega
   by_cases nine : reg = 9#5
   · subst reg
-    cases negative <;>
-      simp (disch := first | assumption | omega | bv_omega) [signOps, block,
-        Op.effect, put, next, state_simp_rules,
-        BoolCodec.read_mem_bytes_write_mem_bytes_same, BitVec.sub_add_cancel]
+    rw [sign_split, sign_tail_nine]
+    simp only [block, List.foldl_cons, List.foldl_nil, Op.effect, put, next]
+    arm_state_nf
+    exact BoolCodec.read_mem_bytes_write_mem_bytes_same _ 8 _ _ slot
   by_cases sp : reg = 31#5
   · subst reg
-    cases negative <;>
-      simp [signOps, block, Op.effect, put, next, state_simp_rules, BitVec.sub_add_cancel]
+    rw [sign_split, sign_tail_sp]
+    simp [block, Op.effect, put, next, state_simp_rules, BitVec.sub_add_cancel]
   apply block_preserves (r (.GPR reg)) base (signOps negative)
   intro op member t
   cases negative <;>
-    simp only [signOps, Bool.false_eq_true, ↓reduceIte, List.append_cons, List.append_nil,
+    simp only [signOps, Bool.false_eq_true, ↓reduceIte, List.cons_append, List.nil_append,
       List.mem_cons, List.not_mem_nil, or_false] at member
   all_goals rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
     simp [Op.effect, put, next, state_simp_rules, nine, sp]
@@ -155,10 +204,9 @@ theorem sign_effect (negative : Bool) (s : ArmState) (base : BitVec 64)
   · intro reg
     exact block_preserves (r (.SFP reg)) base (signOps negative)
       (fun op _ t => op.sfp base t reg) s
-  · cases negative <;>
-      simp [signOps, signMemory, block, Op.effect, put, next, state_simp_rules,
-        NatCompare.spill_mem_w]
-  · cases negative <;> simp [signOps, block, Op.effect, put, next, state_simp_rules]
+  · rw [sign_split, sign_tail_memory]
+    simp [signMemory, block, Op.effect, put, next, state_simp_rules, NatCompare.spill_mem_w]
+  · rw [sign_split, sign_tail_pc]
 
 theorem sign_memory_frame (s : ArmState) (stack : 16 ≤ (r (.GPR 31#5) s).toNat) :
     Delimited.MemoryFrame [((r (.GPR 31#5) s).toNat - 16, 8)] s (signMemory s) := by

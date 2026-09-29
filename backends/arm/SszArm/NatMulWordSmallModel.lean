@@ -13,7 +13,8 @@ theorem small_word_product (operand : NatOperand) (factor : BitVec 64) :
   apply BitVec.eq_of_toNat_eq
   rw [SszNative.NatMul.wordProduct,
     SszNative.LimbMul.wideProduct_toNat _ _ _ _ (by decide), NatToU128.append_toNat]
-  simpa only [BitVec.toNat_ofNat, Nat.add_zero, Nat.add_comm] using
+  arm_word_nf
+  simpa only [BitVec.toNat_ofNat, Nat.zero_mod, Nat.zero_add, Nat.add_zero, Nat.add_comm] using
     (NatMulProduct.product_value (SszNative.NatMul.lowWord operand) factor).symm
 
 theorem small_narrow_model (operand : NatOperand) (factor : BitVec 64)

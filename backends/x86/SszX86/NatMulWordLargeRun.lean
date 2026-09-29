@@ -26,8 +26,8 @@ theorem large_run_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     (cursor : widthLoad t.dmem (s.regs.r8.toNat+16) 8 = some r.used)
     (outputMapped : OutputMapped t)
     (destinationMapped : Large.Mapped t.dmem (BitVec.ofNat 64 r.pointer) (8*(operand.wordCount+1)))
-    (prefix : DataMem)
-    (memory : t.dmem = Large.fillMem prefix (BitVec.ofNat 64 r.pointer) 0 [(firstResult operand factor).1])
+    (prefixMemory : DataMem)
+    (memory : t.dmem = Large.fillMem prefixMemory (BitVec.ofNat 64 r.pointer) 0 [(firstResult operand factor).1])
     (registers : LargeLoopRegisters s t operand factor address r)
     (lowLoad : Mem.loadInt t.dmem t.regs.rsp.toBitVec 8 = some ((firstResult operand factor).1.toNat : Int))
     (startLoad : Mem.loadInt t.dmem (t.regs.rsp.toBitVec+8#64) 8 =
@@ -70,13 +70,13 @@ theorem large_run_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     · exact owned.operand_at.2.2.1
     · exact span
     · rw [pointerNat]
-      have protected := owned.operand_owned.arena
+      have arenaDisjoint := owned.operand_owned.arena
       have usedBound := owned.used_bound
       rw [modelLength] at bounds
       unfold Body.Apart at *
       omega
   have finish (u : MachineData)
-      (whole : u.dmem = Large.fillMem prefix dst 0 written)
+      (whole : u.dmem = Large.fillMem prefixMemory dst 0 written)
       (buffer : NatMul.BufferFrame t.dmem u.dmem r.pointer
         (8*(SszNative.NatMul.runWord operand factor address.toNat capacity.toNat used.toNat).written.length))
       (sp : u.regs.rsp.toBitVec = s.regs.rsp.toBitVec-64)
@@ -87,7 +87,7 @@ theorem large_run_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     apply allocated_return_cps e base hc s u operand factor address capacity used ra owned r written model
       (work.buffer r allocated buffer)
     · rw [whole, ← pointerNat]
-      exact Large.fill_wordsAt prefix dst written (by simpa only [writtenLength] using span)
+      exact Large.fill_wordsAt prefixMemory dst written (by simpa only [writtenLength] using span)
     · rw [buffer_cursor_load s operand factor address capacity used ra owned r allocated _ _ buffer]
       exact cursor
     · exact sp
@@ -99,10 +99,12 @@ theorem large_run_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       simpa only [registers.output] using outputMapped
     · exact pointer
     · simpa only [writtenLength, Nat.add_assoc] using counter
-    · have unchanged := buffer_stack_load s operand factor address capacity used ra owned r allocated _ _ buffer 0 8 (by decide)
-      simp only [BitVec.ofNat_eq_ofNat, BitVec.add_zero] at unchanged
+    · have unchanged : Mem.loadInt u.dmem (s.regs.rsp.toBitVec-64) 8 =
+          Mem.loadInt t.dmem (s.regs.rsp.toBitVec-64) 8 := by
+        word_simpa [] using
+          buffer_stack_load s operand factor address capacity used ra owned r allocated _ _ buffer 0 8 (by decide)
       rw [sp, unchanged, ← registers.sp, lowLoad]
-      simp only [written, word_written_first, List.getElem?_cons_zero, Option.getD_some]
+      simp only [written, word_written_first, List.getElem?_cons_zero, Option.getD_some, operand]
   apply pairs_cps e base hc source dst factor words (count+1) (by omega) apart
     (Post s operand factor address capacity used ra) (count/2) (by omega) 1 (by decide) (by omega)
     t (firstResult operand factor).2 (LimbMul.step_carry_lt _ _ _ _ (by decide))
@@ -115,7 +117,7 @@ theorem large_run_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       (8*(SszNative.NatMul.runWord operand factor address.toNat capacity.toNat used.toNat).written.length) := by
     rw [pairMemory', modelLength, ← pointerNat]
     exact NatMul.fill_buffer_frame _ _ _ _ _ span (by rw [pairedLength]; omega)
-  have pairFull : u.dmem = Large.fillMem prefix dst 0 ((firstResult operand factor).1 :: paired.1) := by
+  have pairFull : u.dmem = Large.fillMem prefixMemory dst 0 ((firstResult operand factor).1 :: paired.1) := by
     rw [pairMemory', memory]
     rfl
   have pairMapped : Large.Mapped u.dmem dst (8*(count+1)) := by
@@ -130,7 +132,8 @@ theorem large_run_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     simpa only [stable.rsp] using unchanged.trans startLoad
   apply Tail.index_cps e base hc u
   intro indexFlags
-  apply Tail.pointer_cps e base hc _ (BitVec.ofNat 64 (Arena.start address.toNat used.toNat)) pairStart
+  apply Tail.pointer_cps e base hc (Tail.indexState u indexFlags)
+    (BitVec.ofNat 64 (Arena.start address.toNat used.toNat)) pairStart
   intro pointerFlags
   let v := Tail.pointerState (Tail.indexState u indexFlags)
     (BitVec.ofNat 64 (Arena.start address.toNat used.toNat)) pointerFlags
@@ -169,19 +172,21 @@ theorem large_run_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     have zero := final_input_zero operand
     change (words[count]?.getD 0) = 0 at zero
     rw [zero] at loaded
-    simpa only [vMemory, vIndex, index, v, Tail.pointerState, Tail.indexState,
-      stable.rsi, registers.input, show (0 : BitVec 64).toNat = 0 by rfl] using loaded
+    have vSource : v.regs.rsi.toBitVec = source :=
+      (congrArg UInt64.toBitVec stable.rsi).trans registers.input
+    rw [vMemory, vSource, vIndex, index]
+    word_simpa [← BitVec.ofNat_mul, Nat.mul_comm, BitVec.toNat_zero, Int.natCast_zero] using loaded
   · intro odd
     have oddCount : count%2 ≠ 0 := fun h => odd (vParity.mpr h)
     have index : 1+2*(count/2) = count := by omega
     have addressEq : Tail.address v = dst+BitVec.ofNat 64 (8*count) := by
-      simp only [Tail.address, vPointer, vIndex, index, BitVec.ofNat_mul, Nat.mul_comm]
+      simp only [Tail.address, vPointer, vIndex, index, BitVec.ofNat_mul, BitVec.mul_comm]
     rw [addressEq]
     exact Delimited.Reservation.mapped_subrange u.dmem dst (8*(count+1)) (8*count) 8 pairMapped (by omega)
   · intro even flags
-    have evenCount := vParity.mp even
-    apply finish {v with status := flags}
-    · simpa only [written, word_written_pairs, evenCount, ↓reduceIte, List.append_nil, vMemory] using pairFull
+    have evenCount : operand.wordCount % 2 = 0 := vParity.mp even
+    refine finish {v with status := flags} ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    · simpa only [written, word_written_pairs, ite_eq_left evenCount, List.append_nil, vMemory] using pairFull
     · exact pairFrame
     · exact vSp
     · exact vOut
@@ -192,19 +197,21 @@ theorem large_run_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     have oddCount : count%2 ≠ 0 := fun h => odd (vParity.mpr h)
     have index : 1+2*(count/2) = count := by omega
     have addressEq : Tail.address v = dst+BitVec.ofNat 64 (8*count) := by
-      simp only [Tail.address, vPointer, vIndex, index, BitVec.ofNat_mul, Nat.mul_comm]
+      simp only [Tail.address, vPointer, vIndex, index, BitVec.ofNat_mul, BitVec.mul_comm]
     have storedMemory : (Tail.storedState v flags).dmem =
         Large.fillMem u.dmem dst count [BitVec.ofNat 64 paired.2] := by
       simp only [Tail.storedState, addressEq, vMemory, vCarry, Large.fillMem]
     have lastFrame : NatMul.BufferFrame u.dmem (Tail.storedState v flags).dmem r.pointer
         (8*(SszNative.NatMul.runWord operand factor address.toNat capacity.toNat used.toNat).written.length) := by
       rw [storedMemory, modelLength, ← pointerNat]
-      exact NatMul.fill_buffer_frame _ _ _ _ _ span (by simp; omega)
-    apply finish (Tail.storedState v flags)
+      exact NatMul.fill_buffer_frame _ _ _ _ _ span (by simp)
+    refine finish (Tail.storedState v flags) ?_ ?_ ?_ ?_ ?_ ?_ ?_
     · rw [storedMemory, pairFull]
-      rw [written, word_written_pairs, if_neg oddCount, ← List.cons_append, NatAdd.Carry.fill_append]
-      simp only [List.length_cons, pairedLength, Nat.zero_add]
-      rw [index]
+      dsimp only [written]
+      rw [word_written_pairs, ite_eq_right oddCount, ← List.cons_append, NatAdd.Carry.fill_append]
+      have lengthPair : (pairedResult operand factor).1.length = 2*(count/2) := pairedLength
+      simp only [List.length_cons, Nat.zero_add]
+      rw [lengthPair, Nat.add_comm (2*(count/2)) 1, index]
     · exact pairFrame.trans lastFrame
     · exact vSp
     · exact vOut

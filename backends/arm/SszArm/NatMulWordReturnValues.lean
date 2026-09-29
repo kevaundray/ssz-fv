@@ -58,7 +58,7 @@ theorem value_body_eq_add (path : StatusPath) (s : ArmState) (base : BitVec 64)
       (NatAdd.valueOps (valueAddPath path)).map (NatAdd.Op.effect base) := by
     cases path <;>
       simp only [valueOps, valueAddPath, NatAdd.valueOps, List.map_cons, List.map_nil,
-        List.cons.injEq, and_true, true_and]
+        List.cons.injEq, and_true]
     case wide => exact (notWide rfl).elim
     all_goals repeat' apply And.intro
     all_goals
@@ -79,14 +79,24 @@ theorem zero_body_eq (path : StatusPath) (s : ArmState) (base : BitVec 64)
   have effects : (valueOps path).map (Op.effect base) = zeroPairOps.map (Op.effect base) := by
     rcases zero with rfl | rfl | rfl <;>
       simp only [valueOps, zeroPairOps, PairKind.ops, PairKind.enterOps,
-        PairKind.storeOps, PairKind.restoreOps, List.map_append, List.map_cons, List.map_nil,
-        List.cons_append, List.nil_append, List.cons.injEq, and_true, true_and]
+        PairKind.storeOps, PairKind.restoreOps, List.map_cons, List.map_nil,
+        List.cons_append, List.nil_append, List.cons.injEq, and_true]
     all_goals repeat' apply And.intro
     all_goals
       funext t
       rfl
   simpa only [valueBody, block, List.foldl_map] using
     congrArg (fun fs : List (ArmState → ArmState) => fs.foldl (fun t f => f t) s) effects
+
+/-- Keep the byte count symbolic when projecting PC through a store. -/
+theorem return_store_next (s : ArmState) (bytes : Nat) (address : BitVec 64)
+    (value : BitVec (bytes * 8)) :
+    next (write_mem_bytes bytes address value s) =
+      w .PC (read_pc s + 4#64) (write_mem_bytes bytes address value s) := by
+  have pc : read_pc (write_mem_bytes bytes address value s) = read_pc s :=
+    r_of_write_mem_bytes
+  unfold next
+  rw [pc]
 
 theorem value_body_effect (path : StatusPath) (s : ArmState) (base : BitVec 64)
     (owned : ReturnOwned s) :
@@ -103,7 +113,12 @@ theorem value_body_effect (path : StatusPath) (s : ArmState) (base : BitVec 64)
     rw [zero_body_eq .zeroGeneral s base (Or.inr (Or.inr rfl))]
     exact zero_pair_effect s base owned
   case small => exact small_pair_effect s base owned
-  all_goals rfl
+  case borrowed =>
+    exact return_store_next s 16 (r (.GPR 0#5) s) (r (.GPR 2#5) s ++ r (.GPR 1#5) s)
+  case wide =>
+    exact return_store_next s 16 (r (.GPR 0#5) s) (r (.GPR 8#5) s ++ r (.GPR 10#5) s)
+  case general =>
+    exact return_store_next s 16 (r (.GPR 0#5) s) (r (.GPR 8#5) s ++ r (.GPR 9#5) s)
 
 theorem value_body_vectors (path : StatusPath) (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) : r (.SFP reg) (valueBody path base s) = r (.SFP reg) s := by
@@ -219,7 +234,7 @@ theorem value_body_frame (path : StatusPath) (s : ArmState) (base : BitVec 64)
   have work := outside ((r (.GPR 31#5) s).toNat - 16, 16) (by simp [valueWrites, NatAdd.valueWrites])
   cases path <;>
     simp (disch := natadd_return_side) [valueMemory, pairMemory, NatFromU128.scratchPair,
-      write_mem_bytes_frame, ArmState.mem_w_eq_mem]
+      write_mem_bytes_frame]
 
 theorem value_frame (path : StatusPath) (s : ArmState) (base : BitVec 64)
     (owned : ReturnOwned s) : MemoryFrame (valueWrites s) s (valueResult path base s) := by
@@ -314,6 +329,6 @@ theorem value_padding (path : StatusPath) (s : ArmState) (base : BitVec 64)
   have stack := owned.stack
   have separate := owned.separate
   simp only [valueWrites, NatAdd.valueWrites, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl <;> simp only [Prod.fst, Prod.snd] <;> omega
+  rcases member with rfl | rfl | rfl <;> omega
 
 end SszArm.NatMulWord

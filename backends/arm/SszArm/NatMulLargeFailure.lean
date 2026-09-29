@@ -56,7 +56,7 @@ theorem large_failure_return (path : ReturnErrorPath) (s u v : ArmState) (base :
     cases impossible
   · rw [header 16 (by decide), model]
     rfl
-  · simpa only [BitVec.ofNat_zero, BitVec.add_zero] using header 0 (by decide)
+  · simpa only [BitVec.add_zero] using header 0 (by decide)
   · exact header 8 (by decide)
 
 end SszArm.NatMul

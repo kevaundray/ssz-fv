@@ -81,12 +81,16 @@ theorem reserve_allocation_runs (s : ArmState) (base address capacity used : Bit
     have separate : (r (.GPR 5#5) u + 16#64).toNat + 8 ≤ (r (.GPR 20#5) t).toNat ∨
         (r (.GPR 20#5) t).toNat + (r (.GPR 2#5) u).toNat ≤ (r (.GPR 5#5) u + 16#64).toNat := by
       rw [r5, output, bytesU]
-      dsimp [reservation]
-      have separate := cursorSeparate checks
-      simpa only [SszNative.Arena.finish, Nat.add_assoc] using separate
+      change (r (.GPR 5#5) s + 16#64).toNat + 8 ≤
+          address.toNat + SszNative.Arena.start address.toNat used.toNat ∨
+        address.toNat + SszNative.Arena.start address.toNat used.toNat + 8 * words ≤
+          (r (.GPR 5#5) s + 16#64).toNat
+      simpa only [SszNative.Arena.finish, Nat.add_assoc] using cursorSeparate checks
     have cursor := post.cursor (by rw [r5]; exact cursorPhysical) separate
     have finishWord : r (.GPR 12#5) u = BitVec.ofNat 64 reservation.used := by
-      rw [← finishReg, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+      have finishNat : (r (.GPR 12#5) u).toNat = reservation.used := finishReg
+      simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using
+        congrArg (BitVec.ofNat 64) finishNat
     have scalar (reg : BitVec 5)
         (hg : reg ∉ [10#5, 11#5, 12#5, 13#5])
         (hz : reg ∉ [0#5, 1#5, 2#5, 3#5, 20#5, 23#5, 24#5, 25#5, 26#5, 27#5, 28#5, 30#5]) :

@@ -12,8 +12,10 @@ private theorem inner_index_step (remaining index : Nat) (factor : BitVec 64)
       let next := SszNative.LimbMul.step factor (words[index]?.getD 0#64) 0#64 carry
       let rest := SszNative.LimbMul.inner remaining factor (words.drop (index + 1)) [] next.2
       (next.1 :: rest.1, rest.2) := by
-  simpa only [List.drop_nil, List.getElem?_nil, Option.getD_none] using
-    SszNative.LimbMul.inner_indexed_succ remaining index factor words [] carry
+  have step := SszNative.LimbMul.inner_indexed_succ remaining index factor words [] carry
+  simp only [List.drop_nil, List.getElem?_nil, Option.getD_none] at step
+  arm_word_nf at step ⊢
+  exact step
 
 /-- Induction counts all remaining stores, including the last zero-extended
 input word. No logical bound is used: representable counters follow from the
@@ -40,8 +42,9 @@ theorem loop_runs_remaining (remaining : Nat) (s : ArmState)
       loop_round_runs s base raw pointer factor words doneWords count index code error aligned head
         positive (by omega) prefixLength space physical separate input written
     refine ⟨fuel, t, runEq, stable, ?_, ?_, frame⟩
-    · simpa only [show index = count by omega, if_pos rfl] using pc
-    · simpa only [inner_index_step, SszNative.LimbMul.inner] using current
+    · simpa only [if_pos (show index = count by omega)] using pc
+    · rw [inner_index_step 0 index factor words (r (.GPR 14#5) s).toNat]
+      simpa only [SszNative.LimbMul.inner] using current
   | succ remaining ih =>
     let next := SszNative.LimbMul.step factor (words[index]?.getD 0#64) 0#64
       (r (.GPR 14#5) s).toNat

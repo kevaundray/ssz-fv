@@ -9,12 +9,12 @@ private theorem stack_disjoint (sp : BitVec 64) (a b : Nat)
   intro i hi j hj
   bv_omega
 
-private theorem cursor_disjoint (s : MachineData) (offset : Nat) (inside : offset + 8 ≤ 40)
+private theorem cursor_disjoint (s : MachineData) (off : Nat) (inside : off + 8 ≤ 40)
     (apart : Large.Disjoint s.regs.rsp.toBitVec (s.regs.r9.toBitVec + 16#64) 40 8) :
-    Large.Disjoint (s.regs.rsp.toBitVec + BitVec.ofNat 64 offset)
+    Large.Disjoint (s.regs.rsp.toBitVec + BitVec.ofNat 64 off)
       (s.regs.r9.toBitVec + 16#64) 8 8 := by
   intro i hi j hj
-  simpa only [memmove_addr_add] using apart (offset + i) (by omega) j hj
+  simpa only [memmove_addr_add] using apart (off + i) (by omega) j hj
 
 /-- Each local spill is observed after all five actual stores. Values are
 established from the original registers, not hypotheses on initialized memory. -/
@@ -49,15 +49,15 @@ theorem prepared_spills (s : MachineData)
 /-- The helper's buffer writes and its pushed return slot preserve every local
 word in the caller's forty-byte frame. -/
 theorem helper_stack_load (s : MachineData) (ra : BitVec 64) (n : Nat) (t : MachineState)
-    (post : MemsetCall.Post s ra n t) (offset : Nat) (inside : offset + 8 ≤ 40)
+    (post : MemsetCall.Post s ra n t) (off : Nat) (inside : off + 8 ≤ 40)
     (apart : Large.Disjoint s.regs.rsp.toBitVec s.regs.rdi.toBitVec 40 n) :
-    Mem.loadInt t.1.dmem (s.regs.rsp.toBitVec + BitVec.ofNat 64 offset) 8 =
-      Mem.loadInt s.dmem (s.regs.rsp.toBitVec + BitVec.ofNat 64 offset) 8 := by
+    Mem.loadInt t.1.dmem (s.regs.rsp.toBitVec + BitVec.ofNat 64 off) 8 =
+      Mem.loadInt s.dmem (s.regs.rsp.toBitVec + BitVec.ofNat 64 off) 8 := by
   apply memmove_loadInt_congr
   intro i hi
   apply post.frame
   rintro (⟨j, hj, equal⟩ | ⟨j, hj, equal⟩)
-  · have sep := apart (offset + i) (by omega) j hj
+  · have sep := apart (off + i) (by omega) j hj
     apply sep
     simpa only [memmove_addr_add] using equal
   · bv_omega

@@ -66,7 +66,10 @@ theorem NormalizeFrame.words {s t : ArmState} (h : NormalizeFrame s t)
 theorem NormalizeFrame.frame {s t : ArmState} (h : NormalizeFrame s t) (out : BitVec 64) :
     MemoryFrame (returnWrites s out) s t := by
   intro a outside
-  exact h.memory a (outside ((r (.GPR 31#5) s).toNat - 16, 16) (by simp [returnWrites]))
+  have apart := outside ((r (.GPR 31#5) s).toNat - 16, 16) (by simp [returnWrites])
+  apply h.memory a
+  simp only [Prod.fst, Prod.snd] at apart
+  omega
 
 theorem NormalizeFrame.space {s t : ArmState} (h : NormalizeFrame s t) {out : BitVec 64}
     (space : ReturnSpace s out) : ReturnSpace t out := by
@@ -139,7 +142,8 @@ theorem normalize_load_run (s : ArmState) (base word : BitVec 64)
   have semantics := NatAdd.indexedReadSequence_eq s 20#5 23#5 10#5 9#5 word
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) hload hrestore
-  simpa only [normalizeLoaded, hp, BitVec.add_assoc] using semantics
+  simpa only [normalizeLoaded, hp, BitVec.add_assoc,
+    show 1016#64 + 32#64 = 1048#64 by decide] using semantics
 
 theorem normalize_load_frame (s : ArmState) (base word : BitVec 64)
     (hs : 16 ≤ (r (.GPR 31#5) s).toNat) :

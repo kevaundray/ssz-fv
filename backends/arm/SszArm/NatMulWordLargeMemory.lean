@@ -51,7 +51,9 @@ theorem allocation_header_prefix (s : ArmState) (operand : SszNative.NatOperand)
   rcases member with member | rfl | rfl
   · rcases active with empty | apart
     · omega
-    · have sep := apart span (by simp [activeWrites, member])
+    · have sep := apart span (by
+        simp only [activeWrites, List.mem_append]
+        exact Or.inl member)
       omega
   · simp only [Prod.fst, Prod.snd]
     exact Or.inl (Nat.le_refl _)
@@ -73,13 +75,13 @@ theorem allocation_post (s t : ArmState) (operand : SszNative.NatOperand) (facto
     (cursor : (read_mem_bytes 8 (r (.GPR 4#5) s + 16#64) t).toNat = reservation.used)
     (frame : MemoryFrame (writesFor s (outcome s operand factor)) s t) :
     Post s t operand factor := by
-  have protected := allocation_header_prefix s operand factor owned reservation model
+  have arenaProtected := allocation_header_prefix s operand factor owned reservation model
   have physical := owned.arenaBound
   have capAddress : (r (.GPR 4#5) s + 8#64).toNat = (r (.GPR 4#5) s).toNat + 8 := by bv_omega
   have sameBase := frame.read (r (.GPR 4#5) s) 8 (by omega)
-    (by simpa using protected.subspan 0 8 (by decide))
+    (by simpa using arenaProtected.subspan 0 8 (by decide))
   have sameCapacity := frame.read (r (.GPR 4#5) s + 8#64) 8 (by rw [capAddress]; omega)
-    (by rw [capAddress]; exact protected.subspan 8 8 (by decide))
+    (by rw [capAddress]; exact arenaProtected.subspan 8 8 (by decide))
   refine ⟨returned, ?_, ?_, ?_, frame,
     NatAdd.operand_preserved frame operand owned.operandAt owned.inputOwned,
     sameBase, sameCapacity⟩
@@ -87,9 +89,14 @@ theorem allocation_post (s t : ArmState) (operand : SszNative.NatOperand) (facto
   · intro actual allocated
     have equal : reservation = actual := by simpa only [model, committed, Option.some.injEq] using allocated
     subst actual
+    have imageWords : (outcome s operand factor).written =
+        SszNative.NatMul.wordWritten operand factor :=
+      congrArg (fun result : SszNative.NatArithmetic.Outcome SszNative.NatOperand =>
+        result.written) model
+    rw [imageWords]
     intro i
     have word := congrArg (fun value : BitVec 64 => some value.toNat) (written i)
-    simpa only [model, committed, widthLoad, BitVec.ofNat_add] using word
+    simpa only [widthLoad, BitVec.ofNat_add] using word
   · simpa only [model, committed] using cursor
 
 theorem loop_frame_active (s u t : ArmState) (reservation : SszNative.Arena.Reservation)

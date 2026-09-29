@@ -35,29 +35,32 @@ theorem Locals.preserve {before after : DataMem} {sp leftPointer payload dst : B
     (frame : BufferFrame before after dst.toNat count)
     (span : sp.toNat+24 ≤ 2^64) (apart : Body.Apart sp.toNat 24 dst.toNat count) :
     Locals after sp leftPointer payload dst := by
-  have load (offset : Nat) (inside : offset+8 ≤ 24) :
-      Mem.loadInt after (sp + BitVec.ofNat 64 offset) 8 =
-        Mem.loadInt before (sp + BitVec.ofNat 64 offset) 8 := by
-    have natural : (sp + BitVec.ofNat 64 offset).toNat = sp.toNat+offset := by bv_omega
+  have preservedLoad (off : Nat) (inside : off+8 ≤ 24) :
+      Mem.loadInt after (sp + BitVec.ofNat 64 off) 8 =
+        Mem.loadInt before (sp + BitVec.ofNat 64 off) 8 := by
+    have natural : (sp + BitVec.ofNat 64 off).toNat = sp.toNat+off := by bv_omega
     apply frame.load
     · rw [natural]; omega
     · rw [natural]; unfold Body.Apart at *; omega
   constructor
-  · simpa using (load 0 (by decide)).trans locals.payload
-  · exact (load 8 (by decide)).trans locals.destination
-  · exact (load 16 (by decide)).trans locals.left
+  · have firstLoad : Mem.loadInt after sp 8 = Mem.loadInt before sp 8 := by
+      word_simpa [] using preservedLoad 0 (by decide)
+    exact firstLoad.trans locals.payload
+  · exact (preservedLoad 8 (by decide)).trans locals.destination
+  · exact (preservedLoad 16 (by decide)).trans locals.left
 
 /-- Concatenate one final low word with the still-live row suffix. -/
 theorem ReadAt.cons {m : DataMem} {dst : BitVec 64} {index : Nat}
-    {word : BitVec 64} {words : List (BitVec 64)}
-    (head : Mem.loadInt m (dst+BitVec.ofNat 64 (8*index)) 8 = some (word.toNat : Int))
-    (tail : ReadAt m dst (index+1) words) : ReadAt m dst index (word::words) := by
+    {limb : BitVec 64} {words : List (BitVec 64)}
+    (head : Mem.loadInt m (dst+BitVec.ofNat 64 (8*index)) 8 = some (limb.toNat : Int))
+    (tail : ReadAt m dst (index+1) words) : ReadAt m dst index (limb::words) := by
   intro j
   by_cases zero : j.val = 0
   · simpa [zero] using head
   · have bound : j.val-1 < words.length := by have := j.isLt; simp only [List.length_cons] at this; omega
-    have eq : j.val = (j.val-1)+1 := by omega
-    simpa [eq, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using tail ⟨j.val-1, bound⟩
+    have address : index+1+(j.val-1) = index+j.val := by omega
+    simpa only [Fin.getElem_fin, List.getElem_cons, dite_eq_right zero, address]
+      using tail ⟨j.val-1, bound⟩
 
 theorem RowFrame.head {before after : DataMem} {dst : BitVec 64} {index count : Nat}
     (frame : RowFrame before after dst (index+1) count)
@@ -78,7 +81,7 @@ theorem fill_mapped (m : DataMem) (dst : BitVec 64) (index count : Nat)
     Large.Mapped (Large.fillMem m dst index words) dst count := by
   induction words generalizing m index with
   | nil => exact hmapped
-  | cons word words ih =>
+  | cons limb words ih =>
     exact ih _ _ (Large.mapped_store _ _ _ _ _ _ hmapped)
 
 end SszX86.NatMul.Product

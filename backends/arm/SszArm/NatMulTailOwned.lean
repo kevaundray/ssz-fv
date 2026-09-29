@@ -24,8 +24,8 @@ theorem TailFrame.arenaOf {s t : ArmState} {left right : SszNative.NatOperand}
   have base := frame.header owned 0 (by decide)
   have capacity := frame.header owned 8 (by decide)
   have used := frame.header owned 16 (by decide)
-  simp only [BitVec.ofNat_zero, BitVec.add_zero] at base
-  unfold NatMulWord.arenaOf arenaOf NatAdd.arenaOf
+  simp only [BitVec.add_zero] at base
+  unfold NatMulWord.arenaOf SszArm.NatMul.arenaOf NatAdd.arenaOf
   with_unfolding_all rw [base, capacity, used]
 
 theorem TailFrame.operandAt {s t : ArmState} (frame : TailFrame s t)
@@ -44,7 +44,7 @@ theorem TailFrame.word_owned {s t : ArmState} {left right : SszNative.NatOperand
     (input : operand.At (UintCodec.widthLoad s))
     (inputOwned : NatAdd.OperandOwned (writesFor s (outcome s left right)) operand)
     (model : outcome s left right = SszNative.NatMul.runWord operand factor
-      (arenaOf s).base (arenaOf s).capacity (arenaOf s).used) :
+      (SszArm.NatMul.arenaOf s).base (SszArm.NatMul.arenaOf s).capacity (SszArm.NatMul.arenaOf s).used) :
     NatMulWord.Owned t operand factor := by
   have result : NatMulWord.outcome t operand factor = outcome s left right := by
     unfold NatMulWord.outcome

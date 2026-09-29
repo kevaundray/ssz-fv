@@ -103,10 +103,9 @@ theorem words_set_of_frame {s t : ArmState} {sp pointer value : BitVec 64}
       simp only [List.mem_cons, List.not_mem_nil, or_false] at member
       rcases member with rfl | rfl
       · have := space.apart
-        simp only [Prod.fst, Prod.snd]
+        have := space.stack
         omega
-      · simp only [Prod.fst, Prod.snd]
-        rw [space.address hi]
+      · rw [space.address hi]
         omega
 
 /-- Direct single-store specialization, deriving both observation and frame

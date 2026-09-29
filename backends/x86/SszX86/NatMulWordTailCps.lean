@@ -20,6 +20,14 @@ def storedState (s : MachineData) (flags : StatusFlags) : MachineData :=
     dmem := Mem.storeInt s.dmem (address s) 8 s.regs.r10.toBitVec.toInt
     status := flags}
 
+theorem stored_zeroState (s : MachineData) (zeroFlags flags : StatusFlags) :
+    storedState (zeroState s zeroFlags) flags = storedState s flags := by
+  rfl
+
+theorem stored_flagged (s : MachineData) (oldFlags flags : StatusFlags) :
+    storedState {s with status := oldFlags} flags = storedState s flags := by
+  rfl
+
 def even (s : MachineData) : Prop := s.regs.r15.toBitVec.extractLsb' 0 8 &&& 1#8 = 0#8
 
 instance (s : MachineData) : Decidable (even s) := by
@@ -126,6 +134,6 @@ theorem finish_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     apply store_cps e base hc _ rfl
     · exact hm parity
     intro storeFlags
-    simpa only [storedState, zeroState] using nextOdd parity storeFlags
+    simpa only [stored_zeroState, stored_flagged] using nextOdd parity storeFlags
 
 end SszX86.NatMulWord.Tail

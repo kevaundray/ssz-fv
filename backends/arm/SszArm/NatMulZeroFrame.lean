@@ -32,10 +32,10 @@ theorem zero_return_covered {s u : ArmState} {left right : SszNative.NatOperand}
   rcases member with rfl | rfl | rfl
   · exact ⟨((r (.GPR 0#5) s).toNat, 16),
       by simp [writesFor, model, SszNative.NatArithmetic.unchanged, localWrites],
-      le_rfl, le_rfl⟩
+      Nat.le_refl _, Nat.le_refl _⟩
   · exact ⟨((r (.GPR 0#5) s).toNat + 64, 4),
       by simp [writesFor, model, SszNative.NatArithmetic.unchanged, localWrites],
-      le_rfl, le_rfl⟩
+      Nat.le_refl _, Nat.le_refl _⟩
   · refine ⟨((r (.GPR 31#5) s).toNat - 144, 144),
       by simp [writesFor, model, SszNative.NatArithmetic.unchanged, localWrites], ?_, ?_⟩
     all_goals simp only [Prod.fst, Prod.snd, sp]; omega

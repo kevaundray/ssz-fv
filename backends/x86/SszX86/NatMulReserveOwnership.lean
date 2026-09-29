@@ -28,8 +28,8 @@ theorem header_of_active (s current : MachineData) (left right : NatOperand)
   obtain ⟨addressLoad, capacityLoad, usedLoad⟩ := pushed_header s left right address capacity used ra owned
   refine ⟨?_, ?_, ?_⟩
   · simpa only [memory, arena] using addressLoad
-  · simpa only [memory, arena] using capacityLoad
-  · simpa only [memory, arena] using usedLoad
+  · word_simpa [memory, arena] using capacityLoad
+  · word_simpa [memory, arena] using usedLoad
 
 /-- Header and stack separation is inherited rather than postulated for the
 committed spill values. -/

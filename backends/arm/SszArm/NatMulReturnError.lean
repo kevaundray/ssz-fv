@@ -50,8 +50,11 @@ private theorem error_prefix_eq (path : ReturnErrorPath) (s : ArmState) (base : 
     cases path <;>
       simp only [ReturnErrorPath.prefix, ReturnErrorPath.wordPrefix, ReturnErrorPath.word,
         NatMulWord.ErrorPath.ops, List.length_cons, List.length_nil, List.take,
-        List.map_cons, List.map_nil, Op.effect, NatMulWord.Op.effect,
-        put, next, NatMulWord.put, NatMulWord.next]
+        List.map_cons, List.map_nil, List.cons.injEq, and_true]
+    all_goals repeat' apply And.intro
+    all_goals
+      funext t
+      rfl
   simpa only [block, NatMulWord.block, List.foldl_map] using
     congrArg (fun fs : List (ArmState → ArmState) => fs.foldl (fun t f => f t) s) effects
 
@@ -62,18 +65,30 @@ private theorem error_return_split (path : ReturnErrorPath) (s : ArmState) (base
     errorReturnBody path s base = block base path.tail (block base path.prefix s) := by
   simp only [errorReturnBody, ReturnErrorPath.ops, block, List.foldl_append]
 
+private theorem error_tail_erased (kind : ReturnErrorPath) (base : BitVec 64) (t : ArmState) :
+    w .PC 0#64 (block base kind.tail t) =
+      w .PC 0#64 (NatMulWord.block base kind.wordTail t) := by
+  cases kind <;>
+    simp only [ReturnErrorPath.tail, ReturnErrorPath.wordTail, block, NatMulWord.block,
+      List.foldl_cons, List.foldl_nil]
+  all_goals
+    simp only [Op.effect, NatMulWord.Op.effect, put, next, NatMulWord.put, NatMulWord.next]
+    arm_state_nf
+
 theorem error_return_erased (path : ReturnErrorPath) (s : ArmState) (base : BitVec 64) :
     w .PC 0#64 (errorReturnBody path s base) =
       w .PC 0#64 (NatMulWord.errorResult path.word base s) := by
+  have append (xs ys : List NatMulWord.Op) (t : ArmState) :
+      NatMulWord.block base (xs ++ ys) t =
+        NatMulWord.block base ys (NatMulWord.block base xs t) := by
+    simp only [NatMulWord.block, List.foldl_append]
   have split : path.word.ops = path.wordPrefix ++ path.wordTail := by cases path <;> rfl
-  rw [error_return_split]
-  rw [error_prefix_eq]
-  simp only [NatMulWord.errorResult, split, NatMulWord.block, List.foldl_append]
-  generalize NatMulWord.block base path.wordPrefix s = u
-  cases path <;>
-    simp [ReturnErrorPath.tail, ReturnErrorPath.wordTail, block, NatMulWord.block,
-      Op.effect, NatMulWord.Op.effect, put, next, NatMulWord.put, NatMulWord.next,
-      state_simp_rules, NatFromU128.store_field_write]
+  have leaf : NatMulWord.errorResult path.word base s =
+      NatMulWord.block base path.wordTail (NatMulWord.block base path.wordPrefix s) := by
+    unfold NatMulWord.errorResult
+    rw [split, append]
+  rw [error_return_split, error_prefix_eq, leaf]
+  exact error_tail_erased path base _
 
 theorem error_return_body_run (path : ReturnErrorPath) (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
@@ -104,7 +119,8 @@ theorem error_return_body_registers (path : ReturnErrorPath) (s : ArmState) (bas
     (space : ReturnSpace s (r (.GPR 0#5) s)) (reg : BitVec 5) (h8 : reg ≠ 8#5) :
     r (.GPR reg) (errorReturnBody path s base) = r (.GPR reg) s := by
   have same := congrArg (r (.GPR reg)) (error_return_erased path s base)
-  simp only [state_simp_rules] at same
+  rw [r_of_w_different (show StateField.GPR reg ≠ .PC by intro h; cases h),
+    r_of_w_different (show StateField.GPR reg ≠ .PC by intro h; cases h)] at same
   exact same.trans (NatMulWord.error_registers path.word s base space.word reg h8)
 
 /-- Both native error entrances write the shared scratchExhausted constructor:

@@ -11,10 +11,44 @@ open SszNative.NatArithmetic
   refine ⟨block_program _ _ _, block_error _ _ _, ?_, ?_⟩
   · intro reg keep
     apply Reserve.wide_commit_registers
-    simp_all only [List.mem_cons, List.not_mem_nil, or_false, not_or]
+    constructor
+    · intro same
+      exact keep (by simp [same])
+    · intro same
+      exact keep (by simp [same])
   · intro reg
     exact Reserve.block_preserves (r (.SFP reg)) base Reserve.wideCommitOps
       (fun op _ t => op.sfp base t reg) s
+
+/-- Assemble the exact allocation postcondition without reducing a concrete
+instruction-block state under dependent limb indices. -/
+private theorem wide_post_of_observations (s t : ArmState) (factor low high address : BitVec 64)
+    (operand : SszNative.NatOperand) (reservation : SszNative.Arena.Reservation)
+    (owned : Owned s operand factor)
+    (model : outcome s operand factor = committed reservation [low, high])
+    (pointer : address.toNat = reservation.pointer)
+    (resultEq : (outcome s operand factor).result = .ok (.large address [low, high]))
+    (returned : Returned s t)
+    (image : SszNative.NatArithmetic.AddResultAt (widthLoad t) (r (.GPR 0#5) s).toNat
+      (.ok (.large address [low, high])))
+    (cursor : (read_mem_bytes 8 (r (.GPR 4#5) s + 16#64) t).toNat = reservation.used)
+    (frame : MemoryFrame (writesFor s (outcome s operand factor)) s t)
+    (baseSame : read_mem_bytes 8 (r (.GPR 4#5) s) t = read_mem_bytes 8 (r (.GPR 4#5) s) s)
+    (capSame : read_mem_bytes 8 (r (.GPR 4#5) s + 8#64) t =
+      read_mem_bytes 8 (r (.GPR 4#5) s + 8#64) s) : Post s t operand factor := by
+  refine ⟨returned, ?_, ?_, ?_, frame,
+    NatAdd.operand_preserved frame operand owned.operandAt owned.inputOwned, baseSame, capSame⟩
+  · simpa only [resultEq] using image
+  · intro actual allocated
+    have equal : reservation = actual := by
+      simpa only [model, committed, Option.some.injEq] using allocated
+    subst actual
+    have imageWords : (outcome s operand factor).written = [low, high] :=
+      congrArg (fun result : SszNative.NatArithmetic.Outcome SszNative.NatOperand =>
+        result.written) model
+    rw [imageWords, ← pointer]
+    exact image.1.2.2.2.2.2
+  · simpa only [model, committed] using cursor
 
 /-- Finish the actual cursor/pair stores and original wide RET. All stored bytes
 are derived from PC1204/1208; no initialized-scratch premise is used. -/
@@ -36,6 +70,7 @@ are derived from PC1204/1208; no initialized-scratch premise is used. -/
   have vm := Reserve.wide_commit_memory u base space pc
   have pointerEq : BitVec.ofNat 64 reservation.pointer = Reserve.widePointer u := by
     rw [← pointer, BitVec.ofNat_toNat]
+    arm_word_nf
   have resultEq : (outcome s operand factor).result =
       .ok (.large (Reserve.widePointer u) [low, high]) := by
     simp [model, committed, pointerEq, SszNative.NatOperand.fromWords,
@@ -71,7 +106,7 @@ are derived from PC1204/1208; no initialized-scratch premise is used. -/
   have commitFrame : MemoryFrame (writesFor s (outcome s operand factor)) u v := by
     apply vm.1.weaken
     intro span member
-    simp only [Reserve.wideCommitWrites, List.mem_cons, List.mem_singleton] at member
+    simp only [Reserve.wideCommitWrites, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
     · simp [writesFor, model, committed, priorFrame.arena, header16]
     · simp [writesFor, model, committed, pointer]
@@ -82,20 +117,28 @@ are derived from PC1204/1208; no initialized-scratch premise is used. -/
   · change run (4 + 12) u = t
     rw [run_plus, vr]
     exact returned.1
-  · refine ⟨vabi.returned returned.2.1, ?_, ?_, ?_, frame,
-      NatAdd.operand_preserved frame operand owned.operandAt owned.inputOwned, ?_, ?_⟩
-    · simpa only [resultEq, vabi.out] using returned.2.2.1
-    · intro allocation allocated
-      have same : allocation = reservation := by
-        simpa only [model, committed, Option.some.injEq] using allocated.symm
-      subst allocation
-      have stored := returned.2.2.1.1.2.2.2.2.2
-      simpa only [model, committed, pointer] using stored
-    · rw [cursorReturn, ← priorFrame.arena, vm.2.1, model]
-      exact finish
-    · rw [baseReturn, ← priorFrame.arena, vm.2.2.1]
-      simpa using priorFrame.header owned 0 (by decide)
-    · rw [capReturn, ← priorFrame.arena, vm.2.2.2.1]
-      exact priorFrame.header owned 8 (by decide)
+  · have image : SszNative.NatArithmetic.AddResultAt (widthLoad t) (r (.GPR 0#5) s).toNat
+        (.ok (.large (Reserve.widePointer u) [low, high])) := by
+      simpa only [vabi.out] using returned.2.2.1
+    have cursorCommit : read_mem_bytes 8 (r (.GPR 4#5) s + 16#64) v = r (.GPR 12#5) u := by
+      simpa only [priorFrame.arena] using vm.2.1
+    have cursor : (read_mem_bytes 8 (r (.GPR 4#5) s + 16#64) t).toNat = reservation.used :=
+      (congrArg BitVec.toNat (cursorReturn.trans cursorCommit)).trans finish
+    have originalBase : read_mem_bytes 8 (r (.GPR 4#5) u) u =
+        read_mem_bytes 8 (r (.GPR 4#5) s) s := by
+      have same := priorFrame.header owned 0 (by decide)
+      arm_word_nf at same
+      simpa only [BitVec.add_zero] using same
+    have baseCommit : read_mem_bytes 8 (r (.GPR 4#5) s) v =
+        read_mem_bytes 8 (r (.GPR 4#5) s) s := by
+      have same := vm.2.2.1.trans originalBase
+      simpa only [priorFrame.arena] using same
+    have capCommit : read_mem_bytes 8 (r (.GPR 4#5) s + 8#64) v =
+        read_mem_bytes 8 (r (.GPR 4#5) s + 8#64) s := by
+      have same := vm.2.2.2.1.trans (priorFrame.header owned 8 (by decide))
+      simpa only [priorFrame.arena] using same
+    exact wide_post_of_observations s t factor low high (Reserve.widePointer u)
+      operand reservation owned model pointer resultEq (vabi.returned returned.2.1)
+      image cursor frame (baseReturn.trans baseCommit) (capReturn.trans capCommit)
 
 end SszArm.NatMulWord

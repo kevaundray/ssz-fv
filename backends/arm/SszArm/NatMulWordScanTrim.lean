@@ -98,7 +98,7 @@ theorem trim_scan (base pointer bias : BitVec 64) (words : List (BitVec 64)) :
     let t := block base trimGuard s
     have hf := trim_guard_follows s base hp
     have hz : r (.GPR 2#5) s + r (.GPR 9#5) s = 0#64 := by
-      rw [h2, h9, trim_remaining_sum]; rfl
+      rw [h2, h9, trim_remaining_sum]
     refine ⟨2, t, block_run base trimGuard s hc he ha hf,
       scan_pure_frame base trimGuard s (by decide), ?_, ?_, ?_, ?_, ?_, ?_⟩
     · exact (trim_guard_register s base 1#5).trans h1
@@ -112,8 +112,7 @@ theorem trim_scan (base pointer bias : BitVec 64) (words : List (BitVec 64)) :
     intro s hn hc he ha hp h1 h2 h8 h9 h10 hs hm
     obtain ⟨hu, huf, hu1, hu2, hu8, hu9, hu10, hup⟩ :=
       trim_scan_round s base pointer bias words n hc he ha hp h1 h2 h8 h9 h10 (by omega) hs hm
-    generalize stateEq : trimRound s base (words[n]?.getD 0#64) = u at
-      hu huf hu1 hu2 hu8 hu9 hu10 hup
+    generalize stateEq : trimRound s base (words[n]?.getD 0#64) = u at hu huf hu1 hu2 hu8 hu9 hu10 hup
     by_cases hz : words[n]?.getD 0#64 = 0#64
     · obtain ⟨fuel, t, ht, htf, ht1, ht2, ht8, ht10, htp, ht9⟩ := ih u (by omega)
         (huf.code hc) (huf.error.trans he) (huf.aligned ha)

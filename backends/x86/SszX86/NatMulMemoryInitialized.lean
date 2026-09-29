@@ -169,11 +169,11 @@ theorem initialized_memory (original current : MachineData) (left right : NatOpe
       Mem.loadInt t.1.dmem (current.regs.rsp.toBitVec+BitVec.ofNat 64 off) 8 =
         Mem.loadInt (Reservation.preparedMem (Reservation.allocatedState current address used guardFlags))
           (current.regs.rsp.toBitVec+BitVec.ofNat 64 off) 8 := by
-    have load := Reservation.helper_stack_load _ _ _ t post off inside (by
+    have loaded := Reservation.helper_stack_load _ _ _ t post off inside (by
       rw [destination]
       exact separation.stack_buffer)
     simpa only [Reservation.initializedState, Reservation.preparedState, Reservation.allocatedState,
-      Reservation.reservedState, Reservation.countState] using load
+      Reservation.reservedState, Reservation.countState] using loaded
   have cursorBefore := Reservation.prepared_cursor (Reservation.allocatedState current address used guardFlags) localCursor
   have ending := Reservation.initialized_end current address capacity used positive countBound r reserved guardFlags
   have endNat : (Reservation.allocatedState current address used guardFlags).regs.r11.toNat = r.used := by

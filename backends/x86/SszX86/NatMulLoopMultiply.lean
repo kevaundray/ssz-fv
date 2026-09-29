@@ -1,5 +1,5 @@
 import SszX86.NatMulLoopControl
-import SszX86.DelimitedRetain
+import SszX86.WordNormalize
 
 namespace SszX86.NatMul.Product
 open UintCodec
@@ -51,8 +51,7 @@ theorem add_carry_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   natmul_step 5 row 7 using hc
   natmul_step 5 row 8 using hc
   natmul_step 5 row 9 using hc
-  simpa [carriedState, carriedLow, carriedHigh, Udivti3.addFlags,
-    zeroHigh, StatusFlags.from_result, Delimited.uint64_literal] using next _
+  word_simpa [carriedState, carriedLow, carriedHigh, zeroHigh] using next _
 
 def updatedWord (s : MachineData) (old : BitVec 64) : BitVec 64 := s.regs.rax.toBitVec + old
 
@@ -81,7 +80,6 @@ theorem update_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
   · exact ⟨_, loaded⟩
   simp only [Effects.All]
   natmul_step 5 row 11 using hc
-  simpa [updatedState, updatedWord, updatedCarry, Udivti3.addFlags,
-    StatusFlags.from_result, Delimited.uint64_literal] using next _
+  word_simpa [updatedState, updatedWord, updatedCarry] using next _
 
 end SszX86.NatMul.Product

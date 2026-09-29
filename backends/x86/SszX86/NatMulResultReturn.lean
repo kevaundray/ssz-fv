@@ -46,8 +46,9 @@ theorem result_finish_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     allocation_result left right address capacity used r allocated
   apply result_load_cps e base hc t s.regs.rdi.toBitVec (BitVec.ofNat 64 r.pointer) output
   · simpa only [natural] using pointer
-  apply normalize_result_cps e base hc _ words lengthBound counter
-  · simpa only [resultLoadState, UInt64.ofBitVec_toNat, natural] using written
+  apply normalize_result_cps e base hc
+    (resultLoadState t s.regs.rdi.toBitVec (BitVec.ofNat 64 r.pointer)) words lengthBound counter
+  · simpa only [resultLoadState, UInt64.toNat_ofBitVec, natural] using written
   intro u memory sameStack sameOutput sameSimd resultPointer resultPayload
   have outputEq : u.regs.rax = s.regs.rdi := by
     simpa only [resultLoadState, UInt64.ofBitVec_toBitVec] using sameOutput
@@ -60,17 +61,17 @@ theorem result_finish_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
     rw [success]
     exact success_publish_frame s t.dmem result.pointer result.payload result owned.output_bound
   apply result_publish_cps e base hc u
-  · simpa only [memory, outputEq] using outputMapped
+  · simpa only [memory, resultLoadState, outputEq] using outputMapped
   apply return_cps e base hc s _ ra
   · exact sameStack.trans stack
-  · simpa only [memory, outputEq, normalizedPointer, normalizedPayload] using publishedWork.saved owned
+  · simpa only [memory, resultLoadState, outputEq, normalizedPointer, normalizedPayload] using publishedWork.saved owned
   · exact sameSimd.trans simd
-  · simpa only [memory, outputEq, normalizedPointer, normalizedPayload] using
+  · simpa only [memory, resultLoadState, outputEq, normalizedPointer, normalizedPayload] using
       (publishedWork.to_frame owned.stack_low).return_slot owned
   intro final finalMemory returned
   apply allocated_post s left right address capacity used ra owned t.dmem r allocated work written cursor
     result success _
-  · simpa only [memory, outputEq, normalizedPointer, normalizedPayload] using finalMemory
+  · simpa only [memory, resultLoadState, outputEq, normalizedPointer, normalizedPayload] using finalMemory
   · exact returned
 
 end SszX86.NatMul

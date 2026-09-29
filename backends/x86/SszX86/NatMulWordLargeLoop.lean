@@ -1,4 +1,5 @@
 import SszX86.NatMulWordLargeLoopFacts
+import SszX86.WordNormalize
 
 namespace SszX86.NatMulWord
 open SszNative UintCodec
@@ -48,7 +49,7 @@ theorem pairs_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       rw [lengthReg]
       exact Nat.mod_eq_of_lt lengthBound
     have plusOne : s.regs.rax.toBitVec+1 = BitVec.ofNat 64 (index+1) := by
-      rw [indexReg, BitVec.ofNat_add]
+      simp (config := {instances := true}) only [indexReg, BitVec.ofNat_add, WordNormalize.bitvecNumeral]
     have plusOneNat : (s.regs.rax.toBitVec+1).toNat = index+1 := by
       rw [plusOne]
       exact Nat.mod_eq_of_lt nextBound
@@ -95,17 +96,19 @@ theorem pairs_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
         simpa only [LimbMul.inner, first, second, firstResult, secondResult, unrolledState]
           using pair_memory s dst factor index carry first second destinationReg indexReg factorReg carryReg carryBound
       · simpa only [unrolledState, secondProducedState, indexReg] using congrArg (BitVec.ofNat 64) (show index = index+2*(0+1)-2 by omega)
-      · simp only [unrolledState, secondProducedState, UInt64.toBitVec_ofBitVec, indexReg,
-          BitVec.ofNat_add]
+      · simp (config := {instances := true}) only
+          [unrolledState, secondProducedState, UInt64.toBitVec_ofBitVec, indexReg,
+            BitVec.ofNat_add, WordNormalize.bitvecNumeral]
       · rw [totalWidth, recurrence]
-        simpa only [LimbMul.inner, unrolledState, secondProducedState, checkedSecond,
-          UInt64.toBitVec_ofNat, first, second, firstResult, secondResult]
+        simp only [LimbMul.inner, unrolledState, secondProducedState, checkedSecond,
+          UInt64.toBitVec_ofNat', first, second, firstResult, secondResult]
     · intro unfinished flags
       have remainingPositive : 0 < pairs := by have := mt exitIff.mpr unfinished; omega
       let t := unrolledState s first second flags
-      have stable := pair_stable s first second flags
+      have stable : PairStable s t := pair_stable s first second flags
       have memory : t.dmem = Large.fillMem s.dmem dst index [firstResult.1, secondResult.1] :=
         pair_memory s dst factor index carry first second destinationReg indexReg factorReg carryReg carryBound
+      have endpoint : index+2+2*pairs = index+2*(pairs+1) := by omega
       apply ih remainingPositive (index+2) (by omega) (by omega) t secondResult.2 secondCarryBound
       · simpa only [stable.rsi] using sourceReg
       · simpa only [stable.r9] using lengthReg
@@ -114,9 +117,10 @@ theorem pairs_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
       · rw [stable.r12, pairedReg]
         congr 1
         omega
-      · simp only [t, unrolledState, secondProducedState, UInt64.toBitVec_ofBitVec,
-          indexReg, BitVec.ofNat_add]
-      · simp only [t, unrolledState, secondProducedState, UInt64.toBitVec_ofNat, checkedSecond]
+      · simp (config := {instances := true}) only
+          [t, unrolledState, secondProducedState, UInt64.toBitVec_ofBitVec,
+            indexReg, BitVec.ofNat_add, WordNormalize.bitvecNumeral]
+      · simp only [t, unrolledState, secondProducedState, UInt64.toBitVec_ofNat', checkedSecond]
       · rw [memory]
         exact NatAdd.Carry.fill_preserves s.dmem (.large source words) dst index (8*capacity)
           [firstResult.1, secondResult.1] input apart (by simp only [List.length_cons, List.length_nil]; omega)
@@ -126,8 +130,8 @@ theorem pairs_cps (e : Executable) (base : Int64) (hc : CodeAt e base)
         · rw [totalWidth, recurrence]
           simp only [first, second, firstResult, secondResult, Large.fillMem] at memory ⊢
           simpa only [memory, Large.fillMem] using restMemory
-        · convert finalIndex using 1 <;> congr 1 <;> omega
-        · convert finalCounter using 1 <;> congr 1 <;> omega
+        · simpa only [endpoint] using finalIndex
+        · simpa only [endpoint] using finalCounter
         · rw [totalWidth, recurrence]
           exact finalCarry
 

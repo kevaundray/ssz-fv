@@ -20,7 +20,7 @@ theorem wide_run_from_current (s u : ArmState) (base factor : BitVec 64)
   let used := read_mem_bytes 8 (r (.GPR 4#5) s + 16#64) s
   obtain ⟨fuel, v, vr, reached, selected⟩ := Reserve.wide_checks_runs u base address capacity used
     (priorFrame.code code) (priorFrame.error.trans error) (priorFrame.aligned aligned) pc
-    (by simpa only [BitVec.ofNat_zero, BitVec.add_zero] using priorFrame.header owned 0 (by decide))
+    (by simpa only [BitVec.add_zero] using priorFrame.header owned 0 (by decide))
     (priorFrame.header owned 8 (by decide)) (priorFrame.header owned 16 (by decide))
   have frame : SmallFrame s v := priorFrame.trans reached.small
   rcases selected with ⟨failed, exit⟩ | ⟨checks, exit, baseReg, startReg, finishReg, _, _⟩

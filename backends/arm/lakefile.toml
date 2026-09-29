@@ -219,4 +219,812 @@ name = "SszFixedSizeOrder"
 srcDir = "../../proofs"
 
 [[lean_lib]]
+name = "SszWordAutomation"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleWords"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleWordsActive"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleAccumulatorCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleAccumulatorDepth"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleAccumulatorTree"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleAccumulatorPushArithmetic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleAccumulatorRootArithmetic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleAccumulator"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleAccumulatorPush"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleAccumulatorRoot"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleAccumulatorRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleProgressive"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleProgressiveInvariant"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszMerkleProgressiveRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszTypedArena"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecError"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecMeasure"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecMeasureExpected"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecMeasureLogic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecMeasureRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecMeasureProofs"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecMeasureResourcesCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecMeasureResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecMeasureOrder"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecEmit"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecEmitOrder"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecEmitPlans"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecEmitMemory"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecEmitResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecEmitSafety"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecEmitSemanticBase"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecEmitSizes"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecEmitSemantic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecEmitProofs"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecode"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeRefinementCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodePrimitiveProofs"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodePrimitiveStorage"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeSequenceCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeSequenceRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeStructCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeStructSlots"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeStructValidation"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeStructRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeUnion"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeBorrowed"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeResourcesCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeResourcesWrites"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeResourcesFrame"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeResourcesPrefix"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszCodecDecodeResourcesPhysical"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashStream"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashStreamBlocks"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashStreamPadding"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashStreamMemory"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashStreamPaddingWrites"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashStreamRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashStreamUpdates"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashStreamFinalize"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashStreamPublic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutTypes"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutArithmetic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutArithmeticProofs"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutArithmeticResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutPacked"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutPackedProofs"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutNested"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutDomain"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutNestedProofs"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayout"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutGenerated"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutPhysical"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutStream"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutRoot"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutWidths"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutRefinementCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutStreamRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutRootRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszHashLayoutIndexedRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesTypes"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticPower"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierOrder"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPhysical"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatShift"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatShiftSemantics"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszNatShiftResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPinnedFrontier"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPinnedAntichain"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTypes"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofIndicesRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofSingle"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiPureBase"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndices"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmetic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticInitialization"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticOperationResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticPhysical"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemantic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemanticCeil"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemanticCeilCarry"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemanticChild"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemanticConcat"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemanticCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemanticMake"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemanticMasks"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemanticPrefix"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemanticShift"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticSemanticWords"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesArithmeticShiftPhysical"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesDescriptor"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesDescriptorRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontier"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierCandidates"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierMembership"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierMembershipComplete"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierResourcesCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierResourcesMonotone"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierResourcesRuns"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierResourcesTrace"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierSemantic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierSemanticBuild"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierSemanticCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierSemanticErrors"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierSemanticPaths"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierSemanticValidation"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierUnique"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesFrontierUniqueKeys"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPaths"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsCursor"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsPhysical"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsRefinementArithmetic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsRefinementBounds"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsRefinementChunks"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsRefinementCount"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsRefinementGeneralized"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsRefinementPosition"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsRefinementResolve"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPathsResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPowerSemantic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPowerSemanticDepth"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPowerSemanticNext"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesPowerSemanticPaths"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesProgressive"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesProgressiveResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesProgressiveSemantic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesProgressiveSemanticAlgebra"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesProgressiveSemanticBorrow"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesProgressiveSemanticMasks"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszIndicesProgressiveSemanticThreshold"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProof"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofConstruction"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofConstructionRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofConstructionRefinementCore"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofConstructionResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofConstructionWidths"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMulti"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiEndpoint"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiEndpointResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiFoldRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiHelperResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiInitial"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiInvariant"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiPassRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiPassRefinementStable"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiPermutation"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiPureTree"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiReservedRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiSize"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiStable"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiStableRoot"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofMultiView"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofSingleRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversal"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalArithmetic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalBoundedRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalProgressiveRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalRange"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalRangeRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalSafety"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalWalkRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalWidths"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalWindow"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofTraversalWindowRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofWidthResources"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofWidths"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofWidthsPublic"
+srcDir = "../../proofs"
+
+[[lean_lib]]
+name = "SszProofWidthsRefinement"
+srcDir = "../../proofs"
+
+[[lean_lib]]
 name = "SszArm"

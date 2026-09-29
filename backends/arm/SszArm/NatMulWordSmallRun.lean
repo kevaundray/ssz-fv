@@ -67,7 +67,7 @@ theorem small_run (s : ArmState) (base : BitVec 64) (operand : SszNative.NatOper
     (nonzero : factor ≠ 0#64) (notone : factor ≠ 1#64) (small : operand.wordCount ≤ 1) :
     ∃ fuel t, run fuel s = t ∧ Post s t operand factor := by
   obtain ⟨scanFuel, u, ur, scan, _, ready⟩ := general_ready s base factor operand code error aligned
-    (by simpa only [entry, BitVec.ofNat_zero, BitVec.add_zero] using pc) owned nonzero notone
+    (by simpa only [entry, BitVec.add_zero] using pc) owned nonzero notone
   simp only [GeneralReady, small, ↓reduceIte] at ready
   obtain ⟨fuel, t, tr, post⟩ := small_checkpoint_run s u base factor operand owned
     (scan.small owned.stackBound) code error aligned ready.1 ready.2 nonzero notone small

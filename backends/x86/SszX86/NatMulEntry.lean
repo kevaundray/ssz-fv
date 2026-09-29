@@ -23,7 +23,9 @@ theorem entry_prepares (e : Executable) (base : Int64) (hc : CodeAt e base)
   have phase := prepare_runs e base hc (localState (pushedState s) flags) left right
     owned.left_pointer owned.left_payload owned.right_pointer owned.right_payload
     originals.1 originals.2
-  exact eventually_weaken _ _ _ _
-    (fun _ prepared => Prepared.rebase ⟨rfl, rfl, rfl, rfl, rfl⟩ prepared) phase
+  exact eventually_weaken (step e) (Prepared (localState (pushedState s) flags) left right base)
+    (Prepared (bodyState s) left right base) _
+    (fun _ prepared => Prepared.rebase (s := bodyState s) (u := localState (pushedState s) flags)
+      ⟨rfl, rfl, rfl, rfl, rfl⟩ prepared) phase
 
 end SszX86.NatMul

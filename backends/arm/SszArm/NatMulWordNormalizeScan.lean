@@ -1,14 +1,9 @@
-import SszArm.NatMulWordNormalizeFrame
+import SszArm.NatMulWordNormalizeStages
 
 namespace SszArm.NatMulWord
 
 open UintCodec SszNative.Limbs
 
-def normalizeGuard : List Op := [.p1468, .p1472]
-def normalizeRoundOps : List Op := [.p1468, .p1472, .p1476, .p1480]
-
-def normalizeRound (base : BitVec 64) (s : ArmState) : ArmState :=
-  block base normalizeRoundOps s
 
 /-- The post-indexed LDR reads the current highest word before moving X8 back.
 Its premise is the current full physical image, not a future read oracle. -/
@@ -34,20 +29,18 @@ theorem normalize_scan_round (s : ArmState) (base pointer : BitVec 64)
     have address : pointer + (BitVec.ofNat 64 n <<< 3) =
         pointer + BitVec.ofNat 64 (8 * n) := by bv_omega
     simpa only [address] using (scan_limb s pointer words n hn hs hm).2.2
-  have hpc : r .PC s = base + 1468#64 := hp
-  have hf : Follows base normalizeRoundOps s := by
-    simp [normalizeRoundOps, Follows, Op.row, Op.effect, put, next,
-      state_simp_rules, hpc, h12, hne, Udivti3.cmp_zero, BitVec.add_assoc]
+  have hf := normalize_round_follows s base hp (by simpa only [h12] using hne)
   refine ⟨block_run base normalizeRoundOps s hc he ha hf,
     normalize_read_frame base normalizeRoundOps s (by decide), ?_, ?_, ?_, ?_⟩
-  · simp [normalizeRound, normalizeRoundOps, block, Op.effect, put, next,
-      state_simp_rules, h8, BitVec.add_neg_eq_sub]
-  · simp [normalizeRound, normalizeRoundOps, block, Op.effect, put, next,
-      state_simp_rules, h8, hload]
-  · simp [normalizeRound, normalizeRoundOps, block, Op.effect, put, next,
-      state_simp_rules, h12, hsub]
-  · simp [normalizeRound, normalizeRoundOps, block, Op.effect, put, next,
-      state_simp_rules, h8, hload]
+  · rw [normalize_round_gpr]
+    simp only [↓reduceIte, h8]
+    bv_omega
+  · rw [normalize_round_gpr]
+    simp only [show (9#5 : BitVec 5) ≠ 8#5 by decide, ↓reduceIte, h8, hload]
+  · rw [normalize_round_gpr]
+    simp only [show (12#5 : BitVec 5) ≠ 8#5 by decide,
+      show (12#5 : BitVec 5) ≠ 9#5 by decide, ↓reduceIte, h12, hsub]
+  · rw [normalize_round_pc, h8, hload]
 
 /-- The induction is over every remaining physical word. At zero no memory is
 read, including when the post-indexed pointer has moved below the allocation. -/
@@ -68,14 +61,19 @@ theorem normalize_scan (base pointer : BitVec 64) (words : List (BitVec 64)) :
   | zero =>
     intro s hn hc he ha hp h8 h12 hs hm
     let t := block base normalizeGuard s
-    have hpc : r .PC s = base + 1468#64 := hp
-    have hf : Follows base normalizeGuard s := by
-      simp [normalizeGuard, Follows, Op.row, Op.effect, put, next,
-        state_simp_rules, hpc, BitVec.add_assoc]
+    have hf := normalize_guard_follows s base hp
     refine ⟨2, t, block_run base normalizeGuard s hc he ha hf,
       normalize_read_frame base normalizeGuard s (by decide), ?_, ?_, ?_⟩
-    all_goals simp [t, normalizeGuard, block, Op.effect, put, next,
-      state_simp_rules, h12, significantCount, Udivti3.cmp_zero]
+    · change read_pc (block base normalizeGuard s) = _
+      rw [normalize_guard_pc, h12]
+      simp only [significantCount, Nat.zero_add, ↓reduceIte]
+    · change r (.GPR 12#5) (block base normalizeGuard s) = _
+      rw [normalize_guard_gpr, h12]
+      simp only [significantCount, Nat.zero_add, ↓reduceIte, BitVec.sub_self]
+    · intro zero
+      change r (.GPR 9#5) (block base normalizeGuard s) = _
+      rw [normalize_guard_gpr]
+      simp only [show (9#5 : BitVec 5) ≠ 12#5 by decide, ↓reduceIte]
   | succ n ih =>
     intro s hn hc he ha hp h8 h12 hs hm
     obtain ⟨hu, huf, hu8, hu9, hu12, hup⟩ := normalize_scan_round s base pointer words n

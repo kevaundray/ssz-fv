@@ -22,7 +22,10 @@ theorem loop_source (s : ArmState) (raw pointer : BitVec 64)
     (physical : raw.toNat + 8 * words.length ≤ 2^64)
     (separate : Protected (NatMul.loopWrites (r (.GPR 31#5) s) pointer count)
       raw.toNat (8 * words.length)) : NatCompare.Source s raw words := by
-  refine ⟨by have := space.stack; omega, physical, ?_⟩
+  refine ⟨by
+    have stack := space.stack
+    arm_word_nf at stack ⊢
+    omega, physical, ?_⟩
   rcases separate with empty | separate
   · left
     apply List.eq_nil_of_length_eq_zero

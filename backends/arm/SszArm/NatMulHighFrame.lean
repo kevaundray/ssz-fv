@@ -34,18 +34,22 @@ theorem high_completed_saved (s : ArmState) (base : BitVec 64)
       show a = block base highSaveOps s from rfl, high_save_effect]
     simp only [ArmState.mem_w_eq_mem]
   have reads := Memory.mem_eq_iff_read_mem_bytes_eq.mp memory
-  have observed := NatMulSpill.six_reads s (r (.GPR 31#5) s)
-    (r (.GPR 9#5) s) (r (.GPR 10#5) s) (r (.GPR 11#5) s)
-    (r (.GPR 12#5) s) (r (.GPR 13#5) s) (r (.GPR 15#5) s) stack
-  change r (.GPR reg) (block base highRestoreOps b) = _
-  simp only [highSaved, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl
-  all_goals
-    simp [BitVec.sub_eq_add_neg] at observed
-    simp (config := {decide := true}) [highRestoreOps, highSpilled, block, Op.effect,
-      put, next, state_simp_rules, reads, sp, BitVec.sub_eq_add_neg,
-      BitVec.add_assoc, observed.1, observed.2.1, observed.2.2.1,
-      observed.2.2.2.1, observed.2.2.2.2.1, observed.2.2.2.2.2]
+  have saved : reg ∈ NatMulWord.HighSite.first.saved := member
+  rcases List.getElem_of_mem saved with ⟨index, bound, selected⟩
+  have length : NatMulWord.HighSite.first.saved.length = 6 := rfl
+  let slot : Fin 6 := ⟨index, by omega⟩
+  have slotReg : NatMulWord.HighSite.first.saved[slot.val]! = reg := by
+    change NatMulWord.HighSite.first.saved[index]! = reg
+    rw [List.getElem!_eq_getElem?_getD, List.getElem?_eq_getElem bound]
+    exact selected
+  have restored := NatMulWord.high_restore_read .first b base slot
+  rw [sp, reads] at restored
+  change r (.GPR reg) (block base highRestoreOps b) = r (.GPR reg) s
+  rw [high_restore_word]
+  exact (congrArg (fun query : BitVec 5 =>
+    r (.GPR query) (NatMulWord.block base NatMulWord.HighSite.first.restoreOps b) =
+      r (.GPR query) s) slotReg).mp
+    (restored.trans (NatMulWord.high_spilled_read .first s slot stack))
 
 theorem high_completed_registers (s : ArmState) (base : BitVec 64)
     (stack : 48 ≤ (r (.GPR 31#5) s).toNat) (reg : BitVec 5) (different : reg ≠ 18#5) :
