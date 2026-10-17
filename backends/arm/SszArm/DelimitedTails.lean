@@ -141,7 +141,7 @@ theorem representation_values (s : ArmState) (base : BitVec 64) (length highest 
     simp only [hz, Nat.sub_zero] at zero
     simp [representationState, representationOps, representationTestOps,
       alignedByteOps, unalignedByteOps, representationSumOps, noOverflowOps,
-      representationJoinOps, block, Op.effect, put, next, state_simp_rules,
+      representationJoinOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
       lenReg, prefixReg, clzReg, zero, hz, sum, retainedBytes]
 
 /-- All non-temporary registers, memory, and SIMD lanes survive the check. -/
@@ -151,7 +151,7 @@ theorem representation_register (s : ArmState) (base : BitVec 64) (highest : Nat
   by_cases hz : highest = 0 <;>
     simp [representationState, representationOps, representationTestOps,
       alignedByteOps, unalignedByteOps, representationSumOps, noOverflowOps,
-      representationJoinOps, block, Op.effect, put, next, state_simp_rules,
+      representationJoinOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
       hz, ne8, ne9, ne10]
 
 theorem representation_memory (s : ArmState) (base : BitVec 64) (highest : Nat) :
@@ -159,7 +159,7 @@ theorem representation_memory (s : ArmState) (base : BitVec 64) (highest : Nat) 
   by_cases hz : highest = 0 <;>
     simp [representationState, representationOps, representationTestOps,
       alignedByteOps, unalignedByteOps, representationSumOps, noOverflowOps,
-      representationJoinOps, block, Op.effect, put, next, state_simp_rules, hz]
+      representationJoinOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hz]
 
 theorem representation_load (s : ArmState) (base : BitVec 64) (highest : Nat) :
     widthLoad (representationState base highest s) = widthLoad s := by
@@ -173,7 +173,7 @@ theorem representation_vectors (s : ArmState) (base : BitVec 64) (highest : Nat)
   by_cases hz : highest = 0 <;>
     simp [representationState, representationOps, representationTestOps,
       alignedByteOps, unalignedByteOps, representationSumOps, noOverflowOps,
-      representationJoinOps, block, Op.effect, put, next, state_simp_rules, hz]
+      representationJoinOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hz]
 
 /-- Successful decode from the real representation-check start through RET.
 The borrowed byte count, full count limbs, and impossibility of reason 32770

@@ -65,18 +65,18 @@ private theorem reason_run (allZero : Bool) (s : ArmState) (base : BitVec 64)
 private theorem reason_register (allZero : Bool) (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) (unchanged : reg ≠ 9#5) :
     r (.GPR reg) (block base (reasonOps allZero) s) = r (.GPR reg) s := by
-  cases allZero <;> simp [reasonOps, noDelimiterOps, trailingOps, block, Op.effect,
+  cases allZero <;> simp [reasonOps, noDelimiterOps, trailingOps, block_cons, block_nil, Op.effect,
     put, next, state_simp_rules, unchanged]
 
 private theorem reason_memory (allZero : Bool) (s : ArmState) (base : BitVec 64) :
     (block base (reasonOps allZero) s).mem = s.mem := by
-  cases allZero <;> simp [reasonOps, noDelimiterOps, trailingOps, block, Op.effect,
+  cases allZero <;> simp [reasonOps, noDelimiterOps, trailingOps, block_cons, block_nil, Op.effect,
     put, next, state_simp_rules]
 
 private theorem reason_vectors (allZero : Bool) (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) :
     r (.SFP reg) (block base (reasonOps allZero) s) = r (.SFP reg) s := by
-  cases allZero <;> simp [reasonOps, noDelimiterOps, trailingOps, block, Op.effect,
+  cases allZero <;> simp [reasonOps, noDelimiterOps, trailingOps, block_cons, block_nil, Op.effect,
     put, next, state_simp_rules]
 
 private theorem reason_values (allZero : Bool) (s : ArmState) (base : BitVec 64)
@@ -85,7 +85,7 @@ private theorem reason_values (allZero : Bool) (s : ArmState) (base : BitVec 64)
       (r (.GPR 9#5) (block base (reasonOps allZero) s)).setWidth 32 =
         (if allZero then 17#32 else 18#32) := by
   have pc : r .PC s = if allZero then base + 188#64 else base + 616#64 := hp
-  cases allZero <;> simp [reasonOps, noDelimiterOps, trailingOps, block, Op.effect,
+  cases allZero <;> simp [reasonOps, noDelimiterOps, trailingOps, block_cons, block_nil, Op.effect,
     put, next, state_simp_rules, pc, BitVec.add_assoc]
 
 /-- A zero final byte executes the complete real scan and error RET. The model's

@@ -10,13 +10,13 @@ theorem fast_finish_register (site : FastSite) (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) :
     r (.GPR reg) (block base (site.finish s) s) = r (.GPR reg) s := by
   cases site <;> by_cases hz : r (.GPR 1#5) s = 0#64 <;>
-    simp [FastSite.finish, block, Op.effect, state_simp_rules, hz]
+    simp [FastSite.finish, block_cons, block_nil, Op.effect, state_simp_rules, hz]
 
 theorem fast_finish_sfp (site : FastSite) (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) :
     r (.SFP reg) (block base (site.finish s) s) = r (.SFP reg) s := by
   cases site <;> by_cases hz : r (.GPR 1#5) s = 0#64 <;>
-    simp [FastSite.finish, block, Op.effect, state_simp_rules, hz]
+    simp [FastSite.finish, block_cons, block_nil, Op.effect, state_simp_rules, hz]
 
 /-- All saved-register observations survive the runtime call. The setup's X22
 copy is intentional; its original value remains in the saved activation. -/
@@ -32,7 +32,7 @@ theorem fast_gpr (site : FastSite) (s : ArmState) (base : BitVec 64)
     simpa [fastDivided, called, state_simp_rules, notLR] using call
   rw [calledKeep]
   have others : reg ≠ 0#5 ∧ reg ≠ 1#5 ∧ reg ≠ 2#5 ∧ reg ≠ 3#5 := by bv_omega
-  cases site <;> simp [fastPrepared, FastSite.setup, block, Op.effect, put, next,
+  cases site <;> simp [fastPrepared, FastSite.setup, block_cons, block_nil, Op.effect, put, next,
     state_simp_rules, others.1, others.2.1, others.2.2.1, others.2.2.2, notLow]
 
 @[simp] theorem fast_sp (site : FastSite) (s : ArmState) (base : BitVec 64) :
@@ -44,7 +44,7 @@ theorem fast_gpr (site : FastSite) (s : ArmState) (base : BitVec 64)
   rw [fastResult, fast_finish_sfp]
   change r (.SFP reg) (callResult site.call (fastPrepared site s base) base) = _
   rw [call_sfp]
-  cases site <;> simp [fastPrepared, FastSite.setup, block, Op.effect, put, next, state_simp_rules]
+  cases site <;> simp [fastPrepared, FastSite.setup, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem fast_saved (site : FastSite) (original s : ArmState) (base : BitVec 64)
     (saved : Saved original s) : Saved original (fastResult site s base) := by

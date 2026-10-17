@@ -48,7 +48,7 @@ theorem first_load_effect (s : ArmState) (base : BitVec 64)
       r (.GPR 13#5) t = 0#64 ∧
       r (.GPR 10#5) t = r (.GPR 10#5) s + r (.GPR 16#5) s ∧ t.mem = s.mem := by
   have hpc : r .PC s = base + 452#64 := hp
-  simp [firstLoadOps, block, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
+  simp [firstLoadOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
 
 theorem first_finish_effect (s : ArmState) (base : BitVec 64)
     (hp : read_pc s = base + 464#64) :
@@ -59,7 +59,7 @@ theorem first_finish_effect (s : ArmState) (base : BitVec 64)
       r (.GPR 11#5) t = r (.GPR 14#5) s * r (.GPR 3#5) s ∧
       t.mem = (firstMemory s).mem := by
   have hpc : r .PC s = base + 464#64 := hp
-  simp [firstFinishOps, firstMemory, block, Op.effect, put, next, state_simp_rules,
+  simp [firstFinishOps, firstMemory, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
     hpc, BitVec.add_assoc, NatCompare.spill_mem_w]
 
 theorem first_run (s : ArmState) (base : BitVec 64)

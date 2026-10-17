@@ -34,7 +34,7 @@ macro "natdiv_failure_side" : tactic => `(tactic|
 
 macro "natdiv_failure_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
-    [failureResult, failureOps, block, List.foldl_cons, List.foldl_nil,
+    [failureResult, failureOps, block_cons, block_nil, List.foldl_cons, List.foldl_nil,
      Op.effect, put, next, state_simp_rules, ArmState.mem_w_eq_mem,
      BitVec.add_assoc, BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat,
      Nat.reduceAdd, BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel])
@@ -66,7 +66,7 @@ theorem failure_registers (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) (hr : reg ∉ [1#5, 8#5, 9#5, 10#5, 31#5]) :
     r (.GPR reg) (failureResult base s) = r (.GPR reg) s := by
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
-  simp (disch := simp_all) [failureResult, failureOps, block, Op.effect,
+  simp (disch := simp_all) [failureResult, failureOps, block_cons, block_nil, Op.effect,
     put, next, state_simp_rules]
 
 @[simp] theorem failure_sp (s : ArmState) (base : BitVec 64) :

@@ -60,7 +60,7 @@ theorem guarded_pc (guard : Guard) (s : ArmState) (good : guard.good s) :
     simp only [Guard.good, Guard.left, Guard.right, ← BitVec.le_def] at good
   all_goals
     simp (config := {decide := true})
-      [guarded, block, Guard.ops, Op.effect, compare64, Dispatch.next, branch,
+      [guarded, block_cons, block_nil, Guard.ops, Op.effect, compare64, Dispatch.next, branch,
        state_simp_rules, Udivti3.cmp_carry, Udivti3.cmp_zero, good, BitVec.add_assoc]
 
 @[simp] theorem guarded_program (guard : Guard) (s : ArmState) :
@@ -73,17 +73,17 @@ theorem guarded_pc (guard : Guard) (s : ArmState) (good : guard.good s) :
 
 @[simp] theorem guarded_memory (guard : Guard) (s : ArmState) :
     (guarded guard s).mem = s.mem := by
-  cases guard <;> simp [guarded, block, Guard.ops, Op.effect, compare64,
+  cases guard <;> simp [guarded, block_cons, block_nil, Guard.ops, Op.effect, compare64,
     Dispatch.next, branch, state_simp_rules]
 
 @[simp] theorem guarded_register (guard : Guard) (s : ArmState) (reg : BitVec 5) :
     r (.GPR reg) (guarded guard s) = r (.GPR reg) s := by
-  cases guard <;> simp [guarded, block, Guard.ops, Op.effect, compare64,
+  cases guard <;> simp [guarded, block_cons, block_nil, Guard.ops, Op.effect, compare64,
     Dispatch.next, branch, state_simp_rules]
 
 @[simp] theorem guarded_vector (guard : Guard) (s : ArmState) (reg : BitVec 5) :
     r (.SFP reg) (guarded guard s) = r (.SFP reg) s := by
-  cases guard <;> simp [guarded, block, Guard.ops, Op.effect, compare64,
+  cases guard <;> simp [guarded, block_cons, block_nil, Guard.ops, Op.effect, compare64,
     Dispatch.next, branch, state_simp_rules]
 
 end SszArm.Emit.Bits

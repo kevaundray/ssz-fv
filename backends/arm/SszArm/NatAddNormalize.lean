@@ -45,19 +45,19 @@ theorem select_run (s : ArmState) (base pointer : BitVec 64) (words : List (BitV
     · simp
     · intro reg hr
       simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
-      simp (disch := simp_all) [block, Op.effect, put, next,
+      simp (disch := simp_all) [block_cons, block_nil, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules]
     · intro reg
-      simp [block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
+      simp [block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
     · intro a ha
-      simp [block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
-  · simp [block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
-  · simp [block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
-  · simp [block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+      simp [block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
+  · simp [block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
+  · simp [block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
+  · simp [block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
       state_simp_rules, hpc, BitVec.add_assoc]
-  · simp [block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+  · simp [block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
       state_simp_rules, h8, h9, compare, NatOperand.fromWords_pointer]
-  · simp [block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+  · simp [block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
       state_simp_rules, h8, h11, compare, NatOperand.fromWords_payload]
 
 /-- The complete output normalization prelude and backward scan. The nonzero
@@ -85,18 +85,18 @@ theorem normalize_run (s : ArmState) (base pointer : BitVec 64)
     simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc])
   have vf : Frame s v := scan_frame base _ s (by decide)
   have vp : read_pc v = base + 2052#64 := by
-    simp [v, block, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
+    simp [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
   have v8 : r (.GPR 8#5) v = BitVec.ofNat 64 (words.length + 1) := by
     calc
       r (.GPR 8#5) v = BitVec.ofNat 64 count + 2#64 := by
         simp (config := {decide := true})
-          [v, block, Op.effect, put, next, state_simp_rules, h8]
+          [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h8]
       _ = BitVec.ofNat 64 (words.length + 1) := by rw [length]; bv_omega
   have v10 : r (.GPR 10#5) v = pointer + BitVec.ofNat 64 (8 * words.length) - 8#64 := by
     calc
       r (.GPR 10#5) v = pointer + (BitVec.ofNat 64 count <<< 3) := by
         simp (config := {decide := true})
-          [v, block, Op.effect, put, next, state_simp_rules, h8, h10]
+          [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h8, h10]
       _ = pointer + BitVec.ofNat 64 (8 * words.length) - 8#64 := by
         rw [length]
         bv_omega

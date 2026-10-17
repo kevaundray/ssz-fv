@@ -46,7 +46,7 @@ theorem byte_read_effect (path : Path) (s : ArmState)
   simp only [NatCompare.saved, r_of_write_mem_bytes] at restored fields
   cases path <;>
     simpa (config := {decide := true})
-      [Tail.block, Path.readOps, Tail.Op.effect, Activation.put, Activation.next,
+      [Tail.block_cons, Tail.block_nil, Path.readOps, Tail.Op.effect, Activation.put, Activation.next,
        Dispatch.next, byteLoaded, NatCompare.saved, NatAdd.load_store_field,
        NatAdd.load_gpr_pc, state_simp_rules, BitVec.add_assoc, BitVec.sub_add_cancel,
        restored] using congrArg (w .PC (read_pc s + 28#64)) fields

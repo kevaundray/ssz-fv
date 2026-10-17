@@ -34,7 +34,7 @@ theorem right_round (s : ArmState) (base pointer : BitVec 64)
       h11, BitVec.add_assoc])
   have huf : NatCompare.Frame s u := scan_frame base _ s (by decide)
   have hup : read_pc u = base + 316#64 := by
-    simp [u, block, Op.effect, next, state_simp_rules, h11, notLast,
+    simp [u, block_cons, block_nil, Op.effect, next, state_simp_rules, h11, notLast,
       NatCompare.count_zero_bit]
   have hus : Source u pointer words := huf.source _ _ hs
   have hum : Words u pointer words := huf.words _ _ hs hm
@@ -42,7 +42,7 @@ theorem right_round (s : ArmState) (base pointer : BitVec 64)
       (r (.GPR LoadKind.trimRight.ptr) u + (r (.GPR LoadKind.trimRight.index) u <<< 3))
       (saved u LoadKind.trimRight.tmp) = words[n]?.getD 0#64 := by
     have hl := NatCompare.limb_load u pointer words n 9#5 hn hus hum
-    simpa [u, block, Op.effect, next, state_simp_rules, h3, h11,
+    simpa [u, block_cons, block_nil, Op.effect, next, state_simp_rules, h3, h11,
       LoadKind.ptr, LoadKind.index, LoadKind.tmp] using hl
   let v := loadResult u base .trimRight (words[n]?.getD 0#64)
   have hv : run 8 u = v := load_run u base _ .trimRight (scan_code huf hc)
@@ -87,7 +87,7 @@ theorem right_trim (base pointer : BitVec 64) (words : List (BitVec 64)) :
         hpc, h11, BitVec.add_assoc]
     refine ⟨2, t, block_run base ops s hc he ha follow,
       scan_frame base ops s (by decide), scan_zero base ops s (by decide), ?_, ?_, ?_, ?_⟩
-    all_goals simp [t, ops, block, Op.effect, next, state_simp_rules, h11,
+    all_goals simp [t, ops, block_cons, block_nil, Op.effect, next, state_simp_rules, h11,
       significantCount, NatCompare.count_zero_bit]
   | succ n ih =>
     intro s hn hc he ha hp h3 h11 hs hm

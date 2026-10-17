@@ -11,20 +11,20 @@ set_option maxHeartbeats 8000000
 private theorem prepare_register (s : ArmState) (base : BitVec 64) (reg : BitVec 5)
     (preserved : reg ∉ [0#5, 1#5, 2#5, 3#5, 21#5, 22#5, 27#5, 28#5, 29#5]) :
     r (.GPR reg) (block base prepareCompareOps s) = r (.GPR reg) s := by
-  simp (disch := simp_all) [block, prepareCompareOps, Op.effect, put, next, state_simp_rules]
+  simp (disch := simp_all) [block_cons, block_nil, prepareCompareOps, Op.effect, put, next, state_simp_rules]
 
 private theorem return_register (s : ArmState) (base : BitVec 64) (reg : BitVec 5)
     (preserved : reg ∉ [0#5, 2#5, 3#5, 8#5]) :
     r (.GPR reg) (block base callReturnOps s) = r (.GPR reg) s := by
-  simp (disch := simp_all) [block, callReturnOps, Op.effect, put, next, state_simp_rules]
+  simp (disch := simp_all) [block_cons, block_nil, callReturnOps, Op.effect, put, next, state_simp_rules]
 
 private theorem prepare_vector (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.SFP reg) (block base prepareCompareOps s) = r (.SFP reg) s := by
-  simp [block, prepareCompareOps, Op.effect, put, next, state_simp_rules]
+  simp [block_cons, block_nil, prepareCompareOps, Op.effect, put, next, state_simp_rules]
 
 private theorem return_vector (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.SFP reg) (block base callReturnOps s) = r (.SFP reg) s := by
-  simp [block, callReturnOps, Op.effect, put, next, state_simp_rules]
+  simp [block_cons, block_nil, callReturnOps, Op.effect, put, next, state_simp_rules]
 
 private theorem compare_owned {s t : ArmState} {pointer payload : BitVec 64}
     (low : 16 ≤ (r (.GPR 31#5) s).toNat)

@@ -31,7 +31,7 @@ theorem prepare_compare_fields (s : ArmState) (base : BitVec 64)
       r (.GPR 27#5) t = r (.GPR 0#5) s ∧ r (.GPR 28#5) t = r (.GPR 2#5) s ∧
       r (.GPR 29#5) t = r (.GPR 3#5) s ∧ r (.GPR 31#5) t = r (.GPR 31#5) s := by
   have hpc : r .PC s = base + 364#64 := hp
-  simp [block, prepareCompareOps, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
+  simp [block_cons, block_nil, prepareCompareOps, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
 
 /-- Only Rust Ordering's low byte is inspected. SXTB first sign-extends that
 byte to W8; B.LT takes both LT and EQ, and rejects exactly GT. -/
@@ -44,7 +44,7 @@ theorem compare_return_fields (s : ArmState) (base : BitVec 64) (order : Orderin
       r (.GPR 31#5) t = r (.GPR 31#5) s := by
   cases order <;>
     simp (config := {decide := true, instances := true})
-      [block, callReturnOps, Op.effect, put, next, state_simp_rules,
+      [block_cons, block_nil, callReturnOps, Op.effect, put, next, state_simp_rules,
        result, SszNative.NatABI.orderingByte, AddWithCarry, make_pstate, bitvec_rules]
 
 end SszArm.Delimited

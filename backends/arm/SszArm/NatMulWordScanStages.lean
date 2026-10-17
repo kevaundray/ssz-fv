@@ -36,12 +36,12 @@ theorem identity_guard_follows (s : ArmState) (base : BitVec 64)
 
 theorem identity_guard_register (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.GPR reg) (block base identityGuard s) = r (.GPR reg) s := by
-  simp [identityGuard, block, Op.effect, put, next, state_simp_rules]
+  simp [identityGuard, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem identity_guard_pc (s : ArmState) (base : BitVec 64) :
     read_pc (block base identityGuard s) =
       if r (.GPR 9#5) s + 1#64 = 0#64 then base + 832#64 else base + 116#64 := by
-  simp [identityGuard, block, Op.effect, put, next, state_simp_rules]
+  simp [identityGuard, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem trim_guard_follows (s : ArmState) (base : BitVec 64)
     (hp : read_pc s = base + 252#64) : Follows base trimGuard s := by
@@ -51,12 +51,12 @@ theorem trim_guard_follows (s : ArmState) (base : BitVec 64)
 
 theorem trim_guard_register (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.GPR reg) (block base trimGuard s) = r (.GPR reg) s := by
-  simp [trimGuard, block, Op.effect, put, next, state_simp_rules]
+  simp [trimGuard, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem trim_guard_pc (s : ArmState) (base : BitVec 64) :
     read_pc (block base trimGuard s) =
       if r (.GPR 2#5) s + r (.GPR 9#5) s = 0#64 then base + 920#64 else base + 260#64 := by
-  simp [trimGuard, block, Op.effect, put, next, state_simp_rules, Delimited.add_zero_flag]
+  simp [trimGuard, block_cons, block_nil, Op.effect, put, next, state_simp_rules, Delimited.add_zero_flag]
 
 theorem identity_tail_follows (s : ArmState) (base : BitVec 64)
     (hp : read_pc s = base + 148#64) : Follows base identityTail s := by
@@ -67,20 +67,20 @@ theorem identity_tail_follows (s : ArmState) (base : BitVec 64)
 theorem identity_tail_keep (s : ArmState) (base : BitVec 64) (reg : BitVec 5)
     (h8 : reg ≠ 8#5) (h9 : reg ≠ 9#5) :
     r (.GPR reg) (block base identityTail s) = r (.GPR reg) s := by
-  simp [identityTail, block, Op.effect, put, next, state_simp_rules, h8, h9]
+  simp [identityTail, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h8, h9]
 
 theorem identity_tail_index (s : ArmState) (base : BitVec 64) :
     r (.GPR 9#5) (block base identityTail s) = r (.GPR 9#5) s - 1#64 := by
-  simp [identityTail, block, Op.effect, put, next, state_simp_rules]
+  simp [identityTail, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem identity_tail_count (s : ArmState) (base : BitVec 64) :
     r (.GPR 8#5) (block base identityTail s) = r (.GPR 9#5) s := by
-  simp [identityTail, block, Op.effect, put, next, state_simp_rules]
+  simp [identityTail, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem identity_tail_pc (s : ArmState) (base : BitVec 64) :
     read_pc (block base identityTail s) =
       if r (.GPR 10#5) s = 0#64 then base + 108#64 else base + 160#64 := by
-  simp [identityTail, block, Op.effect, put, next, state_simp_rules]
+  simp [identityTail, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem trim_tail_follows (s : ArmState) (base : BitVec 64)
     (hp : read_pc s = base + 292#64) : Follows base trimTail s := by
@@ -91,19 +91,19 @@ theorem trim_tail_follows (s : ArmState) (base : BitVec 64)
 theorem trim_tail_keep (s : ArmState) (base : BitVec 64) (reg : BitVec 5)
     (h8 : reg ≠ 8#5) (h9 : reg ≠ 9#5) :
     r (.GPR reg) (block base trimTail s) = r (.GPR reg) s := by
-  simp [trimTail, block, Op.effect, put, next, state_simp_rules, h8, h9]
+  simp [trimTail, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h8, h9]
 
 theorem trim_tail_index (s : ArmState) (base : BitVec 64) :
     r (.GPR 9#5) (block base trimTail s) = r (.GPR 9#5) s - 1#64 := by
-  simp [trimTail, block, Op.effect, put, next, state_simp_rules]
+  simp [trimTail, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem trim_tail_offset (s : ArmState) (base : BitVec 64) :
     r (.GPR 8#5) (block base trimTail s) = r (.GPR 8#5) s + 8#64 := by
-  simp [trimTail, block, Op.effect, put, next, state_simp_rules]
+  simp [trimTail, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem trim_tail_pc (s : ArmState) (base : BitVec 64) :
     read_pc (block base trimTail s) =
       if r (.GPR 11#5) s = 0#64 then base + 252#64 else base + 304#64 := by
-  simp [trimTail, block, Op.effect, put, next, state_simp_rules]
+  simp [trimTail, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 end SszArm.NatMulWord

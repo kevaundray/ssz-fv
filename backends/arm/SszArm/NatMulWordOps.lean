@@ -970,8 +970,17 @@ def Op.effect (base : BitVec 64) : Op → ArmState → ArmState
   | .p1824, s => next (write_mem_bytes 4 ((r (.GPR 0#5) s) + (64#64)) ((((r (.GPR 8#5) s).setWidth 32).setWidth 64).setWidth 32) s)
   | .p1828, s => w .PC (r (.GPR 30#5) s) s
 
+-- Realize the 458-arm `Op.row`/`Op.effect` equation lemmas once, here: otherwise every importing
+-- module whose `simp` unfolds them privately regenerates the match equations and splitter.
+attribute [local simp] Op.row Op.effect
+
 def block (base : BitVec 64) (ops : List Op) (s : ArmState) : ArmState :=
   ops.foldl (fun t op => op.effect base t) s
+
+@[simp] theorem block_nil (base : BitVec 64) (s : ArmState) : block base [] s = s := (rfl)
+
+@[simp] theorem block_cons (base : BitVec 64) (op : Op) (ops : List Op) (s : ArmState) :
+    block base (op :: ops) s = block base ops (op.effect base s) := (rfl)
 
 def Follows (base : BitVec 64) : List Op → ArmState → Prop
   | [], _ => True

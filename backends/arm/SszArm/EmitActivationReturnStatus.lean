@@ -26,26 +26,26 @@ def statusWrites (args : Args) : List Span :=
   simp [statusStored, statusOps, ReturnBlock.block]
 
 @[simp] theorem statusStored_pc (s : ArmState) : read_pc (statusStored s) = read_pc s + 40#64 := by
-  simp [statusStored, statusOps, ReturnBlock.block, ReturnBlock.Op.effect, next, put,
+  simp [statusStored, statusOps, ReturnBlock.block_cons, ReturnBlock.block_nil, ReturnBlock.Op.effect, next, put,
     state_simp_rules, BitVec.add_assoc]
 
 @[simp] theorem statusStored_sp (s : ArmState) :
     r (.GPR 31#5) (statusStored s) = r (.GPR 31#5) s := by
-  simp [statusStored, statusOps, ReturnBlock.block, ReturnBlock.Op.effect, next, put,
+  simp [statusStored, statusOps, ReturnBlock.block_cons, ReturnBlock.block_nil, ReturnBlock.Op.effect, next, put,
     state_simp_rules, BitVec.sub_add_cancel]
 
 @[simp] theorem statusStored_register (s : ArmState) (reg : BitVec 5)
     (not9 : reg ≠ 9#5) (not10 : reg ≠ 10#5) (notSP : reg ≠ 31#5) :
     r (.GPR reg) (statusStored s) = r (.GPR reg) s := by
-  simp [statusStored, statusOps, ReturnBlock.block, ReturnBlock.Op.effect, next, put,
+  simp [statusStored, statusOps, ReturnBlock.block_cons, ReturnBlock.block_nil, ReturnBlock.Op.effect, next, put,
     state_simp_rules, not9, not10, notSP]
 
 @[simp] theorem statusStored_vector (s : ArmState) (reg : BitVec 5) :
     r (.SFP reg) (statusStored s) = r (.SFP reg) s := by
-  simp [statusStored, statusOps, ReturnBlock.block, ReturnBlock.Op.effect, next, put, state_simp_rules]
+  simp [statusStored, statusOps, ReturnBlock.block_cons, ReturnBlock.block_nil, ReturnBlock.Op.effect, next, put, state_simp_rules]
 
 @[simp] theorem statusStored_memory (s : ArmState) : (statusStored s).mem = (statusMemory s).mem := by
-  simp [statusStored, statusOps, ReturnBlock.block, ReturnBlock.Op.effect, next, put,
+  simp [statusStored, statusOps, ReturnBlock.block_cons, ReturnBlock.block_nil, ReturnBlock.Op.effect, next, put,
     statusMemory, state_simp_rules]
   simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
 

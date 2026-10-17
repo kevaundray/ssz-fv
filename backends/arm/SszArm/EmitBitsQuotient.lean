@@ -54,7 +54,7 @@ theorem shift_effect (path : Path) (s : ArmState)
   simp only [NatCompare.saved, r_of_write_mem_bytes] at restored fields
   cases path <;>
     simpa (config := {decide := true})
-      [block, Path.shiftOps, Path.low, Op.effect, Activation.put, Activation.next,
+      [block_cons, block_nil, Path.shiftOps, Path.low, Op.effect, Activation.put, Activation.next,
        Dispatch.next, shifted, NatCompare.saved, NatAdd.load_store_field,
        NatAdd.load_gpr_pc, state_simp_rules, BitVec.add_assoc, BitVec.sub_add_cancel,
        restored] using congrArg (w .PC (read_pc s + 24#64)) fields

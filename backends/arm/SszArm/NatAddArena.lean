@@ -91,10 +91,10 @@ theorem arena_big_reservation_runs (s : ArmState) (base address capacity used : 
         rw [← reached.memory]
         exact memory.1 a (by simpa only [r5] using outside)
       · have same : r (.GPR 8#5) t = r (.GPR 8#5) u := by
-          simp [t, arenaBigStoreOps, block, Op.effect, put, next, state_simp_rules]
+          simp [t, arenaBigStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
         exact same.trans preserved.1
       · have same : r (.GPR 10#5) t = r (.GPR 10#5) u := by
-          simp [t, arenaBigStoreOps, block, Op.effect, put, next, state_simp_rules]
+          simp [t, arenaBigStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
         apply BitVec.eq_of_toNat_eq
         rw [same, effect.2.1, pointer]
         exact preserved.2

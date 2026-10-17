@@ -56,12 +56,12 @@ theorem significant_scan_round (s : ArmState) (base pointer : BitVec 64)
   have huf : ScanFrame s u := scan_pure_frame base _ s (by cases quotient <;> decide)
   have hup : read_pc u = base + BitVec.ofNat 64 (scanLoadKind quotient).start := by
     cases quotient <;> simp [u, scanGuardOps, scanLoadKind, ScanLoad.start,
-      block, Op.effect, put, next, state_simp_rules, h9, hnonzero]
+      block_cons, block_nil, Op.effect, put, next, state_simp_rules, h9, hnonzero]
   have hu9 : r (.GPR 9#5) u = BitVec.ofNat 64 n := by
-    cases quotient <;> simpa [u, scanGuardOps, block, Op.effect, put, next,
+    cases quotient <;> simpa [u, scanGuardOps, block_cons, block_nil, Op.effect, put, next,
       state_simp_rules] using h9
   have huptr : r (.GPR (scanPointerReg quotient)) u = pointer := by
-    cases quotient <;> simpa [u, scanGuardOps, scanPointerReg, block, Op.effect,
+    cases quotient <;> simpa [u, scanGuardOps, scanPointerReg, block_cons, block_nil, Op.effect,
       put, next, state_simp_rules] using hptr
   have hus := huf.source pointer words hs
   have hum := huf.words pointer words hs hm
@@ -93,10 +93,10 @@ theorem significant_scan_round (s : ArmState) (base pointer : BitVec 64)
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
     rcases hr with rfl | rfl | rfl <;> cases quotient <;>
       simp [scanRoundResult, scanTailOps, scanLoadKind, scanLoadResult,
-        scanGuardOps, block, Op.effect, put, next, NatCompare.saved, state_simp_rules]
+        scanGuardOps, block_cons, block_nil, Op.effect, put, next, NatCompare.saved, state_simp_rules]
   all_goals cases quotient <;>
     simp [scanRoundResult, scanTailOps, scanLoadKind, scanLoadResult,
-      scanGuardOps, scanHead, block, Op.effect, put, next, NatCompare.saved,
+      scanGuardOps, scanHead, block_cons, block_nil, Op.effect, put, next, NatCompare.saved,
       state_simp_rules, h9, apply_ite]
 
 /-- Complete native descending scan, including the all-zero and empty cases.
@@ -127,9 +127,9 @@ theorem significant_scan (base pointer : BitVec 64) (words : List (BitVec 64))
     · have hrun := block_run base (scanGuardOps quotient) s hc he ha hf
       cases quotient <;> simpa [t, scanGuardOps] using hrun
     · intro reg hr
-      cases quotient <;> simp [t, scanGuardOps, block, Op.effect, put, next, state_simp_rules]
+      cases quotient <;> simp [t, scanGuardOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     · cases quotient <;> simp [t, scanGuardOps, scanExit, significantCount,
-        block, Op.effect, put, next, state_simp_rules, h9]
+        block_cons, block_nil, Op.effect, put, next, state_simp_rules, h9]
     · simp [significantCount]
   | succ n ih =>
     intro s hn hc he ha hp hptr h9 hs hm

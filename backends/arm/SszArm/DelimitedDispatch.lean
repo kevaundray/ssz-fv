@@ -22,7 +22,7 @@ theorem small_fields (s : ArmState) (base : BitVec 64) :
   have zero := cmp32_zero (read_mem_bytes 4 (r (.GPR 1#5) s) s) 1#32
   change (AddWithCarry (read_mem_bytes 4 (r (.GPR 1#5) s) s)
     4294967294#32 1#1).2.z = 1#1 ↔ _ at zero
-  simp [block, smallOps, Op.effect, put, next, state_simp_rules, zero]
+  simp [block_cons, block_nil, smallOps, Op.effect, put, next, state_simp_rules, zero]
 
 def largeLimitOps : List Op := [.p352, .p356, .p360]
 
@@ -43,7 +43,7 @@ theorem large_limit_fields (s : ArmState) (base : BitVec 64) :
   have zero := cmp32_zero (read_mem_bytes 4 (r (.GPR 1#5) s) s) 1#32
   change (AddWithCarry (read_mem_bytes 4 (r (.GPR 1#5) s) s)
     4294967294#32 1#1).2.z = 1#1 ↔ _ at zero
-  simp [block, largeLimitOps, Op.effect, put, next, state_simp_rules, zero] <;>
+  simp [block_cons, block_nil, largeLimitOps, Op.effect, put, next, state_simp_rules, zero] <;>
     (split <;> simp_all)
 
 /-- Small count construction has no scratch traffic and retains the full value,

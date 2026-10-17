@@ -1040,7 +1040,7 @@ theorem block_run (base : BitVec 64) (ops : List Op) (s : ArmState)
 
 macro "delimited_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true})
-    [block, Follows, Op.row, Op.effect, put, next,
+    [block_cons, block_nil, Follows, Op.row, Op.effect, put, next,
      state_simp_rules, BitVec.add_assoc])
 
 end SszArm.Delimited

@@ -45,7 +45,7 @@ theorem tailGuarded_pc (guard : TailGuard) (s : ArmState) (good : guard.good s) 
     read_pc (tailGuarded guard s) = read_pc s + 8#64 := by
   cases guard <;> simp only [TailGuard.good] at good
   all_goals
-    simp (config := {decide := true}) [tailGuarded, Tail.block, TailGuard.ops, Tail.Op.effect,
+    simp (config := {decide := true}) [tailGuarded, Tail.block_cons, Tail.block_nil, TailGuard.ops, Tail.Op.effect,
       Tail.lowerOrSame, Dispatch.branch, Dispatch.compare64, Dispatch.next, state_simp_rules,
       Udivti3.cmp_zero, good, BitVec.add_assoc]
   all_goals
@@ -56,7 +56,7 @@ theorem tailGuarded_pc (guard : TailGuard) (s : ArmState) (good : guard.good s) 
 theorem vector_aligned_pc (s : ArmState)
     (same : r (.GPR 24#5) s = r (.GPR 23#5) s) :
     read_pc (tailGuarded .vectorBacking s) = read_pc s + 324#64 := by
-  simp (config := {decide := true}) [tailGuarded, Tail.block, TailGuard.ops, Tail.Op.effect,
+  simp (config := {decide := true}) [tailGuarded, Tail.block_cons, Tail.block_nil, TailGuard.ops, Tail.Op.effect,
     Tail.lowerOrSame, Dispatch.branch, Dispatch.compare64, Dispatch.next, state_simp_rules,
     Udivti3.cmp_high, same, BitVec.add_assoc]
 
@@ -68,17 +68,17 @@ theorem vector_aligned_pc (s : ArmState)
 
 @[simp] theorem tailGuarded_memory (guard : TailGuard) (s : ArmState) :
     (tailGuarded guard s).mem = s.mem := by
-  cases guard <;> simp [tailGuarded, Tail.block, TailGuard.ops, Tail.Op.effect,
+  cases guard <;> simp [tailGuarded, Tail.block_cons, Tail.block_nil, TailGuard.ops, Tail.Op.effect,
     Dispatch.branch, Dispatch.compare64, Dispatch.next, state_simp_rules]
 
 @[simp] theorem tailGuarded_register (guard : TailGuard) (s : ArmState) (reg : BitVec 5) :
     r (.GPR reg) (tailGuarded guard s) = r (.GPR reg) s := by
-  cases guard <;> simp [tailGuarded, Tail.block, TailGuard.ops, Tail.Op.effect,
+  cases guard <;> simp [tailGuarded, Tail.block_cons, Tail.block_nil, TailGuard.ops, Tail.Op.effect,
     Dispatch.branch, Dispatch.compare64, Dispatch.next, state_simp_rules]
 
 @[simp] theorem tailGuarded_vector (guard : TailGuard) (s : ArmState) (reg : BitVec 5) :
     r (.SFP reg) (tailGuarded guard s) = r (.SFP reg) s := by
-  cases guard <;> simp [tailGuarded, Tail.block, TailGuard.ops, Tail.Op.effect,
+  cases guard <;> simp [tailGuarded, Tail.block_cons, Tail.block_nil, TailGuard.ops, Tail.Op.effect,
     Dispatch.branch, Dispatch.compare64, Dispatch.next, state_simp_rules]
 
 end SszArm.Emit.Bits

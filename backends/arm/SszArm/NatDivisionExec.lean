@@ -651,7 +651,7 @@ theorem Op.high_gpr_frame (op : Op) (base : BitVec 64) (s : ArmState)
 
 macro "natdivision_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true})
-    [block, Follows, Op.row, Op.effect, put, next,
+    [block_cons, block_nil, Follows, Op.row, Op.effect, put, next,
      state_simp_rules, BitVec.add_assoc])
 
 end SszArm.NatDivision

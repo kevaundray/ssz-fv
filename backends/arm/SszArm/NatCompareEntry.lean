@@ -39,7 +39,7 @@ theorem scan_entry (s : ArmState) (base : BitVec 64) (n : Nat)
   all_goals
     by_cases hl : r (.GPR 0#5) s = 0#64 <;> by_cases hr : r (.GPR 2#5) s = 0#64 <;>
       simp [t, ops, scanEntryOps, scanKind, ScanKind.index, ScanKind.head,
-        block, Op.effect, put, next, state_simp_rules, hl, hr, h9]
+        block_cons, block_nil, Op.effect, put, next, state_simp_rules, hl, hr, h9]
 
 theorem scan_inputs (s : ArmState) (xs ys : List (BitVec 64))
     (hx : Operand s (r (.GPR 0#5) s) (r (.GPR 1#5) s) xs)

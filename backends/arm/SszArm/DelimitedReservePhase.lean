@@ -12,11 +12,11 @@ set_option maxHeartbeats 8000000
 private theorem reserve_limit_register (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) (unchanged : reg ≠ 8#5) :
     r (.GPR reg) (block base largeLimitOps s) = r (.GPR reg) s := by
-  simp [largeLimitOps, block, Op.effect, put, next, state_simp_rules, unchanged]
+  simp [largeLimitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, unchanged]
 
 private theorem reserve_limit_vectors (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.SFP reg) (block base largeLimitOps s) = r (.SFP reg) s := by
-  simp [largeLimitOps, block, Op.effect, put, next, state_simp_rules]
+  simp [largeLimitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 /-- Observe the real paired store in the checked reservation memory image.
 The payload is not inferred merely from the numeric Nat relation. -/

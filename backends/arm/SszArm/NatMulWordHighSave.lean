@@ -7,7 +7,7 @@ theorem high_save_first (s : ArmState) (base : BitVec 64) :
     block base HighSite.first.saveOps s =
       w (.GPR 31#5) (r (.GPR 31#5) s - 48#64)
         (w .PC (read_pc s + 28#64) (HighSite.first.spilled s)) := by
-  simp [HighSite.saveOps, HighSite.spilled, HighSite.saved, block, Op.effect, put, next,
+  simp [HighSite.saveOps, HighSite.spilled, HighSite.saved, block_cons, block_nil, Op.effect, put, next,
     NatMulSpill.six, state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg,
     NatFromU128.store_field_write]
   rw [w_of_w_commute (fld1 := .PC) (fld2 := .GPR 31#5) (by decide)]
@@ -17,7 +17,7 @@ theorem high_save_loop (s : ArmState) (base : BitVec 64) :
     block base HighSite.loop.saveOps s =
       w (.GPR 31#5) (r (.GPR 31#5) s - 48#64)
         (w .PC (read_pc s + 28#64) (HighSite.loop.spilled s)) := by
-  simp [HighSite.saveOps, HighSite.spilled, HighSite.saved, block, Op.effect, put, next,
+  simp [HighSite.saveOps, HighSite.spilled, HighSite.saved, block_cons, block_nil, Op.effect, put, next,
     NatMulSpill.six, state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg,
     NatFromU128.store_field_write]
   rw [w_of_w_commute (fld1 := .PC) (fld2 := .GPR 31#5) (by decide)]
@@ -27,7 +27,7 @@ theorem high_save_small (s : ArmState) (base : BitVec 64) :
     block base HighSite.small.saveOps s =
       w (.GPR 31#5) (r (.GPR 31#5) s - 48#64)
         (w .PC (read_pc s + 28#64) (HighSite.small.spilled s)) := by
-  simp [HighSite.saveOps, HighSite.spilled, HighSite.saved, block, Op.effect, put, next,
+  simp [HighSite.saveOps, HighSite.spilled, HighSite.saved, block_cons, block_nil, Op.effect, put, next,
     NatMulSpill.six, state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg,
     NatFromU128.store_field_write]
   rw [w_of_w_commute (fld1 := .PC) (fld2 := .GPR 31#5) (by decide)]

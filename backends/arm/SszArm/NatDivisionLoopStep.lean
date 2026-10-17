@@ -77,19 +77,19 @@ theorem loop_load_run (s : ArmState) (base : BitVec 64) (count i : Nat)
         by_cases h21 : reg = 21#5 <;> by_cases h31 : reg = 31#5 <;>
         (try subst reg) <;>
         simp_all (config := {decide := true, instances := true})
-          [loopPrepared, loopSpill, loopAddress, loopLoadOps, block, Op.effect,
+          [loopPrepared, loopSpill, loopAddress, loopLoadOps, block_cons, block_nil, Op.effect,
             put, next, state_simp_rules, read_spill_w, BitVec.sub_add_cancel, BitVec.add_assoc]
-    | PC => simp [loopPrepared, loopLoadOps, block, Op.effect, put, next,
+    | PC => simp [loopPrepared, loopLoadOps, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, hpc, BitVec.add_assoc]
-    | SFP reg => simp [loopPrepared, loopSpill, loopLoadOps, block, Op.effect,
+    | SFP reg => simp [loopPrepared, loopSpill, loopLoadOps, block_cons, block_nil, Op.effect,
         put, next, state_simp_rules]
-    | FLAG flag => simp [loopPrepared, loopSpill, loopLoadOps, block, Op.effect,
+    | FLAG flag => simp [loopPrepared, loopSpill, loopLoadOps, block_cons, block_nil, Op.effect,
         put, next, state_simp_rules]
-    | ERR => simp [loopPrepared, loopSpill, loopLoadOps, block, Op.effect,
+    | ERR => simp [loopPrepared, loopSpill, loopLoadOps, block_cons, block_nil, Op.effect,
         put, next, state_simp_rules]
-  · simp [loopPrepared, loopSpill, loopLoadOps, block, Op.effect, put, next, state_simp_rules]
+  · simp [loopPrepared, loopSpill, loopLoadOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · intro n addr
-    simp [loopPrepared, loopSpill, loopLoadOps, block, Op.effect, put, next,
+    simp [loopPrepared, loopSpill, loopLoadOps, block_cons, block_nil, Op.effect, put, next,
       state_simp_rules, read_spill_w]
 
 theorem loop_store_run (s : ArmState) (base : BitVec 64) (count i : Nat)
@@ -133,24 +133,24 @@ theorem loop_store_run (s : ArmState) (base : BitVec 64) (count i : Nat)
         by_cases h9 : reg = 9#5 <;> by_cases h23 : reg = 23#5 <;>
         by_cases h31 : reg = 31#5 <;> (try subst reg) <;>
         simp_all (config := {decide := true, instances := true})
-          [loopFinished, loopStored, loopSpill, loopAddress, loopStoreOps, block, Op.effect,
+          [loopFinished, loopStored, loopSpill, loopAddress, loopStoreOps, block_cons, block_nil, Op.effect,
             put, next, state_simp_rules, read_spill_w, loop_read_two_spills_w,
             BitVec.sub_add_cancel, BitVec.add_assoc]
     | PC =>
       by_cases hz : r (.GPR 23#5) s = 0#64 <;>
-        simp [loopFinished, loopStoreOps, block, Op.effect, put, next,
+        simp [loopFinished, loopStoreOps, block_cons, block_nil, Op.effect, put, next,
           state_simp_rules, loop_cmn_zero, hz] <;> decide
-    | SFP reg => simp [loopFinished, loopStored, loopSpill, loopStoreOps, block, Op.effect,
+    | SFP reg => simp [loopFinished, loopStored, loopSpill, loopStoreOps, block_cons, block_nil, Op.effect,
         put, next, state_simp_rules]
     | FLAG flag => cases flag <;>
-        simp [loopFinished, loopStored, loopSpill, loopStoreOps, block, Op.effect,
+        simp [loopFinished, loopStored, loopSpill, loopStoreOps, block_cons, block_nil, Op.effect,
           put, next, state_simp_rules]
-    | ERR => simp [loopFinished, loopStored, loopSpill, loopStoreOps, block, Op.effect,
+    | ERR => simp [loopFinished, loopStored, loopSpill, loopStoreOps, block_cons, block_nil, Op.effect,
         put, next, state_simp_rules]
-  · simp [loopFinished, loopStored, loopSpill, loopStoreOps, block, Op.effect,
+  · simp [loopFinished, loopStored, loopSpill, loopStoreOps, block_cons, block_nil, Op.effect,
       put, next, state_simp_rules]
   · intro n addr
-    simp [loopFinished, loopStored, loopSpill, loopAddress, loopStoreOps, block,
+    simp [loopFinished, loopStored, loopSpill, loopAddress, loopStoreOps, block_cons, block_nil,
       Op.effect, put, next, state_simp_rules, read_spill_w, loop_read_two_spills_w, hrestore]
 
 end SszArm.NatDivision

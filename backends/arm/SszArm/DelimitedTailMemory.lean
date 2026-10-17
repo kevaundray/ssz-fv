@@ -12,7 +12,7 @@ set_option maxHeartbeats 8000000
 theorem epilogue_memory (s : ArmState) (base : BitVec 64) :
     (block base epilogueOps s).mem =
       (write_mem_bytes 8 (r (.GPR 0#5) s) (r (.GPR 8#5) s) s).mem := by
-  simp [block, epilogueOps, Op.effect, put, next, state_simp_rules]
+  simp [block_cons, block_nil, epilogueOps, Op.effect, put, next, state_simp_rules]
   apply mem_write_mem_bytes_of_mem_eq
   simp [ArmState.mem_w_eq_mem]
 

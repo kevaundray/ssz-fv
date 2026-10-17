@@ -39,7 +39,7 @@ theorem classify (s : ArmState) (base : BitVec 64)
   all_goals
     by_cases hx : r (.GPR 3#5) s = 0#64 <;> by_cases hy : r (.GPR 9#5) s = 0#64 <;>
       simp (config := {decide := true, instances := true})
-        [t, ops, classifyOps, different, rejectZero, block, Op.effect, put, next,
+        [t, ops, classifyOps, different, rejectZero, block_cons, block_nil, Op.effect, put, next,
          Udivti3.compare, Udivti3.next, state_simp_rules, BitVec.ofNat_eq_ofNat,
          hpc, hx, hy, BitVec.add_assoc]
 
@@ -89,7 +89,7 @@ theorem plain_compare (s : ArmState) (base : BitVec 64)
     all_goals try omega
     all_goals
       simp (config := {decide := true, instances := true})
-        [t, ops, plainOps, compareOps, block, Op.effect, put, next,
+        [t, ops, plainOps, compareOps, block_cons, block_nil, Op.effect, put, next,
          Udivti3.compare, Udivti3.next, state_simp_rules, BitVec.ofNat_eq_ofNat,
          Udivti3.cmp_zero, Udivti3.cmp_carry, ls_condition, hpc, hz, heq, hle, BitVec.add_assoc]
       try bv_omega

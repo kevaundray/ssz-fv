@@ -53,11 +53,11 @@ theorem width_select (s : ArmState) (base : BitVec 64) (path : WidthPath)
   refine ⟨block_run base path.ops s hc he ha follow,
     scan_frame base _ _ (by cases path <;> decide),
     scan_zero base _ _ (by cases path <;> decide), ?_, ?_, ?_, ?_⟩
-  · cases path <;> simp [WidthPath.ops, block, Op.effect, put, next,
+  · cases path <;> simp [WidthPath.ops, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules, leftReg]
-  · cases path <;> simp_all [WidthPath.ops, block, Op.effect, put, next,
+  · cases path <;> simp_all [WidthPath.ops, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules]
-  · cases path <;> simp [WidthPath.ops, block, Op.effect, put, next,
+  · cases path <;> simp [WidthPath.ops, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules]
   · have carryGuard : (AddWithCarry
         (BitVec.ofNat 64 leftCount ||| BitVec.ofNat 64 rightCount) (~~~(2#64)) 1#1).2.c = 1#1 ↔
@@ -66,7 +66,7 @@ theorem width_select (s : ArmState) (base : BitVec 64) (path : WidthPath)
       simp only [BitVec.toNat_ofNat]
       omega
     cases path <;> by_cases small : leftCount ≤ 1 ∧ rightCount ≤ 1 <;>
-      simp_all [WidthPath.ops, block, Op.effect, put, next, Udivti3.compare,
+      simp_all [WidthPath.ops, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
         Udivti3.next, state_simp_rules]
 
 end SszArm.NatAdd

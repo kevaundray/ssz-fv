@@ -18,15 +18,15 @@ theorem small_dispatch_pc (s : ArmState) (base : BitVec 64)
     read_pc (smallDispatch s base) =
       if r (.GPR 9#5) s = 0#64 then base + 1048#64 else base + 1132#64 := by
   have hpc : r .PC s = base + 1040#64 := pc
-  simp [smallDispatch, block, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
+  simp [smallDispatch, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
 
 theorem small_dispatch_low (s : ArmState) (base : BitVec 64) :
     r (.GPR 8#5) (smallDispatch s base) = r (.GPR 2#5) s * r (.GPR 3#5) s := by
-  simp [smallDispatch, block, Op.effect, put, next, state_simp_rules]
+  simp [smallDispatch, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem small_dispatch_high (s : ArmState) (base : BitVec 64) :
     r (.GPR 9#5) (smallDispatch s base) = r (.GPR 9#5) s := by
-  simp [smallDispatch, block, Op.effect, put, next, state_simp_rules]
+  simp [smallDispatch, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 private theorem small_product_memory (s : ArmState) (base : BitVec 64) :
     (Op.p1040.effect base s).mem = s.mem := by
@@ -48,9 +48,9 @@ theorem small_dispatch_frame (s : ArmState) (base : BitVec 64) :
       apply keep
       subst reg
       decide
-    simp [smallDispatch, block, Op.effect, put, next, state_simp_rules, different]
+    simp [smallDispatch, block_cons, block_nil, Op.effect, put, next, state_simp_rules, different]
   · intro reg
-    simp [smallDispatch, block, Op.effect, put, next, state_simp_rules]
+    simp [smallDispatch, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · intro a _
     exact congrFun ((small_branch_memory (Op.p1040.effect base s) base).trans
       (small_product_memory s base)) a

@@ -79,9 +79,9 @@ theorem arena_store_frame (s : ArmState) (base : BitVec 64) :
   · exact block_error _ _ _
   · intro reg notChanged
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at notChanged
-    simp (disch := simp_all) [arenaStoreOps, block, Op.effect, put, next, state_simp_rules]
+    simp (disch := simp_all) [arenaStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · intro reg
-    simp [arenaStoreOps, block, Op.effect, put, next, state_simp_rules]
+    simp [arenaStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 /-- Cursor commitment is proved with abstract source memory: register updates
 are erased before the store-congruence lemma is instantiated. -/
@@ -117,10 +117,10 @@ theorem arena_store_effect (s : ArmState) (base : BitVec 64)
   have hpc : r .PC s = base + 336#64 := hp
   dsimp only
   refine ⟨?_, ?_, ?_, ?_⟩
-  · simp [arenaStoreOps, block, Op.effect, put, next, state_simp_rules,
+  · simp [arenaStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
       hpc, BitVec.add_assoc]
-  · simp [arenaStoreOps, arenaCommitPointer, block, Op.effect, put, next, state_simp_rules]
-  · simp [arenaStoreOps, block, Op.effect, put, next, state_simp_rules]
+  · simp [arenaStoreOps, arenaCommitPointer, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
+  · simp [arenaStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · let prepared := Op.effect base .p340 (Op.effect base .p336 s)
     have observations : prepared.mem = s.mem ∧
         r (.GPR 4#5) prepared = r (.GPR 4#5) s ∧

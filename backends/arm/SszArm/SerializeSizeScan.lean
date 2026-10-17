@@ -34,10 +34,10 @@ theorem scan_round (s : ArmState) (base pointer : BitVec 64)
   have runGuard : run 2 s = u := Serialize.block_run base guardOps s code error aligned follows
   have guardFrame : Frame s u := readonly_frame base _ s (by decide)
   have pcU : read_pc u = base + 168#64 := by
-    simp [u, guardOps, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+    simp [u, guardOps, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
       state_simp_rules, index, nonzero]
   have indexU : r (.GPR 10#5) u = BitVec.ofNat 64 n := by
-    simpa [u, guardOps, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+    simpa [u, guardOps, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
       state_simp_rules] using index
   have addressU : r (.GPR 8#5) u = pointer := (guardFrame.registers _ (by decide)).trans address
   have sourceU := guardFrame.source pointer words source
@@ -59,7 +59,7 @@ theorem scan_round (s : ArmState) (base pointer : BitVec 64)
   refine ⟨?_, totalFrame.trans (readonly_frame base _ v (by decide)), ?_, ?_, ?_, ?_⟩
   · rw [show 13 = 2 + 8 + 3 by decide, run_plus, run_plus, runGuard, runLoad, runTail]
     rfl
-  all_goals simp [roundResult, tailOps, loadResult, guardOps, Serialize.block,
+  all_goals simp [roundResult, tailOps, loadResult, guardOps, Serialize.block_cons, Serialize.block_nil,
     Serialize.Op.effect, Serialize.put, Serialize.next, NatCompare.saved,
     state_simp_rules, index, apply_ite]
 
@@ -87,9 +87,9 @@ theorem significant_scan (base pointer : BitVec 64) (words : List (BitVec 64)) :
         Serialize.put, Serialize.next, state_simp_rules, pc', BitVec.add_assoc]
     refine ⟨2, t, Serialize.block_run base guardOps s code error aligned follows,
       readonly_frame base _ s (by decide), ?_, ?_, ?_⟩
-    · simp [t, guardOps, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+    · simp [t, guardOps, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
         state_simp_rules]
-    · simp [t, guardOps, significantCount, Serialize.block, Serialize.Op.effect,
+    · simp [t, guardOps, significantCount, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect,
         Serialize.put, Serialize.next, state_simp_rules, index]
     · simp [significantCount]
   | succ n ih =>

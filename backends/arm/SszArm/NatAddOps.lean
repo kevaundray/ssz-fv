@@ -654,6 +654,10 @@ def Op.row : Op → Nat × BitVec 32
   | .p2404 => (2404, 0xb9004008#32)
   | .p2408 => (2408, 0xd65f03c0#32)
 
+-- Realize `Op.row`'s equation lemmas once, here: otherwise every importing module whose `simp`
+-- unfolds `Op.row` privately regenerates the 603-arm match splitter and equations.
+attribute [local simp] Op.row
+
 /-- Every operation names an actual word of the bound image. -/
 theorem Op.mem_program (op : Op) : op.row ∈ program := by
   cases op <;> decide
@@ -1286,6 +1290,11 @@ theorem Op.aligned (op : Op) (base : BitVec 64) (s : ArmState)
 
 def block (base : BitVec 64) (ops : List Op) (s : ArmState) : ArmState :=
   ops.foldl (fun t op => op.effect base t) s
+
+@[simp] theorem block_nil (base : BitVec 64) (s : ArmState) : block base [] s = s := (rfl)
+
+@[simp] theorem block_cons (base : BitVec 64) (op : Op) (ops : List Op) (s : ArmState) :
+    block base (op :: ops) s = block base ops (op.effect base s) := (rfl)
 
 def Follows (base : BitVec 64) : List Op → ArmState → Prop
   | [], _ => True

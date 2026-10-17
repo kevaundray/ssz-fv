@@ -31,25 +31,25 @@ theorem large_left_route (s : ArmState) (base : BitVec 64)
   refine ⟨block_run base _ s hc he ha follows, ?_, ?_, ?_, ?_⟩
   · constructor
     · by_cases small : r (.GPR 3#5) s = 0#64 <;>
-        simp [largeLeftRoute, small, block, Op.effect, put, next, state_simp_rules]
+        simp [largeLeftRoute, small, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     · by_cases small : r (.GPR 3#5) s = 0#64 <;>
-        simp [largeLeftRoute, small, block, Op.effect, put, next, state_simp_rules]
+        simp [largeLeftRoute, small, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     · intro reg outside
       by_cases three : reg = 3#5
       · subst reg
         by_cases small : r (.GPR 3#5) s = 0#64 <;>
-          simp [largeLeftRoute, small, block, Op.effect, put, next, state_simp_rules]
+          simp [largeLeftRoute, small, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
       · by_cases small : r (.GPR 3#5) s = 0#64 <;>
-          simp [largeLeftRoute, small, block, Op.effect, put, next, three, state_simp_rules]
+          simp [largeLeftRoute, small, block_cons, block_nil, Op.effect, put, next, three, state_simp_rules]
     · intro reg
       by_cases small : r (.GPR 3#5) s = 0#64 <;>
-        simp [largeLeftRoute, small, block, Op.effect, put, next, state_simp_rules]
+        simp [largeLeftRoute, small, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     · intro address outside
       by_cases small : r (.GPR 3#5) s = 0#64 <;>
-        simp [largeLeftRoute, small, block, Op.effect, put, next, state_simp_rules]
+        simp [largeLeftRoute, small, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   all_goals
     by_cases small : r (.GPR 3#5) s = 0#64 <;>
-      simp_all [largeLeftRoute, block, Op.effect, put, next, state_simp_rules]
+      simp_all [largeLeftRoute, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 /-- Both nonzero Small operands bypass the borrowed scans and width classifier. -/
 theorem immediate_start (s : ArmState) (base : BitVec 64)
@@ -66,12 +66,12 @@ theorem immediate_start (s : ArmState) (base : BitVec 64)
       hpc, leftSmall, rightSmall, leftNonzero, rightNonzero]
   refine ⟨block_run base _ s hc he ha follows, ?_, ?_, ?_⟩
   · constructor
-    · simp [block, Op.effect, state_simp_rules]
-    · simp [block, Op.effect, state_simp_rules]
-    · intro reg outside; simp [block, Op.effect, state_simp_rules]
-    · intro reg; simp [block, Op.effect, state_simp_rules]
-    · intro address outside; simp [block, Op.effect, state_simp_rules]
-  · simp [block, Op.effect, state_simp_rules]
-  · simp [block, Op.effect, state_simp_rules, rightNonzero]
+    · simp [block_cons, block_nil, Op.effect, state_simp_rules]
+    · simp [block_cons, block_nil, Op.effect, state_simp_rules]
+    · intro reg outside; simp [block_cons, block_nil, Op.effect, state_simp_rules]
+    · intro reg; simp [block_cons, block_nil, Op.effect, state_simp_rules]
+    · intro address outside; simp [block_cons, block_nil, Op.effect, state_simp_rules]
+  · simp [block_cons, block_nil, Op.effect, state_simp_rules]
+  · simp [block_cons, block_nil, Op.effect, state_simp_rules, rightNonzero]
 
 end SszArm.NatAdd

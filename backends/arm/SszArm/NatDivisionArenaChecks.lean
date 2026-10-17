@@ -80,7 +80,7 @@ theorem arena_guard_registers (kind : ArenaCheckKind) (s : ArmState)
     r (.GPR reg) (block base kind.ops s) = r (.GPR reg) s := by
   cases kind <;> simp only [ArenaCheckKind.clobbers, List.mem_cons, List.not_mem_nil,
     or_false, not_or] at hr <;>
-    simp (disch := simp_all) [ArenaCheckKind.ops, block, Op.effect, put, next,
+    simp (disch := simp_all) [ArenaCheckKind.ops, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem arena_guard_frame (kind : ArenaCheckKind) (s : ArmState)
@@ -90,12 +90,12 @@ theorem arena_guard_frame (kind : ArenaCheckKind) (s : ArmState)
     apply arena_guard_registers kind s base reg
     cases kind <;> simp_all [ArenaCheckKind.clobbers]
   · intro reg
-    cases kind <;> simp [ArenaCheckKind.ops, block, Op.effect, put, next,
+    cases kind <;> simp [ArenaCheckKind.ops, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem arena_guard_memory (kind : ArenaCheckKind) (s : ArmState)
     (base : BitVec 64) : (block base kind.ops s).mem = s.mem := by
-  cases kind <;> simp [ArenaCheckKind.ops, block, Op.effect, put, next,
+  cases kind <;> simp [ArenaCheckKind.ops, block_cons, block_nil, Op.effect, put, next,
     Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem arena_guard_run (kind : ArenaCheckKind) (s : ArmState)
@@ -153,13 +153,13 @@ theorem arena_big_address_exit (s : ArmState) (base : BitVec 64) :
     r (.GPR 10#5) t = pointer ∧ r (.GPR 11#5) t = used ∧
       r (.GPR 12#5) t = used + pointer ∧
       read_pc t = if 2^64 ≤ used.toNat + pointer.toNat then base + 812#64 else base + 236#64 := by
-  simp [block, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules,
     Udivti3.adc_carry, Udivti3.radix]
 
 theorem arena_big_round_exit (s : ArmState) (base : BitVec 64) :
     read_pc (block base ArenaCheckKind.bigRound.ops s) =
       if 2^64 < (r (.GPR 12#5) s).toNat + 8 then base + 812#64 else base + 244#64 := by
-  simp [block, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules, cmn_hi_zero]
+  simp [block_cons, block_nil, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules, cmn_hi_zero]
 
 theorem arena_big_align_exit (s : ArmState) (base : BitVec 64) :
     let aligned := (r (.GPR 12#5) s + 7#64) &&& 18446744073709551608#64
@@ -169,7 +169,7 @@ theorem arena_big_align_exit (s : ArmState) (base : BitVec 64) :
       r (.GPR 11#5) t = padding + r (.GPR 11#5) s ∧
       read_pc t = if 2^64 ≤ padding.toNat + (r (.GPR 11#5) s).toNat
         then base + 812#64 else base + 264#64 := by
-  simp [block, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules,
     Udivti3.adc_carry, Udivti3.radix]
 
 theorem arena_big_end_exit (s : ArmState) (base : BitVec 64) :
@@ -177,7 +177,7 @@ theorem arena_big_end_exit (s : ArmState) (base : BitVec 64) :
     r (.GPR 12#5) t = r (.GPR 11#5) s + r (.GPR 9#5) s ∧
       read_pc t = if 2^64 ≤ (r (.GPR 11#5) s).toNat + (r (.GPR 9#5) s).toNat
         then base + 812#64 else base + 272#64 := by
-  simp [block, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules,
     Udivti3.adc_carry, Udivti3.radix]
 
 theorem arena_big_capacity_exit (s : ArmState) (base : BitVec 64) :
@@ -186,7 +186,7 @@ theorem arena_big_capacity_exit (s : ArmState) (base : BitVec 64) :
     r (.GPR 9#5) t = capacity ∧
       read_pc t = if capacity.toNat < (r (.GPR 12#5) s).toNat
         then base + 812#64 else base + 284#64 := by
-  simp [block, ArenaCheckKind.ops, Op.effect, put, next, Udivti3.compare,
+  simp [block_cons, block_nil, ArenaCheckKind.ops, Op.effect, put, next, Udivti3.compare,
     Udivti3.next, state_simp_rules, Udivti3.cmp_high]
 
 theorem arena_small_address_exit (s : ArmState) (base : BitVec 64) :
@@ -196,13 +196,13 @@ theorem arena_small_address_exit (s : ArmState) (base : BitVec 64) :
     r (.GPR 8#5) t = pointer ∧ r (.GPR 9#5) t = used ∧
       r (.GPR 10#5) t = used + pointer ∧
       read_pc t = if 2^64 ≤ used.toNat + pointer.toNat then base + 812#64 else base + 700#64 := by
-  simp [block, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules,
     Udivti3.adc_carry, Udivti3.radix]
 
 theorem arena_small_round_exit (s : ArmState) (base : BitVec 64) :
     read_pc (block base ArenaCheckKind.smallRound.ops s) =
       if 2^64 < (r (.GPR 10#5) s).toNat + 8 then base + 812#64 else base + 708#64 := by
-  simp [block, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules, cmn_hi_zero]
+  simp [block_cons, block_nil, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules, cmn_hi_zero]
 
 theorem arena_small_align_exit (s : ArmState) (base : BitVec 64) :
     let aligned := (r (.GPR 10#5) s + 7#64) &&& 18446744073709551608#64
@@ -212,13 +212,13 @@ theorem arena_small_align_exit (s : ArmState) (base : BitVec 64) :
       r (.GPR 9#5) t = padding + r (.GPR 9#5) s ∧
       read_pc t = if 2^64 ≤ padding.toNat + (r (.GPR 9#5) s).toNat
         then base + 812#64 else base + 728#64 := by
-  simp [block, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules,
     Udivti3.adc_carry, Udivti3.radix]
 
 theorem arena_small_end_exit (s : ArmState) (base : BitVec 64) :
     read_pc (block base ArenaCheckKind.smallEnd.ops s) =
       if 2^64 < (r (.GPR 9#5) s).toNat + 17 then base + 812#64 else base + 736#64 := by
-  simp [block, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules, cmn_hi_zero]
+  simp [block_cons, block_nil, ArenaCheckKind.ops, Op.effect, put, next, state_simp_rules, cmn_hi_zero]
 
 theorem arena_small_capacity_exit (s : ArmState) (base : BitVec 64) :
     let capacity := read_mem_bytes 8 (r (.GPR 21#5) s + 8#64) s
@@ -226,7 +226,7 @@ theorem arena_small_capacity_exit (s : ArmState) (base : BitVec 64) :
     let t := block base ArenaCheckKind.smallCapacity.ops s
     r (.GPR 11#5) t = capacity ∧ r (.GPR 10#5) t = finish ∧
       read_pc t = if capacity.toNat < finish.toNat then base + 812#64 else base + 752#64 := by
-  simp [block, ArenaCheckKind.ops, Op.effect, put, next, Udivti3.compare,
+  simp [block_cons, block_nil, ArenaCheckKind.ops, Op.effect, put, next, Udivti3.compare,
     Udivti3.next, state_simp_rules, Udivti3.cmp_high]
 
 end SszArm.NatDivision

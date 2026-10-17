@@ -55,11 +55,11 @@ theorem body_run (body : Body) (s : ArmState) (base : BitVec 64)
     · let a := block base [.p220, .p224] s
       have sa : Space a := by
         constructor
-        · simpa [a, block, Op.effect, put, next, state_simp_rules] using space.stack
-        · simpa [a, block, Op.effect, put, next, state_simp_rules] using space.output
-        · simpa [a, block, Op.effect, put, next, state_simp_rules] using space.separate
+        · simpa [a, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using space.stack
+        · simpa [a, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using space.output
+        · simpa [a, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using space.separate
       have pa : read_pc a = base + 228#64 := by
-        simp [a, block, Op.effect, put, next, state_simp_rules, hpc, Body.entry, BitVec.add_assoc]
+        simp [a, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, Body.entry, BitVec.add_assoc]
       apply lower_follows_append .zero48 _ a base pa
       let b := block base LowerKind.zero48.ops a
       have sb : Space b := lower_space .zero48 a base sa

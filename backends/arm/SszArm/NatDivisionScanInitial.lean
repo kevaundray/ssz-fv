@@ -68,11 +68,11 @@ theorem initial_scan (s : ArmState) (base pointer : BitVec 64)
     refine ⟨1 + fuel + 3, t, ?_, hsf.trans (scan_pure_frame base ops v (by decide)), ?_, ?_⟩
     · rw [run_plus, run_plus, hu, hv, ht]
     · by_cases hsmall : sigWords words < 3
-      · simp [t, ops, block, Op.effect, put, next, state_simp_rules,
+      · simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
           hv8', hcount, hcarry, hz, hsmall, show ¬ 3 ≤ sigWords words by omega]
-      · simp [t, ops, block, Op.effect, put, next, state_simp_rules,
+      · simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
           hv8', hcount, hcarry, hz, hsmall, show 3 ≤ sigWords words by omega]
     · intro h
-      simp [t, ops, block, Op.effect, put, next, state_simp_rules, hv8', hcount]
+      simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hv8', hcount]
 
 end SszArm.NatDivision

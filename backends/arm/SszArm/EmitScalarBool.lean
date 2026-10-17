@@ -39,7 +39,7 @@ theorem bool_runs (s : ArmState) (base : BitVec 64) (args : Args) (flag : Bool) 
   rw [execution]
   change r .PC s = _ at pc
   cases flag <;>
-    simp (config := {decide := true}) [block, boolOps, Op.effect, put, next, boolResult,
+    simp (config := {decide := true}) [block_cons, block_nil, boolOps, Op.effect, put, next, boolResult,
       state_simp_rules, pc, tag, capacity, registers.value, registers.output,
       registers.result, payload, BitVec.add_assoc]
   all_goals simp only [NatExact.store_w, NatExact.gpr_w_pc, w_of_w_shadow]

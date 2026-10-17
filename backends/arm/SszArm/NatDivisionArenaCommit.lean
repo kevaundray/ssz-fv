@@ -46,16 +46,16 @@ theorem arena_big_store_registers (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) (hr : reg ∉ [9#5, 24#5]) :
     r (.GPR reg) (block base arenaBigStoreOps s) = r (.GPR reg) s := by
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
-  simp (disch := simp_all) [arenaBigStoreOps, block, Op.effect, put, next, state_simp_rules]
+  simp (disch := simp_all) [arenaBigStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem arena_small_store_frame (s : ArmState) (base : BitVec 64) :
     ArenaFrame s (block base arenaSmallStoreOps s) := by
   refine ⟨block_program _ _ _, block_error _ _ _, ?_, ?_⟩
   · intro reg hr
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
-    simp (disch := simp_all) [arenaSmallStoreOps, block, Op.effect, put, next, state_simp_rules]
+    simp (disch := simp_all) [arenaSmallStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · intro reg
-    simp [arenaSmallStoreOps, block, Op.effect, put, next, state_simp_rules]
+    simp [arenaSmallStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem arena_big_store_effect (s : ArmState) (base : BitVec 64) :
     let t := block base arenaBigStoreOps s
@@ -63,7 +63,7 @@ theorem arena_big_store_effect (s : ArmState) (base : BitVec 64) :
       r (.GPR 9#5) t = 0#64 ∧
       r (.GPR 24#5) t = r (.GPR 10#5) s + r (.GPR 11#5) s ∧
       t.mem = (arenaBigMemory s).mem := by
-  simp [arenaBigStoreOps, arenaBigMemory, block, Op.effect, put, next,
+  simp [arenaBigStoreOps, arenaBigMemory, block_cons, block_nil, Op.effect, put, next,
     state_simp_rules, BitVec.add_assoc, NatCompare.spill_mem_w]
 
 theorem arena_small_store_effect (s : ArmState) (base : BitVec 64)
@@ -75,7 +75,7 @@ theorem arena_small_store_effect (s : ArmState) (base : BitVec 64)
       t.mem = (arenaSmallMemory s).mem := by
   have hpc : r .PC s = base + 752#64 := hp
   simp [arenaSmallStoreOps, arenaSmallMemory, arenaSmallPointer, arenaSmallCursorMemory,
-    block, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc,
+    block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc,
     NatCompare.spill_mem_w]
 
 /-- The large path commits the cursor but writes no quotient byte yet. -/

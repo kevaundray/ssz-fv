@@ -43,17 +43,17 @@ theorem right_read (s : ArmState) (base pointer : BitVec 64)
     · simp [g]
     · simp [g]
     · intro reg hreg
-      simp [g, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
+      simp [g, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
     · intro reg
-      simp [g, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
+      simp [g, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
     · intro a ha
-      simp [g, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
+      simp [g, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
   have g3 : r (.GPR 3#5) g = pointer := (frameGuard.registers _ (by decide)).trans h3
   have g14 : r (.GPR 14#5) g = BitVec.ofNat 64 index :=
     (frameGuard.registers _ (by decide)).trans h14
   by_cases present : index < right.length
   · have gp : read_pc g = base + 1880#64 := by
-      simp [g, block, Op.effect, Udivti3.compare, Udivti3.next,
+      simp [g, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next,
         state_simp_rules, h14, h4, hg, present]
     have source := frameGuard.source pointer right hs
     have words := frameGuard.words pointer right hs hm
@@ -68,7 +68,7 @@ theorem right_read (s : ArmState) (base pointer : BitVec 64)
     · simp [readState, present, loadResult, LoadKind.start, state_simp_rules]
     · simp [readState, present, loadResult, LoadKind.dst, state_simp_rules]
   · have gp : read_pc g = base + 1988#64 := by
-      simp [g, block, Op.effect, Udivti3.compare, Udivti3.next,
+      simp [g, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next,
         state_simp_rules, h14, h4, hg, present]
     have gpc : r .PC g = base + 1988#64 := gp
     have runZero : run 2 g = block base [.p1988, .p1992] g :=
@@ -79,8 +79,8 @@ theorem right_read (s : ArmState) (base pointer : BitVec 64)
     · simp only [readFuel, present, ↓reduceIte]
       rw [show 4 = 2 + 2 by decide, run_plus, runGuard, runZero]
       simp only [readState, present, ↓reduceIte, g]
-    · simp [readState, present, block, Op.effect, put, next, state_simp_rules]
-    · simp [readState, present, block, Op.effect, put, next, state_simp_rules]
+    · simp [readState, present, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
+    · simp [readState, present, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 def tailOps (carry : Bool) : List Op :=
   if carry then [.p1952, .p1964, .p1968, .p1972, .p1976]
@@ -113,14 +113,14 @@ theorem tail_run (s : ArmState) (base : BitVec 64) (remaining : Nat)
         state_simp_rules, hpc, BitVec.add_assoc]
   refine ⟨block_run base _ s hc he ha follow, ?_, ?_, ?_, ?_⟩
   · by_cases carry : r (.FLAG .C) s = 1#1 <;>
-      simp [tailState, tailOps, carry, block, Op.effect, put, next, state_simp_rules]
+      simp [tailState, tailOps, carry, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · by_cases carry : r (.FLAG .C) s = 1#1 <;>
-      simp [tailState, tailOps, carry, block, Op.effect, put, next,
+      simp [tailState, tailOps, carry, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, h13, dec]
   · by_cases carry : r (.FLAG .C) s = 1#1 <;>
-      simp [tailState, tailOps, carry, block, Op.effect, put, next, state_simp_rules]
+      simp [tailState, tailOps, carry, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · by_cases carry : r (.FLAG .C) s = 1#1 <;> by_cases last : remaining = 0 <;>
-      simp [tailState, tailOps, carry, block, Op.effect, put, next,
+      simp [tailState, tailOps, carry, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, h13, hz, last]
 
 end SszArm.NatAdd.SmallLoop

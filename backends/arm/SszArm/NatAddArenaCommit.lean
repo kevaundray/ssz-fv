@@ -43,18 +43,18 @@ theorem arena_big_store_frame (s : ArmState) (base : BitVec 64) :
   refine ⟨block_program _ _ _, block_error _ _ _, ?_, ?_⟩
   · intro reg hr
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
-    simp (disch := simp_all) [arenaBigStoreOps, block, Op.effect, put, next, state_simp_rules]
+    simp (disch := simp_all) [arenaBigStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · intro reg
-    simp [arenaBigStoreOps, block, Op.effect, put, next, state_simp_rules]
+    simp [arenaBigStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem arena_small_store_frame (s : ArmState) (base : BitVec 64) :
     ArenaFrame s (block base arenaSmallStoreOps s) := by
   refine ⟨block_program _ _ _, block_error _ _ _, ?_, ?_⟩
   · intro reg hr
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
-    simp (disch := simp_all) [arenaSmallStoreOps, block, Op.effect, put, next, state_simp_rules]
+    simp (disch := simp_all) [arenaSmallStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · intro reg
-    simp [arenaSmallStoreOps, block, Op.effect, put, next, state_simp_rules]
+    simp [arenaSmallStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem arena_big_store_effect (s : ArmState) (base : BitVec 64)
     (hp : read_pc s = base + 268#64) :
@@ -63,7 +63,7 @@ theorem arena_big_store_effect (s : ArmState) (base : BitVec 64)
       r (.GPR 9#5) t = r (.GPR 9#5) s + r (.GPR 12#5) s ∧
       r (.GPR 11#5) t = r (.GPR 11#5) s ∧ t.mem = (arenaBigMemory s).mem := by
   have hpc : r .PC s = base + 268#64 := hp
-  simp [arenaBigStoreOps, arenaBigMemory, block, Op.effect, put, next,
+  simp [arenaBigStoreOps, arenaBigMemory, block_cons, block_nil, Op.effect, put, next,
     state_simp_rules, hpc, BitVec.add_assoc, NatCompare.spill_mem_w]
 
 theorem arena_small_store_effect (s : ArmState) (base : BitVec 64)
@@ -75,7 +75,7 @@ theorem arena_small_store_effect (s : ArmState) (base : BitVec 64)
       t.mem = (arenaSmallMemory s).mem := by
   have hpc : r .PC s = base + 1180#64 := hp
   simp [arenaSmallStoreOps, arenaSmallMemory, arenaSmallPointer, arenaBigMemory,
-    block, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc,
+    block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc,
     NatCompare.spill_mem_w]
   apply mem_write_mem_bytes_of_mem_eq
   simp only [NatCompare.spill_mem_w]

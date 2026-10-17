@@ -72,7 +72,7 @@ theorem commit_effect (s : ArmState) (base : BitVec 64) :
   apply state_eq_iff_components_eq.mpr
   refine ⟨?_, ?_, ?_⟩
   · intro f
-    cases f <;> simp [block, Op.effect, put, next, commitMemory,
+    cases f <;> simp [block_cons, block_nil, Op.effect, put, next, commitMemory,
       state_simp_rules, BitVec.add_assoc, store_field_write]
     all_goals
       rename_i reg
@@ -81,9 +81,9 @@ theorem commit_effect (s : ArmState) (base : BitVec 64) :
       · by_cases h9 : reg = 9#5
         · subst reg; simp (config := {decide := true}) [state_simp_rules]
         · simp (disch := simp_all) [state_simp_rules]
-  · simp [block, Op.effect, put, next, commitMemory, state_simp_rules]
+  · simp [block_cons, block_nil, Op.effect, put, next, commitMemory, state_simp_rules]
   · apply Memory.mem_eq_iff_read_mem_bytes_eq.mp
-    simp [block, Op.effect, put, next, commitMemory, state_simp_rules,
+    simp [block_cons, block_nil, Op.effect, put, next, commitMemory, state_simp_rules,
       ArmState.mem_w_eq_mem, store_field_write, BitVec.add_assoc]
     all_goals simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
 
@@ -103,7 +103,7 @@ theorem body_effect (body : Body) (s : ArmState) (base : BitVec 64)
     rw [lower_effect .smallPair s base space]
     rw [lower_effect .smallStatus _ base
       (spPC _ _ (lowerMemory_space .smallPair s space))]
-    simp [block, Op.effect, Body.final, Body.memory, smallMemory,
+    simp [block_cons, block_nil, Op.effect, Body.final, Body.memory, smallMemory,
       lowerMemory_pc_write, lowerMemory_gpr, state_simp_rules]
   · simp only [Body.ops, splitBlock]
     have headEq : block base [.p220, .p224] s =
@@ -111,7 +111,7 @@ theorem body_effect (body : Body) (s : ArmState) (base : BitVec 64)
       apply state_eq_iff_components_eq.mpr
       refine ⟨?_, ?_, ?_⟩
       · intro f
-        cases f <;> simp [block, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
+        cases f <;> simp [block_cons, block_nil, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
         all_goals
           rename_i reg
           by_cases h8 : reg = 8#5
@@ -119,8 +119,8 @@ theorem body_effect (body : Body) (s : ArmState) (base : BitVec 64)
           · by_cases h9 : reg = 9#5
             · subst reg; simp (config := {decide := true}) [state_simp_rules]
             · simp (disch := simp_all) [state_simp_rules]
-      · simp [block, Op.effect, put, next, state_simp_rules]
-      · simp [block, Op.effect, put, next, state_simp_rules]
+      · simp [block_cons, block_nil, Op.effect, put, next, state_simp_rules]
+      · simp [block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     rw [headEq]
     have prepared : Space (w (.GPR 9#5) 1#64 (w (.GPR 8#5) 32768#64 s)) := by
       exact ⟨by simpa [state_simp_rules] using space.stack,
@@ -133,7 +133,7 @@ theorem body_effect (body : Body) (s : ArmState) (base : BitVec 64)
     rw [lower_effect .errorPair _ base
       (spPC _ _ (lowerMemory_space _ _ (spPC _ _ (lowerMemory_space _ _
         (spPC _ _ (lowerMemory_space _ _ (spPC _ _ prepared)))))))]
-    simp [block, Op.effect, next, Body.final, Body.memory, failureMemory,
+    simp [block_cons, block_nil, Op.effect, next, Body.final, Body.memory, failureMemory,
       lowerMemory_pc_write, lowerMemory_gpr, state_simp_rules,
       store_field_write]
   · simp only [Body.ops, splitBlock]
@@ -144,7 +144,7 @@ theorem body_effect (body : Body) (s : ArmState) (base : BitVec 64)
         by simpa [commitMemory, state_simp_rules] using space.output,
         by simpa [commitMemory, state_simp_rules] using space.separate⟩
     rw [lower_effect .wideStatus _ base (spPC _ _ prepared)]
-    simp [block, Op.effect, Body.final, Body.memory, wideMemory,
+    simp [block_cons, block_nil, Op.effect, Body.final, Body.memory, wideMemory,
       lowerMemory_pc_write, lowerMemory_gpr, commitMemory, state_simp_rules]
 
 end SszArm.NatFromU128

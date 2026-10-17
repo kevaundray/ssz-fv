@@ -135,7 +135,7 @@ theorem arena_big_reservation_success_registers {s t : ArmState}
     · exact (block_error _ _ _).trans reached.frame.error
     · intro reg
       have unchanged : r (.SFP reg) (block base arenaBigStoreOps u) = r (.SFP reg) u := by
-        simp [arenaBigStoreOps, block, Op.effect, put, next, state_simp_rules]
+        simp [arenaBigStoreOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
       exact unchanged.trans (reached.frame.vectors reg)
     · intro reg hr
       have hstore : reg ∉ [9#5, 24#5] := by simp_all

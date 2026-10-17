@@ -26,13 +26,13 @@ def bytesOps : List Op := [.p820, .p824, .p828, .p832, .p836, .p840, .p844, .p84
 @[irreducible] def bytesSetup (s : ArmState) : ArmState := block bytesOps s
 
 theorem bytes_setup_memory (s : ArmState) : (bytesSetup s).mem = s.mem := by
-  simp [bytesSetup, block, bytesOps, Op.effect, put, next, state_simp_rules]
+  simp [bytesSetup, block_cons, block_nil, bytesOps, Op.effect, put, next, state_simp_rules]
 
 theorem bytes_setup_program (s : ArmState) : (bytesSetup s).program = s.program := by
-  simp [bytesSetup, block, bytesOps, Op.effect, put, next, state_simp_rules]
+  simp [bytesSetup, block_cons, block_nil, bytesOps, Op.effect, put, next, state_simp_rules]
 
 theorem bytes_setup_error (s : ArmState) : read_err (bytesSetup s) = read_err s := by
-  simp [bytesSetup, block, bytesOps, Op.effect, put, next, state_simp_rules]
+  simp [bytesSetup, block_cons, block_nil, bytesOps, Op.effect, put, next, state_simp_rules]
 
 theorem bytes_setup_register (s : ArmState) (reg : BitVec 5)
     (untouched : reg ∉ [0#5, 1#5, 2#5, 8#5, 23#5]) :
@@ -42,18 +42,18 @@ theorem bytes_setup_register (s : ArmState) (reg : BitVec 5)
   have h2 : reg ≠ 2#5 := by simp_all
   have h8 : reg ≠ 8#5 := by simp_all
   have h23 : reg ≠ 23#5 := by simp_all
-  simp [bytesSetup, block, bytesOps, Op.effect, put, next, state_simp_rules, h0, h1, h2, h8, h23]
+  simp [bytesSetup, block_cons, block_nil, bytesOps, Op.effect, put, next, state_simp_rules, h0, h1, h2, h8, h23]
 
 theorem bytes_setup_vector (s : ArmState) (reg : BitVec 5) :
     r (.SFP reg) (bytesSetup s) = r (.SFP reg) s := by
-  simp [bytesSetup, block, bytesOps, Op.effect, put, next, state_simp_rules]
+  simp [bytesSetup, block_cons, block_nil, bytesOps, Op.effect, put, next, state_simp_rules]
 
 theorem bytes_setup_arguments (s : ArmState) (args : Args) (registers : BodyRegisters s args) :
     r (.GPR 0#5) (bytesSetup s) = args.output ∧
     r (.GPR 1#5) (bytesSetup s) = read_mem_bytes 8 (args.value + 8#64) s ∧
     r (.GPR 2#5) (bytesSetup s) = read_mem_bytes 8 (args.value + 16#64) s ∧
     r (.GPR 23#5) (bytesSetup s) = read_mem_bytes 8 (args.value + 16#64) s := by
-  simp (config := {decide := true}) [bytesSetup, block, bytesOps, Op.effect, put, next,
+  simp (config := {decide := true}) [bytesSetup, block_cons, block_nil, bytesOps, Op.effect, put, next,
     state_simp_rules, registers.output, registers.value]
 
 theorem bytes_setup_run (s : ArmState) (base : BitVec 64) (args : Args) (desc : Desc)
@@ -90,7 +90,7 @@ theorem bytes_setup_run (s : ArmState) (base : BitVec 64) (args : Args) (desc : 
     change run 9 s = block bytesOps s at executed
     simpa only [bytesSetup] using executed
   · change r .PC s = _ at pc
-    simp (config := {decide := true}) [bytesSetup, block, bytesOps, Op.effect, put, next,
+    simp (config := {decide := true}) [bytesSetup, block_cons, block_nil, bytesOps, Op.effect, put, next,
       state_simp_rules, pc, masked, guard, BitVec.add_assoc]
 
 end SszArm.Emit.Scalar

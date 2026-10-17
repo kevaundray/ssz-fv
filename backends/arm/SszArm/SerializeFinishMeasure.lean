@@ -40,7 +40,7 @@ theorem measure_copy_run (base : BitVec 64) (s : ArmState)
   apply block_run base measureCopyOps (branched base s)
   · exact code.congr (by simp [branched, staged, state_simp_rules])
   · exact (branched_error base s).trans error
-  · simpa [branched, staged, stageOps, block, Op.effect, next, put,
+  · simpa [branched, staged, stageOps, block_cons, block_nil, Op.effect, next, put,
       CheckSPAlignment, read_gpr, state_simp_rules] using aligned
   · simp [Follows, measureCopyOps, branched, Op.row, Op.effect, next, put,
       state_simp_rules, status, BitVec.add_assoc]
@@ -48,7 +48,7 @@ theorem measure_copy_run (base : BitVec 64) (s : ArmState)
 @[simp] theorem measure_copied_pc (base : BitVec 64) (s : ArmState)
     (status : read_mem_bytes 4 (sp s + 88#64) s ≠ 0#32) :
     read_pc (measureCopied base s) = base + 116#64 := by
-  simp [measureCopied, measureCopyOps, branched, block, Op.effect, next, put,
+  simp [measureCopied, measureCopyOps, branched, block_cons, block_nil, Op.effect, next, put,
     state_simp_rules, status, BitVec.add_assoc]
 
 @[simp] theorem measure_copied_program (base : BitVec 64) (s : ArmState) :
@@ -67,7 +67,7 @@ theorem measure_copied_register (base : BitVec 64) (s : ArmState) (reg : BitVec 
     (untouched : reg ∉ [5#5, 8#5, 9#5, 10#5, 11#5, 12#5, 13#5]) :
     r (.GPR reg) (measureCopied base s) = r (.GPR reg) s := by
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at untouched
-  simp_all [measureCopied, measureCopyOps, branched, staged, stageOps, block,
+  simp_all [measureCopied, measureCopyOps, branched, staged, stageOps, block_cons, block_nil,
     Op.effect, next, put, state_simp_rules]
 
 @[simp] theorem measure_copied_sp (base : BitVec 64) (s : ArmState) :

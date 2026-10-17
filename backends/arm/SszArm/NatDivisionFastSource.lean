@@ -11,7 +11,7 @@ theorem fast_low (site : FastSite) (s : ArmState) (base : BitVec 64) :
   rw [fastResult, fast_finish_register]
   change r (.GPR 22#5) (callResult site.call (fastPrepared site s base) base) = _
   rw [call_gpr _ _ _ 22#5 (by decide) (by decide)]
-  cases site <;> simp [fastPrepared, FastSite.setup, block, Op.effect, put, next, state_simp_rules]
+  cases site <;> simp [fastPrepared, FastSite.setup, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem fast_pc_result (site : FastSite) (s : ArmState) (base : BitVec 64) :
     read_pc (fastResult site s base) =

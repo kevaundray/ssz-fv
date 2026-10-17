@@ -94,18 +94,18 @@ theorem left_run (s : ArmState) (base pointer : BitVec 64)
         Udivti3.next, state_simp_rules, hpc, BitVec.add_assoc]
     have urun : run 2 s = u := block_run base _ s hc he ha follows
     have up : read_pc u = base + 1700#64 := by
-      simp [u, block, Op.effect, Udivti3.compare,
+      simp [u, block_cons, block_nil, Op.effect, Udivti3.compare,
         Udivti3.next, state_simp_rules, noCarry]
     have us : Source u pointer left := uf.source _ _ hs
     have um : Words u pointer left := by
       intro i
-      simpa [u, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules] using hm i
+      simpa [u, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules] using hm i
     have u1 : r (.GPR 1#5) u = pointer := (uf.registers _ (by decide)).trans h1
     have u15 : r (.GPR 15#5) u = BitVec.ofNat 64 index := by
       have original : r (.GPR 15#5) s = BitVec.ofNat 64 index := by
         rw [← h15]
         simp
-      simpa [u, block, Op.effect, Udivti3.compare,
+      simpa [u, block_cons, block_nil, Op.effect, Udivti3.compare,
         Udivti3.next, state_simp_rules] using original
     have load : read_mem_bytes 8
         (r (.GPR LoadKind.loopLeft.ptr) u + (r (.GPR LoadKind.loopLeft.index) u <<< 3))
@@ -126,7 +126,7 @@ theorem left_run (s : ArmState) (base pointer : BitVec 64)
     · simp [leftState, within, loadResult, LoadKind.dst, state_simp_rules]
     · intro reg hr
       simp [leftState, within, loadResult, LoadKind.dst, saved,
-        block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules, hr]
+        block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules, hr]
   · have zero : left[index]?.getD 0 = 0 := by
       rw [List.getElem?_eq_none (by omega)]
       rfl
@@ -143,13 +143,13 @@ theorem left_run (s : ArmState) (base pointer : BitVec 64)
         block_run base [.p1692, .p1696, .p1796] s hc he ha follows
     · simpa only [leftState, within, ↓reduceIte] using
         pure_frame base [.p1692, .p1696, .p1796] s writes (by decide)
-    · simp [leftState, leftGate, within, GateKind.start, block, Op.effect,
+    · simp [leftState, leftGate, within, GateKind.start, block_cons, block_nil, Op.effect,
         put, next, Udivti3.compare, Udivti3.next, state_simp_rules, carry, BitVec.add_assoc]
     · rw [zero]
-      simp [leftState, within, block, Op.effect, put, next,
+      simp [leftState, within, block_cons, block_nil, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules]
     · intro reg hr
-      simp [leftState, within, block, Op.effect, put, next,
+      simp [leftState, within, block_cons, block_nil, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules, hr]
 
 end SszArm.NatAdd.LargeLoop

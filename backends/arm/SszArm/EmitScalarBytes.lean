@@ -22,7 +22,7 @@ theorem bytes_finish_run (s : ArmState) (base : BitVec 64) (args : Args) (size :
   change run 2 s = _ at execution
   rw [execution]
   change r .PC s = _ at pc
-  simp [bytesFinish, block, Op.effect, next, state_simp_rules, result, count, pc, BitVec.add_assoc]
+  simp [bytesFinish, block_cons, block_nil, Op.effect, next, state_simp_rules, result, count, pc, BitVec.add_assoc]
 
 theorem bytes_body (s : ArmState) (base : BitVec 64) (args : Args) (desc : Desc)
     (bytes : Ssz.Bytes) (size : Nat) (kind : ByteKind desc)

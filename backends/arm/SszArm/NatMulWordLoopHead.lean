@@ -21,26 +21,25 @@ theorem loop_head_run (s : ArmState) (base : BitVec 64)
 theorem loop_head_registers (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) (keep : reg ≠ 16#5) :
     r (.GPR reg) (loopHead s base) = r (.GPR reg) s := by
-  simp [loopHead, loopHeadOps, block, Op.effect, put, next, Udivti3.compare,
+  simp [loopHead, loopHeadOps, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
     Udivti3.next, state_simp_rules, keep]
 
 theorem loop_head_index (s : ArmState) (base : BitVec 64) :
     r (.GPR 16#5) (loopHead s base) = r (.GPR 13#5) s + 1#64 := by
-  simp [loopHead, loopHeadOps, block, Op.effect, put, next, Udivti3.compare,
+  simp [loopHead, loopHeadOps, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
     Udivti3.next, state_simp_rules]
 
 theorem loop_head_memory (s : ArmState) (base : BitVec 64) :
     (loopHead s base).mem = s.mem := by
-  simp [loopHead, loopHeadOps, block, Op.effect, put, next, Udivti3.compare,
+  simp [loopHead, loopHeadOps, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
     Udivti3.next, state_simp_rules]
 
 theorem loop_head_pc (s : ArmState) (base : BitVec 64) :
     read_pc (loopHead s base) =
       if (r (.GPR 13#5) s + 1#64).toNat < (r (.GPR 2#5) s).toNat
       then base + 600#64 else base + 824#64 := by
-  simp [loopHead, loopHeadOps, block, Op.effect, put, next, Udivti3.compare,
+  simp [loopHead, loopHeadOps, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
     Udivti3.next, state_simp_rules, Udivti3.cmp_carry]
-  simp only [← Nat.not_lt, ite_not]
 
 theorem loop_head_stable (s : ArmState) (base : BitVec 64) :
     LoopStable s (loopHead s base) := by
@@ -79,16 +78,16 @@ private theorem input_loaded_memory (s : ArmState) (base value : BitVec 64) :
 private theorem loop_zero_gpr (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.GPR reg) (block base [.p824, .p828] s) =
       if reg = 17#5 then 0#64 else r (.GPR reg) s := by
-  simp only [block, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
+  simp only [block_cons, block_nil, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
     NatCompare.r_gpr_of_w_pc, NatCompare.r_gpr_of_w_gpr] <;> arm_word_nf
 
 private theorem loop_zero_pc (s : ArmState) (base : BitVec 64) :
     read_pc (block base [.p824, .p828] s) = base + 632#64 := by
-  simp only [block, List.foldl_cons, List.foldl_nil, Op.effect, read_pc, r_of_w_same]
+  simp only [block_cons, block_nil, List.foldl_cons, List.foldl_nil, Op.effect, read_pc, r_of_w_same]
 
 private theorem loop_zero_memory (s : ArmState) (base : BitVec 64) :
     (block base [.p824, .p828] s).mem = s.mem := by
-  simp only [block, List.foldl_cons, List.foldl_nil, Op.effect, put, next, ArmState.mem_w_eq_mem]
+  simp only [block_cons, block_nil, List.foldl_cons, List.foldl_nil, Op.effect, put, next, ArmState.mem_w_eq_mem]
 
 /-- Both native choices at812: the indexed load uses the postincremented raw
 pointer, and out-of-range access follows824/828 without reading memory. -/

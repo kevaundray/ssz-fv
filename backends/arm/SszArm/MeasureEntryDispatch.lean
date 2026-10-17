@@ -50,7 +50,7 @@ theorem selected_pc (s : ArmState) (base : BitVec 64) (desc : Desc)
   change r .PC s = base + 44#64 at pc
   cases desc <;>
     simp (config := {decide := true, instances := true})
-      [selected, Dispatch.block, dispatchOps, bodyEntry, Dispatch.Op.effect,
+      [selected, Dispatch.block_cons, Dispatch.block_nil, dispatchOps, bodyEntry, Dispatch.Op.effect,
        Emit.Dispatch.branch, Emit.Dispatch.compare64, Emit.Dispatch.next,
        Emit.Dispatch.greater, Activation.put, Activation.next,
        state_simp_rules, bitvec_rules, minimal_theory,

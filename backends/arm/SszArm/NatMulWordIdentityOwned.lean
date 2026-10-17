@@ -65,7 +65,7 @@ theorem identity_ready (s : ArmState) (base : BitVec 64) (operand : SszNative.Na
       (huf.code hc) (huf.error.trans he) (huf.aligned ha) hf
     refine ⟨fuel + 1, t, ?_, huf.trans (scan_pure_frame base [.p100] u (by decide)), Or.inr ?_⟩
     · rw [run_plus, hu, ht]
-    · simp [t, block, Op.effect, put, next, state_simp_rules, hu1, hu2,
+    · simp [t, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hu1, hu2,
         normalized_small, SszNative.NatOperand.pointer, SszNative.NatOperand.payload]
   | large pointer words =>
     have hn : pointer ≠ 0#64 := by

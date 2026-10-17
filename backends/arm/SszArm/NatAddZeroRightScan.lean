@@ -42,11 +42,11 @@ theorem zero_left_large_right (s : ArmState) (base pointer : BitVec 64)
     split <;> decide)
   have pcV : read_pc v = base + 460#64 := by
     by_cases empty : sigWords words = 0 <;>
-      simp [v, ops, empty, block, Op.effect, put, next,
+      simp [v, ops, empty, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, hpc, countU, BitVec.add_assoc]
   have indexV : r (.GPR 9#5) v = BitVec.ofNat 64 words.length - 1#64 := by
     by_cases empty : sigWords words = 0 <;>
-      simpa [v, ops, empty, block, Op.effect, put, next, state_simp_rules] using originalIndex
+      simpa [v, ops, empty, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using originalIndex
   apply Post.prepend owned scanned out fuel execution
   apply Post.prepend ownedU frame outV ops.length ran
   exact zero_borrow_post true v base pointer words left (.large pointer words)
@@ -94,7 +94,7 @@ theorem zero_right_large_right (s : ArmState) (base pointer : BitVec 64)
     have outV : r (.GPR 0#5) v = r (.GPR 0#5) u := scan_zero base ops u (by decide)
     have ownedV := ownedU.transport frame outV
     have pcV : read_pc v = base + 656#64 := by
-      simp [v, ops, block, Op.effect, put, next, state_simp_rules, countU, ptr]
+      simp [v, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, countU, ptr]
     apply Post.prepend ownedU frame outV ops.length ran
     apply zero_small_post .left v base word (.small word) (.large pointer words) ownedV
       (scan_code frame (scan_code scanned hc)) (frame.error.trans (scanned.error.trans he))
@@ -117,9 +117,9 @@ theorem zero_right_large_right (s : ArmState) (base pointer : BitVec 64)
     have frame : NatCompare.Frame u v := scan_frame base ops u (by decide)
     have outV : r (.GPR 0#5) v = r (.GPR 0#5) u := scan_zero base ops u (by decide)
     have pcV : read_pc v = base + 584#64 := by
-      simp [v, ops, block, Op.effect, put, next, state_simp_rules, hpc, countU, ptr, BitVec.add_assoc]
+      simp [v, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, countU, ptr, BitVec.add_assoc]
     have indexV : r (.GPR 9#5) v = BitVec.ofNat 64 leftWords.length - 1#64 := by
-      simp [v, ops, block, Op.effect, put, next, state_simp_rules, ownedU.leftPayload,
+      simp [v, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, ownedU.leftPayload,
         SszNative.NatOperand.payload]
     apply Post.prepend ownedU frame outV ops.length ran
     exact zero_borrow_post false v base leftPointer leftWords (.large leftPointer leftWords)

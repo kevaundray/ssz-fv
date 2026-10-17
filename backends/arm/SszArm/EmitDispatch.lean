@@ -68,7 +68,7 @@ theorem selected_pc (s : ArmState) (base : BitVec 64) (desc : Desc) (value : Val
   all_goals try contradiction
   all_goals
     simp (config := {decide := true, instances := true})
-      [selected, Dispatch.block, dispatchOps, bodyEntry, Dispatch.Op.effect,
+      [selected, Dispatch.block_cons, Dispatch.block_nil, dispatchOps, bodyEntry, Dispatch.Op.effect,
        Dispatch.branch, Dispatch.compare64, Dispatch.compare32, Dispatch.next,
        Dispatch.greater, state_simp_rules, bitvec_rules, minimal_theory,
        pc, tag, valueTag, descriptorTag, Emit.valueTag, BitVec.add_assoc]

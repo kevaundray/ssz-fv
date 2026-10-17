@@ -43,7 +43,7 @@ def tailResult (path : TailPath) (base : BitVec 64) (s : ArmState) : ArmState :=
 macro "delimited_tail_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
     [tailBody, TailPath.ops, invalidOps, scratchOps, overLimitOps, successOps,
-     tagsOps, List.cons_append, List.nil_append, block, List.foldl_cons,
+     tagsOps, List.cons_append, List.nil_append, block_cons, block_nil, List.foldl_cons,
      List.foldl_nil, Op.effect, put, next, state_simp_rules,
      ArmState.mem_w_eq_mem, BitVec.add_assoc, BitVec.ofNat_eq_ofNat,
      BitVec.ofNat_add_ofNat, Nat.reduceAdd, BitVec.add_zero,
@@ -78,7 +78,7 @@ theorem tail_body_pc (path : TailPath) (s : ArmState) (base : BitVec 64)
   have hpc : r .PC s = base + BitVec.ofNat 64 path.pc := hp
   cases path <;>
     simp [tailBody, TailPath.ops, TailPath.pc, invalidOps, scratchOps,
-      overLimitOps, successOps, tagsOps, block, Op.effect, put, next,
+      overLimitOps, successOps, tagsOps, block_cons, block_nil, Op.effect, put, next,
       state_simp_rules, hpc, BitVec.add_assoc]
 
 @[simp] theorem tail_body_sp (path : TailPath) (s : ArmState) (base : BitVec 64) :
@@ -96,7 +96,7 @@ theorem tail_body_vectors (path : TailPath) (s : ArmState) (base : BitVec 64)
   have ne : reg ≠ 0#5 := by bv_omega
   cases path <;>
     simp [tailBody, TailPath.ops, invalidOps, scratchOps, overLimitOps,
-      successOps, tagsOps, block, Op.effect, put, next, state_simp_rules, ne]
+      successOps, tagsOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, ne]
 
 /-- Only output bytes and the actual lower sixteen-byte slot are writable.
 The saved activation is deliberately absent from this exact tail frame. -/
@@ -238,7 +238,7 @@ theorem success_tail_memory (s : ArmState) (base : BitVec 64) (bytes count : Nat
       (successMemory s (r (.GPR 0#5) s) (r (.GPR 2#5) s) bytes count).mem := by
   unfold tailResult
   rw [epilogue_memory]
-  simp [tailBody, TailPath.ops, successOps, block, Op.effect, put, next,
+  simp [tailBody, TailPath.ops, successOps, block_cons, block_nil, Op.effect, put, next,
     state_simp_rules, successMemory, byteCount, countLow, countHigh, tag]
   apply mem_write_mem_bytes_of_mem_eq
   simp only [ArmState.mem_w_eq_mem]

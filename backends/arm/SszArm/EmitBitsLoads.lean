@@ -127,14 +127,14 @@ theorem setup_run (path : Path) (s : ArmState) (base : BitVec 64)
   cases path <;> simp [ready, block, Path.setupOps]
 
 @[simp] theorem ready_memory (path : Path) (s : ArmState) : (ready path s).mem = s.mem := by
-  cases path <;> simp [ready, block, Path.setupOps, Op.effect, Activation.put, Activation.next,
+  cases path <;> simp [ready, block_cons, block_nil, Path.setupOps, Op.effect, Activation.put, Activation.next,
     state_simp_rules]
 
 @[simp] theorem ready_arguments (path : Path) (s : ArmState) :
     r (.GPR 0#5) (ready path s) = r (.GPR 20#5) s ∧
     r (.GPR 1#5) (ready path s) = read_mem_bytes 8 (r (.GPR 22#5) s + 16#64) s ∧
     r (.GPR 2#5) (ready path s) = r (.GPR 23#5) s := by
-  cases path <;> simp [ready, block, Path.setupOps, Op.effect, Activation.put, Activation.next,
+  cases path <;> simp [ready, block_cons, block_nil, Path.setupOps, Op.effect, Activation.put, Activation.next,
     state_simp_rules]
 
 end SszArm.Emit.Bits

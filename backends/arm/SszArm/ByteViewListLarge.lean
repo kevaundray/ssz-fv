@@ -81,7 +81,7 @@ theorem compare_counts (s : ArmState) (base : BitVec 64) (k : Nat)
       try have hreg := h11 hk0
       try have hpos : 1 ≤ k := by omega
       simp (config := {decide := true, instances := true})
-        [*, t, ops, countOps, sameCount, scanExit, block, Op.effect, put, next,
+        [*, t, ops, countOps, sameCount, scanExit, block_cons, block_nil, Op.effect, put, next,
          Udivti3.compare, Udivti3.next, state_simp_rules, BitVec.ofNat_eq_ofNat,
          BitVec.add_assoc]
 
@@ -128,7 +128,7 @@ theorem compare_low (s : ArmState) (base low : BitVec 64)
       try simp only [heq] at hz hle
       try omega
       all_goals simp (config := {decide := true, instances := true})
-        [*, t, ops, lowOps, compareOps, block, Op.effect, put, next,
+        [*, t, ops, lowOps, compareOps, block_cons, block_nil, Op.effect, put, next,
          Udivti3.compare, Udivti3.next, state_simp_rules, BitVec.ofNat_eq_ofNat,
          Udivti3.cmp_zero, Udivti3.cmp_carry, BitVec.add_assoc]
       try bv_omega

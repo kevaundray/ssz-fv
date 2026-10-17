@@ -56,7 +56,7 @@ theorem first_word_fields (s : ArmState) (base a b : BitVec 64) (kind : FirstKin
   cases kind <;> simp at leftKind left right
   all_goals
     by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp [FirstKind.ops, sumOverflow, overflow, block, Op.effect, put, next,
+      simp [FirstKind.ops, sumOverflow, overflow, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, leftKind, left, right]
 
 /-- There is exactly one payload write in each first-word path. -/
@@ -70,7 +70,7 @@ theorem first_word_memory (s : ArmState) (base a b : BitVec 64) (kind : FirstKin
   cases kind <;> simp at left right
   all_goals
     by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;>
-      simp [FirstKind.ops, sumOverflow, overflow, block, Op.effect, put, next,
+      simp [FirstKind.ops, sumOverflow, overflow, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, left, right, NatCompare.spill_mem_w]
 
 /-- Only X11 through X15 are modified, independently of the branch choice. -/
@@ -81,13 +81,13 @@ theorem first_word_registers (s : ArmState) (base : BitVec 64)
   intro reg outside
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at outside
   cases kind <;> cases overflow <;>
-    simp (disch := simp_all) [FirstKind.ops, block, Op.effect, put, next, state_simp_rules]
+    simp (disch := simp_all) [FirstKind.ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem first_word_vectors (s : ArmState) (base : BitVec 64)
     (kind : FirstKind) (overflow : Bool) :
     ∀ reg : BitVec 5, r (.SFP reg) (block base (kind.ops overflow) s) = r (.SFP reg) s := by
   intro reg
   cases kind <;> cases overflow <;>
-    simp [FirstKind.ops, block, Op.effect, put, next, state_simp_rules]
+    simp [FirstKind.ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 end SszArm.NatAdd

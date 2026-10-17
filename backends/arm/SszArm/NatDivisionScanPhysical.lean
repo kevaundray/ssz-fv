@@ -41,13 +41,13 @@ theorem physical_scan_round (s : ArmState) (base pointer : BitVec 64)
   have hu : run 3 s = u := block_run base physicalGuardOps s hc he ha hfollow
   have huf : ScanFrame s u := scan_pure_frame base _ s (by decide)
   have hup : read_pc u = base + 132#64 := by
-    simp [u, physicalGuardOps, block, Op.effect, put, next, state_simp_rules, h8, hne]
+    simp [u, physicalGuardOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h8, hne]
   have hus := huf.source pointer words hs
   have hum := huf.words pointer words hs hm
   have hload : read_mem_bytes 8 (ScanLoad.physical.address u)
       (NatCompare.saved u 11#5) = words[n]?.getD 0#64 := by
     have hadd : ScanLoad.physical.address u = pointer + (BitVec.ofNat 64 n <<< 3) := by
-      simp [u, physicalGuardOps, ScanLoad.address, block, Op.effect, put, next,
+      simp [u, physicalGuardOps, ScanLoad.address, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, h9, h23]
       bv_omega
     rw [hadd]
@@ -65,7 +65,7 @@ theorem physical_scan_round (s : ArmState) (base pointer : BitVec 64)
   · rw [show 12 = 3 + 7 + 2 by decide, run_plus, run_plus, hu, hv, ht]
     rfl
   all_goals simp [physicalRoundResult, physicalTailOps, physicalGuardOps,
-    scanLoadResult, block, Op.effect, put, next, NatCompare.saved, state_simp_rules,
+    scanLoadResult, block_cons, block_nil, Op.effect, put, next, NatCompare.saved, state_simp_rules,
     h9, h8, h23, BitVec.ofNat_add]
   all_goals bv_omega
 
@@ -97,7 +97,7 @@ theorem physical_scan (base pointer : BitVec 64) (words : List (BitVec 64)) :
         state_simp_rules, hpc, BitVec.add_assoc]
     refine ⟨3, t, block_run base physicalGuardOps s hc he ha hf,
       scan_pure_frame base _ s (by decide), ?_, ?_, ?_, ?_, ?_⟩
-    all_goals simp [t, physicalGuardOps, block, Op.effect, put, next,
+    all_goals simp [t, physicalGuardOps, block_cons, block_nil, Op.effect, put, next,
       state_simp_rules, h8, significantCount]
   | succ n ih =>
     intro s hn hc he ha hp h9 h8 h23 hs hm
@@ -152,16 +152,16 @@ theorem physical_scan_entry (s : ArmState) (base pointer : BitVec 64)
   have hu : run 4 s = u := block_run base ops s hc he ha hf
   have huf : ScanFrame s u := scan_pure_frame base ops s (by decide)
   have hup : read_pc u = base + 120#64 := by
-    simp [u, ops, block, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
+    simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
   have hu9 : r (.GPR 9#5) u = pointer - 8#64 := by
-    simp [u, ops, block, Op.effect, put, next, state_simp_rules, h1]
+    simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h1]
   have hu8 : r (.GPR 8#5) u = BitVec.ofNat 64 (words.length + 1) := by
-    simp [u, ops, block, Op.effect, put, next, state_simp_rules, h2, BitVec.ofNat_add]
+    simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h2, BitVec.ofNat_add]
   have hu23 : r (.GPR 23#5) u = BitVec.ofNat 64 (8 * words.length) := by
-    simp [u, ops, block, Op.effect, put, next, state_simp_rules, h2]
+    simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h2]
     bv_omega
   have hu24 : r (.GPR 24#5) u = 8#64 := by
-    simp [u, ops, block, Op.effect, put, next, state_simp_rules]
+    simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   obtain ⟨fuel, t, ht, htf, ht8, ht22, ht23, ht24, htp⟩ :=
     physical_scan base pointer words words.length u (Nat.le_refl _)
       (huf.code hc) (huf.error.trans he) (huf.aligned ha) hup hu9 hu8 hu23

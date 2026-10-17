@@ -10,7 +10,7 @@ open Delimited (MemoryFrame)
 @[simp] theorem prepared_vector (path : Path) (s : ArmState) (reg : BitVec 5) :
     r (.SFP reg) (prepared path s) = r (.SFP reg) s := by
   have readySame (state : ArmState) : r (.SFP reg) (ready path state) = r (.SFP reg) state := by
-    cases path <;> simp [ready, block, Path.setupOps, Op.effect, Activation.put,
+    cases path <;> simp [ready, block_cons, block_nil, Path.setupOps, Op.effect, Activation.put,
       Activation.next, state_simp_rules]
   have countedSame (state : ArmState) : r (.SFP reg) (counted path state) = r (.SFP reg) state := by
     simp [counted, countPair, Activation.put, Activation.next, state_simp_rules]

@@ -59,7 +59,7 @@ theorem high_completed_aligned (site : HighSite) (s : ArmState) (base : BitVec 6
 @[simp] theorem round_stored_pc (s : ArmState) (base : BitVec 64) :
     read_pc (roundStored s base) = read_pc s + 152#64 := by
   have storePC (t : ArmState) : read_pc (block base storeOps t) = read_pc t + 32#64 := by
-    simp [storeOps, block, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
+    simp [storeOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
   rw [roundStored, storePC, round_added_pc]
   simp [BitVec.add_assoc]
 

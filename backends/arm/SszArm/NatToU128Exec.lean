@@ -266,6 +266,11 @@ theorem Op.aligned (op : Op) (base : BitVec 64) (s : ArmState)
 def block (base : BitVec 64) (ops : List Op) (s : ArmState) : ArmState :=
   ops.foldl (fun t op => op.effect base t) s
 
+@[simp] theorem block_nil (base : BitVec 64) (s : ArmState) : block base [] s = s := (rfl)
+
+@[simp] theorem block_cons (base : BitVec 64) (op : Op) (ops : List Op) (s : ArmState) :
+    block base (op :: ops) s = block base ops (op.effect base s) := (rfl)
+
 def Follows (base : BitVec 64) : List Op → ArmState → Prop
   | [], _ => True
   | op :: ops, s => read_pc s = base + BitVec.ofNat 64 op.row.1 ∧

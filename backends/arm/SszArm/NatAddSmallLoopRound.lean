@@ -14,13 +14,13 @@ theorem read_register (s : ArmState) (base : BitVec 64) (right : List (BitVec 64
     r (.GPR reg) (readState s base right index) = r (.GPR reg) s := by
   by_cases present : index < right.length <;>
     simp [readState, present, loadResult, LoadKind.dst, LoadKind.tmp,
-      block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+      block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
       saved, state_simp_rules, hr]
 
 theorem tail_memory (s : ArmState) (base : BitVec 64) :
     (tailState s base).mem = s.mem := by
   by_cases carry : r (.FLAG .C) s = 1#1 <;>
-    simp [tailState, tailOps, carry, block, Op.effect, put, next, state_simp_rules]
+    simp [tailState, tailOps, carry, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 def addState (s : ArmState) (base : BitVec 64)
     (right : List (BitVec 64)) (index : Nat) : ArmState :=
@@ -89,23 +89,23 @@ theorem round_run (s : ArmState) (base pointer sp output : BitVec 64)
       simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, vpc, BitVec.add_assoc])
   have uf : LoopFrame regions v u := readonly_frame base _ v regions (by decide)
   have up : read_pc u = base + 1920#64 := by
-    simp [u, block, Op.effect, put, next, state_simp_rules, vpc, BitVec.add_assoc]
+    simp [u, block_cons, block_nil, Op.effect, put, next, state_simp_rules, vpc, BitVec.add_assoc]
   have u9 : r (.GPR 9#5) u = output := (uf.registers _ (by decide)).trans v9
   have u14 : r (.GPR 14#5) u = BitVec.ofNat 64 index := by
-    simp [u, block, Op.effect, put, next, state_simp_rules, v14]
+    simp [u, block_cons, block_nil, Op.effect, put, next, state_simp_rules, v14]
   have u13 : r (.GPR 13#5) u = BitVec.ofNat 64 (remaining + 1) := by
-    simp [u, block, Op.effect, put, next, state_simp_rules, v13]
+    simp [u, block_cons, block_nil, Op.effect, put, next, state_simp_rules, v13]
   have usp : r (.GPR 31#5) u = sp := uf.sp.trans (vf.sp.trans hsp)
   have ua : storeAddress u .small = address output index := by
     simp [storeAddress, StoreKind.index, u9, u14, address_shift]
   have u15 : r (.GPR 15#5) u = (LimbAdd.step 0#64 (right[index]?.getD 0#64) carry).1 := by
-    simp [u, block, Op.effect, put, next, state_simp_rules, v12, v15,
+    simp [u, block_cons, block_nil, Op.effect, put, next, state_simp_rules, v12, v15,
       add_low _ _ carryBound]
   have u16 : r (.GPR 16#5) u = BitVec.ofNat 64 (index + 1) := by
-    simp [u, block, Op.effect, put, next, state_simp_rules, v14, BitVec.ofNat_add]
+    simp [u, block_cons, block_nil, Op.effect, put, next, state_simp_rules, v14, BitVec.ofNat_add]
   have uCarry : r (.FLAG .C) u =
       (AddWithCarry (BitVec.ofNat 64 carry) (right[index]?.getD 0#64) 0#1).2.c := by
-    simp [u, block, Op.effect, put, next, state_simp_rules, v12, v15]
+    simp [u, block_cons, block_nil, Op.effect, put, next, state_simp_rules, v12, v15]
   have restore := store_restore u .small (by simpa [usp] using layout.stack)
     (by simpa [ua] using physical) (by
       right

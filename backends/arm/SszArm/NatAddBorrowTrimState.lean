@@ -32,7 +32,7 @@ theorem borrow_guard_inputs (s : ArmState) (base : BitVec 64) (right : Bool) :
       r (.GPR (borrowKind right).index) u = r (.GPR 9#5) s := by
   cases right <;>
     simp [borrowGuard, borrowKind, borrowPointer, LoadKind.ptr, LoadKind.index,
-      block, Op.effect, next, state_simp_rules]
+      block_cons, block_nil, Op.effect, next, state_simp_rules]
 
 /-- Opaque register observations of either original-representation rescan. -/
 theorem borrow_round_fields (s : ArmState) (base word : BitVec 64)
@@ -46,6 +46,6 @@ theorem borrow_round_fields (s : ArmState) (base word : BitVec 64)
   by_cases zero : word = 0#64 <;> cases right <;>
     simp [borrowRoundState, borrowTail, borrowGuard, borrowKind, borrowHead,
       borrowExit, loadResult, LoadKind.start, LoadKind.dst, LoadKind.tmp,
-      block, Op.effect, put, next, NatCompare.saved, state_simp_rules, count, zero]
+      block_cons, block_nil, Op.effect, put, next, NatCompare.saved, state_simp_rules, count, zero]
 
 end SszArm.NatAdd

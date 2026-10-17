@@ -12,25 +12,25 @@ private theorem count_start_register (s : ArmState) (base : BitVec 64) (reg : Bi
     (unchanged : reg ∉ [8#5, 9#5, 10#5, 23#5, 31#5]) :
     r (.GPR reg) (block base clzStartOps s) = r (.GPR reg) s := by
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at unchanged
-  simp (disch := simp_all) [block, clzStartOps, Op.effect, put, next, state_simp_rules]
+  simp (disch := simp_all) [block_cons, block_nil, clzStartOps, Op.effect, put, next, state_simp_rules]
 
 private theorem count_end_register (s : ArmState) (base : BitVec 64) (reg : BitVec 5)
     (unchanged : reg ∉ [8#5, 9#5, 10#5, 24#5, 26#5, 31#5]) :
     r (.GPR reg) (block base countOps s) = r (.GPR reg) s := by
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at unchanged
-  simp (disch := simp_all) [block, countOps, Op.effect, put, next, state_simp_rules]
+  simp (disch := simp_all) [block_cons, block_nil, countOps, Op.effect, put, next, state_simp_rules]
 
 private theorem count_start_vectors (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.SFP reg) (block base clzStartOps s) = r (.SFP reg) s := by
-  simp [block, clzStartOps, Op.effect, put, next, state_simp_rules]
+  simp [block_cons, block_nil, clzStartOps, Op.effect, put, next, state_simp_rules]
 
 private theorem count_end_vectors (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.SFP reg) (block base countOps s) = r (.SFP reg) s := by
-  simp [block, countOps, Op.effect, put, next, state_simp_rules]
+  simp [block_cons, block_nil, countOps, Op.effect, put, next, state_simp_rules]
 
 private theorem count_end_memory (s : ArmState) (base : BitVec 64) :
     (block base countOps s).mem = s.mem := by
-  simp [block, countOps, Op.effect, put, next, state_simp_rules]
+  simp [block_cons, block_nil, countOps, Op.effect, put, next, state_simp_rules]
 
 private theorem count_slot_frame (s : ArmState) (stack : 16 ≤ (r (.GPR 31#5) s).toNat) :
     MemoryFrame [((r (.GPR 31#5) s).toNat - 16, 16)] s (countSlot s) := by

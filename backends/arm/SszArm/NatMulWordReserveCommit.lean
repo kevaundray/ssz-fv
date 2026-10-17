@@ -42,7 +42,7 @@ theorem wide_commit_effect (s : ArmState) (base : BitVec 64)
     read_pc t = base + 1216#64 ∧ r (.GPR 10#5) t = widePointer s ∧
       r (.GPR 8#5) t = 2#64 ∧ t.mem = (wideCommitMemory s).mem := by
   have hpc : r .PC s = base + 1200#64 := hp
-  simp [wideCommitOps, widePointer, wideCommitMemory, block, Op.effect, put, next,
+  simp [wideCommitOps, widePointer, wideCommitMemory, block_cons, block_nil, Op.effect, put, next,
     state_simp_rules, hpc, BitVec.add_assoc, NatCompare.spill_mem_w]
   apply mem_write_mem_bytes_of_mem_eq
   simp only [NatCompare.spill_mem_w]
@@ -50,7 +50,7 @@ theorem wide_commit_effect (s : ArmState) (base : BitVec 64)
 theorem wide_commit_registers (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) (keep : reg ≠ 8#5 ∧ reg ≠ 10#5) :
     r (.GPR reg) (block base wideCommitOps s) = r (.GPR reg) s := by
-  simp [wideCommitOps, block, Op.effect, put, next, state_simp_rules, keep.1, keep.2]
+  simp [wideCommitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, keep.1, keep.2]
 
 theorem wide_commit_memory (s : ArmState) (base : BitVec 64)
     (space : WideSpace s) (hp : read_pc s = base + 1200#64) :

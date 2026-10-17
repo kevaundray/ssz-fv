@@ -31,7 +31,7 @@ structure Saved (original current : ArmState) : Prop where
 
 macro "division_prologue_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
-    [block, prologueOps, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
+    [block_cons, block_nil, prologueOps, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
      state_simp_rules, ArmState.mem_w_eq_mem, BitVec.add_assoc,
      BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat, Nat.reduceAdd,
      BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel])
@@ -50,7 +50,7 @@ theorem prologue_pc (s : ArmState) (base : BitVec 64)
     (hp : read_pc s = base) :
     read_pc (block base prologueOps s) = base + 32#64 := by
   have hpc : r .PC s = base := hp
-  simp [block, prologueOps, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
+  simp [block_cons, block_nil, prologueOps, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
 
 theorem prologue_frame (s : ArmState) (base : BitVec 64)
     (stack : 80 ≤ (r (.GPR 31#5) s).toNat) :
@@ -77,10 +77,10 @@ theorem prologue_saved (s : ArmState) (base : BitVec 64)
       tail_reads
   · intro reg low high
     have other : reg ≠ 19#5 ∧ reg ≠ 20#5 ∧ reg ≠ 21#5 ∧ reg ≠ 31#5 := by bv_omega
-    simp [block, prologueOps, Op.effect, put, next, state_simp_rules,
+    simp [block_cons, block_nil, prologueOps, Op.effect, put, next, state_simp_rules,
       other.1, other.2.1, other.2.2.1, other.2.2.2]
   · intro reg low high
-    simp [block, prologueOps, Op.effect, put, next, state_simp_rules]
+    simp [block_cons, block_nil, prologueOps, Op.effect, put, next, state_simp_rules]
 
 theorem prologue_arguments (s : ArmState) (base : BitVec 64) :
     let t := block base prologueOps s

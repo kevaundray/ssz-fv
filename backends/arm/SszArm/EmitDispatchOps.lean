@@ -83,6 +83,11 @@ theorem step (op : Op) (s : ArmState) (base : BitVec 64)
 def block (ops : List Op) (s : ArmState) : ArmState :=
   ops.foldl (fun t op => op.effect t) s
 
+@[simp] theorem block_nil (s : ArmState) : block [] s = s := (rfl)
+
+@[simp] theorem block_cons (op : Op) (ops : List Op) (s : ArmState) :
+    block (op :: ops) s = block ops (op.effect s) := (rfl)
+
 def Follows (base : BitVec 64) : List Op → ArmState → Prop
   | [], _ => True
   | op :: ops, s => read_pc s = base + BitVec.ofNat 64 op.row.1 ∧

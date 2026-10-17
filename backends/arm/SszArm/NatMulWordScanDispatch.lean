@@ -16,21 +16,21 @@ private theorem dispatch_head_follows (s : ArmState) (base : BitVec 64)
 
 private theorem dispatch_head_register (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.GPR reg) (block base dispatchHead s) = r (.GPR reg) s := by
-  simp [dispatchHead, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
+  simp [dispatchHead, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
 
 private theorem dispatch_head_pc (s : ArmState) (base : BitVec 64) :
     read_pc (block base dispatchHead s) =
       if r (.GPR 3#5) s = 1#64 then base + 100#64 else base + 8#64 := by
-  simp [dispatchHead, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
+  simp [dispatchHead, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
 
 private theorem dispatch_zero_register (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.GPR reg) (block base [.p8] s) = r (.GPR reg) s := by
-  simp [block, Op.effect, state_simp_rules]
+  simp [block_cons, block_nil, Op.effect, state_simp_rules]
 
 private theorem dispatch_zero_pc (s : ArmState) (base : BitVec 64) :
     read_pc (block base [.p8] s) =
       if r (.GPR 3#5) s = 0#64 then base + 12#64 else base + 228#64 := by
-  by_cases zero : r (.GPR 3#5) s = 0#64 <;> simp [block, Op.effect, state_simp_rules, zero]
+  by_cases zero : r (.GPR 3#5) s = 0#64 <;> simp [block_cons, block_nil, Op.effect, state_simp_rules, zero]
 
 /-- The original compare/branch dispatch gives factor-one precedence over the
 factor-zero and general multiplication paths. -/
@@ -77,26 +77,26 @@ private theorem trim_init_follows (s : ArmState) (base : BitVec 64)
 private theorem trim_init_pc (s : ArmState) (base : BitVec 64)
     (hn : r (.GPR 1#5) s ≠ 0#64) :
     read_pc (block base trimInitOps s) = base + 252#64 := by
-  simp [trimInitOps, block, Op.effect, put, next, state_simp_rules, hn, BitVec.add_assoc]
+  simp [trimInitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hn, BitVec.add_assoc]
 
 private theorem trim_init_keep (s : ArmState) (base : BitVec 64) (reg : BitVec 5)
     (h8 : reg ≠ 8#5) (h9 : reg ≠ 9#5) (h10 : reg ≠ 10#5) :
     r (.GPR reg) (block base trimInitOps s) = r (.GPR reg) s := by
-  simp [trimInitOps, block, Op.effect, put, next, state_simp_rules, h8, h9, h10]
+  simp [trimInitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h8, h9, h10]
 
 private theorem trim_init_offset (s : ArmState) (base : BitVec 64) :
     r (.GPR 8#5) (block base trimInitOps s) =
       ((r (.GPR 2#5) s <<< 3) ^^^ 18446744073709551608#64) := by
-  simp [trimInitOps, block, Op.effect, put, next, state_simp_rules]
+  simp [trimInitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 private theorem trim_init_index (s : ArmState) (base : BitVec 64) :
     r (.GPR 9#5) (block base trimInitOps s) = 0#64 := by
-  simp [trimInitOps, block, Op.effect, put, next, state_simp_rules]
+  simp [trimInitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 private theorem trim_init_address (s : ArmState) (base : BitVec 64) :
     r (.GPR 10#5) (block base trimInitOps s) =
       (r (.GPR 2#5) s <<< 3) + r (.GPR 1#5) s - 8#64 := by
-  simp [trimInitOps, block, Op.effect, put, next, state_simp_rules]
+  simp [trimInitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem trim_scan_entry (s : ArmState) (base pointer : BitVec 64)
     (words : List (BitVec 64))
@@ -151,43 +151,43 @@ private theorem trim_exit_pc (s : ArmState) (base : BitVec 64) :
     read_pc (block base trimExitOps s) =
       if r (.GPR 2#5) s + r (.GPR 9#5) s + 1#64 = 1#64
       then base + 924#64 else base + 320#64 := by
-  simp [trimExitOps, block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
+  simp [trimExitOps, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
 
 private theorem trim_exit_keep (s : ArmState) (base : BitVec 64) (reg : BitVec 5)
     (h9 : reg ≠ 9#5) (h12 : reg ≠ 12#5) :
     r (.GPR reg) (block base trimExitOps s) = r (.GPR reg) s := by
-  simp [trimExitOps, block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+  simp [trimExitOps, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
     state_simp_rules, h9, h12]
 
 private theorem trim_exit_count (s : ArmState) (base : BitVec 64) :
     r (.GPR 9#5) (block base trimExitOps s) = r (.GPR 2#5) s + r (.GPR 9#5) s + 1#64 := by
-  simp [trimExitOps, block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
+  simp [trimExitOps, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
 
 private theorem trim_exit_index (s : ArmState) (base : BitVec 64) :
     r (.GPR 12#5) (block base trimExitOps s) = r (.GPR 2#5) s + r (.GPR 9#5) s := by
-  simp [trimExitOps, block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
+  simp [trimExitOps, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
 
 private theorem trim_zero_keep (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.GPR reg) (block base [.p920] s) = r (.GPR reg) s := by
-  simp [block, Op.effect, state_simp_rules]
+  simp [block_cons, block_nil, Op.effect, state_simp_rules]
 
 private theorem trim_zero_pc (s : ArmState) (base : BitVec 64) :
     read_pc (block base [.p920] s) =
       if r (.GPR 2#5) s = 0#64 then base + 928#64 else base + 924#64 := by
-  simp [block, Op.effect, state_simp_rules]
+  simp [block_cons, block_nil, Op.effect, state_simp_rules]
 
 private theorem trim_low_keep (s : ArmState) (base : BitVec 64) (reg : BitVec 5)
     (hne : reg ≠ 2#5) : r (.GPR reg) (block base [.p924] s) = r (.GPR reg) s := by
-  simp [block, Op.effect, put, next, state_simp_rules, hne]
+  simp [block_cons, block_nil, Op.effect, put, next, state_simp_rules, hne]
 
 private theorem trim_low_payload (s : ArmState) (base : BitVec 64) :
     r (.GPR 2#5) (block base [.p924] s) = read_mem_bytes 8 (r (.GPR 1#5) s) s := by
-  simp [block, Op.effect, put, next, state_simp_rules]
+  simp [block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 private theorem trim_low_pc (s : ArmState) (base : BitVec 64)
     (hp : read_pc s = base + 924#64) : read_pc (block base [.p924] s) = base + 928#64 := by
   have hpc : r .PC s = base + 924#64 := hp
-  simp [block, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
+  simp [block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
 
 private theorem trim_low_exit (s : ArmState) (base pointer : BitVec 64)
     (words : List (BitVec 64))

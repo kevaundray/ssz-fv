@@ -75,7 +75,7 @@ theorem high_digits (site : HighSite) (s : ArmState) (base : BitVec 64) :
     r (.GPR site.b1) (block base site.core0 s) = r (.GPR 3#5) s >>> 32 := by
   cases site <;>
     simp (config := {decide := true}) only [HighSite.core0, HighSite.a0, HighSite.a1,
-      HighSite.b0, HighSite.b1, HighSite.left, block, List.foldl_cons, List.foldl_nil,
+      HighSite.b0, HighSite.b1, HighSite.left, block_cons, block_nil, List.foldl_cons, List.foldl_nil,
       Op.effect, high_put_gpr, ↓reduceIte]
 
 theorem high_low_cross (site : HighSite) (s : ArmState) (base : BitVec 64) :
@@ -84,7 +84,7 @@ theorem high_low_cross (site : HighSite) (s : ArmState) (base : BitVec 64) :
         ((r (.GPR site.a0) s * r (.GPR site.b0) s) >>> 32) := by
   cases site <;>
     simp (config := {decide := true}) only [HighSite.core1, HighSite.a0, HighSite.a1,
-      HighSite.b0, HighSite.v, block, List.foldl_cons, List.foldl_nil, Op.effect,
+      HighSite.b0, HighSite.v, block_cons, block_nil, List.foldl_cons, List.foldl_nil, Op.effect,
       high_put_gpr, ↓reduceIte]
   all_goals exact BitVec.add_comm _ _
 
@@ -109,7 +109,7 @@ theorem high_high_cross (site : HighSite) (s : ArmState) (base : BitVec 64) :
         ((r (.GPR site.v) s).setWidth 32).setWidth 64) >>> 32 := by
   cases site <;>
     simp (config := {decide := true}) only [HighSite.core2, HighSite.a0, HighSite.b0,
-      HighSite.b1, HighSite.v, HighSite.z, block, List.foldl_cons, List.foldl_nil,
+      HighSite.b1, HighSite.v, HighSite.z, block_cons, block_nil, List.foldl_cons, List.foldl_nil,
       Op.effect, high_put_gpr, ↓reduceIte, true_and]
   all_goals congr 1; exact BitVec.add_comm _ _
 
@@ -136,7 +136,7 @@ theorem high_combine (site : HighSite) (s : ArmState) (base : BitVec 64) :
       r (.GPR site.a1) s * r (.GPR site.b1) s + r (.GPR site.b0) s + r (.GPR site.z) s := by
   cases site <;>
     simp (config := {decide := true}) only [HighSite.core3, HighSite.a1, HighSite.b0,
-      HighSite.b1, HighSite.v, HighSite.z, HighSite.destination, block,
+      HighSite.b1, HighSite.v, HighSite.z, HighSite.destination, block_cons, block_nil,
       List.foldl_cons, List.foldl_nil, Op.effect, high_put_gpr, ↓reduceIte]
   all_goals congr 1; exact BitVec.add_comm _ _
 

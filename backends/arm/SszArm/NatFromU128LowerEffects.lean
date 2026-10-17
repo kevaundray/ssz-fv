@@ -16,7 +16,7 @@ theorem lower_smallPair_effect (s : ArmState) (base : BitVec 64) (space : Space 
   · intro f
     cases f <;>
       simp (config := {decide := true, instances := true})
-        [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+        [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
          LowerKind.offset, state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg,
          store_field_write, reads.1, reads.2]
     all_goals
@@ -28,10 +28,10 @@ theorem lower_smallPair_effect (s : ArmState) (base : BitVec 64) (space : Space 
         · by_cases h31 : reg = 31#5
           · subst reg; simp (config := {decide := true}) [state_simp_rules]
           · simp (disch := simp_all) [state_simp_rules]
-  · simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+  · simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules]
   · apply Memory.mem_eq_iff_read_mem_bytes_eq.mp
-    simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+    simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules, ArmState.mem_w_eq_mem,
       store_field_write, BitVec.add_assoc, BitVec.sub_eq_add_neg]
     all_goals simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
@@ -50,7 +50,7 @@ theorem lower_smallStatus_effect (s : ArmState) (base : BitVec 64) (space : Spac
   · intro f
     cases f <;>
       simp (config := {decide := true, instances := true})
-        [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+        [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
          LowerKind.offset, state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg,
          store_field_write, reads.1, reads.2]
     all_goals
@@ -62,10 +62,10 @@ theorem lower_smallStatus_effect (s : ArmState) (base : BitVec 64) (space : Spac
         · by_cases h31 : reg = 31#5
           · subst reg; simp (config := {decide := true}) [state_simp_rules]
           · simp (disch := simp_all) [state_simp_rules]
-  · simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+  · simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules]
   · apply Memory.mem_eq_iff_read_mem_bytes_eq.mp
-    simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+    simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules, ArmState.mem_w_eq_mem,
       store_field_write, BitVec.add_assoc, BitVec.sub_eq_add_neg]
     all_goals simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
@@ -84,7 +84,7 @@ theorem lower_wideStatus_effect (s : ArmState) (base : BitVec 64) (space : Space
   · intro f
     cases f <;>
       simp (config := {decide := true, instances := true})
-        [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+        [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
          LowerKind.offset, state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg,
          store_field_write, reads.1, reads.2]
     all_goals
@@ -96,10 +96,10 @@ theorem lower_wideStatus_effect (s : ArmState) (base : BitVec 64) (space : Space
         · by_cases h31 : reg = 31#5
           · subst reg; simp (config := {decide := true}) [state_simp_rules]
           · simp (disch := simp_all) [state_simp_rules]
-  · simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+  · simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules]
   · apply Memory.mem_eq_iff_read_mem_bytes_eq.mp
-    simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+    simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules, ArmState.mem_w_eq_mem,
       store_field_write, BitVec.add_assoc, BitVec.sub_eq_add_neg]
     all_goals simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
@@ -118,7 +118,7 @@ theorem lower_zero48_effect (s : ArmState) (base : BitVec 64) (space : Space s) 
   · intro f
     cases f <;>
       simp (config := {decide := true, instances := true})
-        [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+        [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
          LowerKind.offset, state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg,
          store_field_write, reads.1, reads.2]
     all_goals
@@ -130,10 +130,10 @@ theorem lower_zero48_effect (s : ArmState) (base : BitVec 64) (space : Space s) 
         · by_cases h31 : reg = 31#5
           · subst reg; simp (config := {decide := true}) [state_simp_rules]
           · simp (disch := simp_all) [state_simp_rules]
-  · simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+  · simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules]
   · apply Memory.mem_eq_iff_read_mem_bytes_eq.mp
-    simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+    simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules, ArmState.mem_w_eq_mem,
       store_field_write, BitVec.add_assoc, BitVec.sub_eq_add_neg]
     all_goals simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
@@ -152,7 +152,7 @@ theorem lower_zero32_effect (s : ArmState) (base : BitVec 64) (space : Space s) 
   · intro f
     cases f <;>
       simp (config := {decide := true, instances := true})
-        [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+        [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
          LowerKind.offset, state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg,
          store_field_write, reads.1, reads.2]
     all_goals
@@ -164,10 +164,10 @@ theorem lower_zero32_effect (s : ArmState) (base : BitVec 64) (space : Space s) 
         · by_cases h31 : reg = 31#5
           · subst reg; simp (config := {decide := true}) [state_simp_rules]
           · simp (disch := simp_all) [state_simp_rules]
-  · simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+  · simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules]
   · apply Memory.mem_eq_iff_read_mem_bytes_eq.mp
-    simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+    simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules, ArmState.mem_w_eq_mem,
       store_field_write, BitVec.add_assoc, BitVec.sub_eq_add_neg]
     all_goals simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
@@ -186,7 +186,7 @@ theorem lower_zero16_effect (s : ArmState) (base : BitVec 64) (space : Space s) 
   · intro f
     cases f <;>
       simp (config := {decide := true, instances := true})
-        [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+        [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
          LowerKind.offset, state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg,
          store_field_write, reads.1, reads.2]
     all_goals
@@ -198,10 +198,10 @@ theorem lower_zero16_effect (s : ArmState) (base : BitVec 64) (space : Space s) 
         · by_cases h31 : reg = 31#5
           · subst reg; simp (config := {decide := true}) [state_simp_rules]
           · simp (disch := simp_all) [state_simp_rules]
-  · simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+  · simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules]
   · apply Memory.mem_eq_iff_read_mem_bytes_eq.mp
-    simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+    simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules, ArmState.mem_w_eq_mem,
       store_field_write, BitVec.add_assoc, BitVec.sub_eq_add_neg]
     all_goals simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
@@ -220,7 +220,7 @@ theorem lower_errorPair_effect (s : ArmState) (base : BitVec 64) (space : Space 
   · intro f
     cases f <;>
       simp (config := {decide := true, instances := true})
-        [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+        [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
          LowerKind.offset, state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg,
          store_field_write, reads.1, reads.2]
     all_goals
@@ -232,10 +232,10 @@ theorem lower_errorPair_effect (s : ArmState) (base : BitVec 64) (space : Space 
         · by_cases h31 : reg = 31#5
           · subst reg; simp (config := {decide := true}) [state_simp_rules]
           · simp (disch := simp_all) [state_simp_rules]
-  · simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+  · simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules]
   · apply Memory.mem_eq_iff_read_mem_bytes_eq.mp
-    simp [LowerKind.ops, block, Op.effect, put, next, lowerMemory, lowerSaved,
+    simp [LowerKind.ops, block_cons, block_nil, Op.effect, put, next, lowerMemory, lowerSaved,
       LowerKind.offset, state_simp_rules, ArmState.mem_w_eq_mem,
       store_field_write, BitVec.add_assoc, BitVec.sub_eq_add_neg]
     all_goals simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]

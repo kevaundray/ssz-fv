@@ -66,6 +66,11 @@ theorem Op.stable (op : Op) (s : ArmState) : Stable s (op.effect s) := by
 def block (ops : List Op) (s : ArmState) : ArmState :=
   ops.foldl (fun t op => op.effect t) s
 
+@[simp] theorem block_nil (s : ArmState) : block [] s = s := (rfl)
+
+@[simp] theorem block_cons (op : Op) (ops : List Op) (s : ArmState) :
+    block (op :: ops) s = block ops (op.effect s) := (rfl)
+
 def Follows (base : BitVec 64) : List Op → ArmState → Prop
   | [], _ => True
   | op :: ops, s => read_pc s = base + BitVec.ofNat 64 op.row.1 ∧
@@ -114,7 +119,7 @@ theorem runs (s : ArmState) (base : BitVec 64)
   change run 10 s = block ops s at executed
   rw [executed]
   change r .PC s = _ at pc
-  simp (config := {decide := true}) [block, ops, Op.effect, put, next, result,
+  simp (config := {decide := true}) [block_cons, block_nil, ops, Op.effect, put, next, result,
     state_simp_rules, pc, BitVec.add_assoc]
   simp only [w, write_base_pc, write_base_gpr]
 

@@ -36,7 +36,7 @@ theorem borrow_round (s : ArmState) (base pointer : BitVec 64)
     cases right <;> simpa [u, borrowGuard] using hx
   have huf : NatCompare.Frame s u := scan_frame base _ _ (by cases right <;> decide)
   have hup : read_pc u = base + BitVec.ofNat 64 (borrowKind right).start := by
-    cases right <;> simp [u, borrowGuard, borrowKind, LoadKind.start, block,
+    cases right <;> simp [u, borrowGuard, borrowKind, LoadKind.start, block_cons, block_nil,
       Op.effect, next, state_simp_rules, h9, notLast]
   have hus : Source u pointer words := huf.source _ _ hs
   have hum : Words u pointer words := huf.words _ _ hs hm
@@ -92,7 +92,7 @@ theorem borrow_trim (base pointer : BitVec 64) (words : List (BitVec 64)) (right
       scan_frame base ops s (by cases right <;> decide),
       scan_zero base ops s (by cases right <;> decide), ?_, ?_⟩
     · simp [significantCount]
-    · cases right <;> simp [t, ops, borrowGuard, borrowExit, block,
+    · cases right <;> simp [t, ops, borrowGuard, borrowExit, block_cons, block_nil,
         Op.effect, next, state_simp_rules, h9, significantCount]
   | succ n ih =>
     intro s hn hc he ha hp hptr h9 hs hm

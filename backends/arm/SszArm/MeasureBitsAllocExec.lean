@@ -98,6 +98,11 @@ theorem effect_aligned (site : Site) (op : Op) (s : ArmState) (base : BitVec 64)
 def block (site : Site) (base : BitVec 64) (ops : List Op) (s : ArmState) : ArmState :=
   ops.foldl (fun state op => effect site base op state) s
 
+@[simp] theorem block_nil (site : Site) (base : BitVec 64) (s : ArmState) : block site base [] s = s := (rfl)
+
+@[simp] theorem block_cons (site : Site) (base : BitVec 64) (op : Op) (ops : List Op) (s : ArmState) :
+    block site base (op :: ops) s = block site base ops (effect site base op s) := (rfl)
+
 def Follows (site : Site) (base : BitVec 64) : List Op → ArmState → Prop
   | [], _ => True
   | op :: ops, s => read_pc s = base + BitVec.ofNat 64 (row site op).1 ∧

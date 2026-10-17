@@ -90,10 +90,10 @@ theorem fast_output_saved (original s : ArmState) (base : BitVec 64)
   · exact (fast_output_arguments s base space).2.2.2.2.2
   · intro reg low high
     have keep : reg ≠ 1#5 ∧ reg ≠ 8#5 ∧ reg ≠ 9#5 ∧ reg ≠ 10#5 ∧ reg ≠ 31#5 := by bv_omega
-    simp [block, fastOutputOps, Op.effect, put, next, state_simp_rules,
+    simp [block_cons, block_nil, fastOutputOps, Op.effect, put, next, state_simp_rules,
       keep.1, keep.2.1, keep.2.2.1, keep.2.2.2.1, keep.2.2.2.2]
   · intro reg low high
-    simp [block, fastOutputOps, Op.effect, put, next, state_simp_rules]
+    simp [block_cons, block_nil, fastOutputOps, Op.effect, put, next, state_simp_rules]
 
 theorem payload_saved (original s : ArmState) (base : BitVec 64)
     (saved : Saved original s) (stack : 80 ≤ (r (.GPR 31#5) original).toNat)
@@ -102,8 +102,8 @@ theorem payload_saved (original s : ArmState) (base : BitVec 64)
   · exact (payload_arguments s base).2.2.2.2.2
   · intro reg low high
     have keep : reg ≠ 9#5 := by bv_omega
-    simp [block, payloadOps, Op.effect, put, next, state_simp_rules, keep]
+    simp [block_cons, block_nil, payloadOps, Op.effect, put, next, state_simp_rules, keep]
   · intro reg low high
-    simp [block, payloadOps, Op.effect, put, next, state_simp_rules]
+    simp [block_cons, block_nil, payloadOps, Op.effect, put, next, state_simp_rules]
 
 end SszArm.NatDivision

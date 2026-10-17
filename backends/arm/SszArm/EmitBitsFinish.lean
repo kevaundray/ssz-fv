@@ -50,7 +50,7 @@ theorem finish_run (kind : Finish) (s : ArmState) (base : BitVec 64) (args : Arg
   change r .PC s = _ at pc
   cases kind <;> simp only [Finish.countReady] at count
   all_goals
-    simp [finished, finishRegisters, Finish.ops, Finish.start, Tail.block, Tail.Op.effect,
+    simp [finished, finishRegisters, Finish.ops, Finish.start, Tail.block_cons, Tail.block_nil, Tail.Op.effect,
       Activation.put, Activation.next, Dispatch.next, state_simp_rules, result, count, pc,
       NatAdd.load_store_field, NatAdd.load_gpr_pc, BitVec.add_assoc, BitVec.sub_eq_add_neg]
 

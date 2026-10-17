@@ -91,10 +91,10 @@ theorem round_run (s : ArmState) (base pointer : BitVec 64)
     simp [Follows, Op.row, Op.effect, put, next, state_simp_rules,
       hpc, h8, nonzero, BitVec.add_assoc]
   refine ⟨block_run base _ s hc he ha follows, scan_frame base _ s (by decide), ?_, ?_, ?_⟩
-  · simp [round, block, Op.effect, put, next, state_simp_rules, h8, dec]
-  · simp [round, block, Op.effect, put, next, state_simp_rules, h10, BitVec.sub_eq_add_neg]
+  · simp [round, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h8, dec]
+  · simp [round, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h10, BitVec.sub_eq_add_neg]
   · by_cases zero : words[index]?.getD 0#64 = 0#64 <;>
-      simp [round, block, Op.effect, put, next, state_simp_rules, h10, load, zero]
+      simp [round, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h10, load, zero]
 
 /-- Complete backward normalization scan, retaining original noncanonical
 physical words while computing their exact significant count. -/
@@ -119,7 +119,7 @@ theorem scan_run (base pointer : BitVec 64) (words : List (BitVec 64))
     refine ⟨2, t, block_run base ops s hc he ha (by
       simp [ops, Follows, Op.row, Op.effect, put, next, state_simp_rules,
         hpc, h8, BitVec.add_assoc]), scan_frame base ops s (by decide), ?_, ?_⟩
-    all_goals simp [t, ops, block, Op.effect, put, next, state_simp_rules, h8, significantCount]
+    all_goals simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h8, significantCount]
   | succ n ih =>
     intro s hn hc he ha hp h8 h10 hm
     have h10' : r (.GPR 10#5) s = pointer + BitVec.ofNat 64 (8 * n) := by

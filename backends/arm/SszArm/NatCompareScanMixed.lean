@@ -63,7 +63,7 @@ theorem scan_mixed_round (s : ArmState) (base : BitVec 64)
   have huf : Frame s u := readonly_frame base _ _ (by cases smallLeft <;> decide)
   have hup : read_pc u = base + BitVec.ofNat 64 (mixedLoad smallLeft).start := by
     cases smallLeft <;>
-      simp_all [u, mixedPre, mixedLoad, LoadKind.start, block, Op.effect,
+      simp_all [u, mixedPre, mixedLoad, LoadKind.start, block_cons, block_nil, Op.effect,
         put, next, Udivti3.compare, Udivti3.next, state_simp_rules,
         Udivti3.cmp_carry, payload]
   have hload : read_mem_bytes 8
@@ -73,7 +73,7 @@ theorem scan_mixed_round (s : ArmState) (base : BitVec 64)
       (huf.source _ _ hs) (huf.words _ _ hs hm)
     cases smallLeft <;>
       simpa [u, mixedPre, mixedLoad, LoadKind.ptr, LoadKind.index, LoadKind.tmp,
-        block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+        block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
         state_simp_rules, pointer, h9] using hl
   let v := loadResult u base (mixedLoad smallLeft) (words[0]?.getD 0)
   have hv : run 8 u = v := load_run u base _ (mixedLoad smallLeft)
@@ -93,7 +93,7 @@ theorem scan_mixed_round (s : ArmState) (base : BitVec 64)
   all_goals
     cases smallLeft <;>
       simp_all [t, mixedPost, v, mixedLoad, u, mixedPre, mixedKind, ScanKind.head,
-        loadResult, LoadKind.dst, saved, words, block, Op.effect, put, next,
+        loadResult, LoadKind.dst, saved, words, block_cons, block_nil, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules, Udivti3.cmp_zero]
 
 /-- The final Small/Small iteration is a SUBS/CSEL sequence without memory access. -/
@@ -116,7 +116,7 @@ theorem scan_small_round (s : ArmState) (base : BitVec 64)
       Udivti3.next, state_simp_rules, hpc, h9, BitVec.add_assoc]
   refine ⟨6, t, block_run base ops s hc he ha hfollow,
     readonly_frame base ops s (by decide), ?_, ?_, ?_, ?_, ?_⟩
-  all_goals simp [t, ops, block, Op.effect, put, next, Udivti3.compare,
+  all_goals simp [t, ops, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
     Udivti3.next, state_simp_rules, h9, hx, hy, Udivti3.cmp_zero]
 
 end SszArm.NatCompare

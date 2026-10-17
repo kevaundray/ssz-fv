@@ -13,7 +13,7 @@ theorem aligned_of_stack {s t : ArmState} (aligned : CheckSPAlignment s)
 
 theorem ready_pc (path : Path) (s : ArmState) :
     read_pc (ready path s) = read_pc s + BitVec.ofNat 64 (4 * path.setupOps.length) := by
-  cases path <;> simp [ready, block, Path.setupOps, Op.effect, Activation.put,
+  cases path <;> simp [ready, block_cons, block_nil, Path.setupOps, Op.effect, Activation.put,
     Activation.next, state_simp_rules, BitVec.add_assoc]
 
 theorem prepare_run (s : ArmState) (base : BitVec 64) (args : Args)

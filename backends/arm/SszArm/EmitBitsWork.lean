@@ -51,7 +51,7 @@ theorem prepared_work (path : Path) {s : ArmState} {args : Args} {desc : Desc}
     (preserved _ (by decide)).trans registers.stack, ?_, ?_, ?_, ?_, ?_⟩
   · obtain ⟨_, pointer, _⟩ := prepared_arguments path owned registers
     have equal : r (.GPR 22#5) (prepared path s) = r (.GPR 1#5) (prepared path s) := by
-      cases path <;> simp [prepared, ready, block, Path.setupOps, Op.effect,
+      cases path <;> simp [prepared, ready, block_cons, block_nil, Path.setupOps, Op.effect,
         Activation.put, Activation.next, state_simp_rules]
     exact equal.trans pointer
   · rw [prepared, ready_register path _ 23#5 (by decide), checked_full]
@@ -62,7 +62,7 @@ theorem prepared_work (path : Path) {s : ArmState} {args : Args} {desc : Desc}
     rw [reads]
     exact qInput.value_at.2.1
   · have same : r (.GPR path.low) (prepared path s) = r (.GPR path.low) (checked path s) := by
-      cases path <;> simp [prepared, ready, block, Path.setupOps, Path.low, Op.effect,
+      cases path <;> simp [prepared, ready, block_cons, block_nil, Path.setupOps, Path.low, Op.effect,
         Activation.put, Activation.next, state_simp_rules]
     exact same.trans checkedLow
   · intro list
@@ -70,7 +70,7 @@ theorem prepared_work (path : Path) {s : ArmState} {args : Args} {desc : Desc}
     have value : r (.GPR 26#5) (checked Path.list s) = countLow bits.count := checkedLow
     have result : r (.GPR 25#5) (prepared .list s) =
         (((countLow bits.count).setWidth 32 &&& 7#32).setWidth 64) := by
-      simp [prepared, ready, block, Path.setupOps, Op.effect, Activation.put, Activation.next,
+      simp [prepared, ready, block_cons, block_nil, Path.setupOps, Op.effect, Activation.put, Activation.next,
         state_simp_rules, value]
     rw [result]
     exact low32_remainder bits.count

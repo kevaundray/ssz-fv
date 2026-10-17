@@ -59,7 +59,7 @@ theorem scan_empty (s : ArmState) (base : BitVec 64) (kind : ScanKind)
   have hu := block_run base kind.emptyOps s hc he ha hfollow
   have huf : Frame s u := readonly_frame base _ _ (by cases kind <;> decide)
   have hup : read_pc u = base + 700#64 := by
-    cases kind <;> simp_all [u, ScanKind.emptyOps, ScanKind.index, block,
+    cases kind <;> simp_all [u, ScanKind.emptyOps, ScanKind.index, block_cons, block_nil,
       Op.effect, next, state_simp_rules]
   obtain ⟨fuel, t, ht, htf, htp, hret⟩ := return_equal u base
     (huf.code hc) (huf.error.trans he) (huf.aligned ha) hup

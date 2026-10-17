@@ -71,7 +71,7 @@ private theorem select_block_pc (s : ArmState) (base : BitVec 64)
     (hp : read_pc s = base + 1484#64) :
     read_pc (block base [.p1484, .p1488, .p1492] s) = base + 1496#64 := by
   have hpc : r .PC s = base + 1484#64 := hp
-  simp [block, Op.effect, put, next, Udivti3.compare,
+  simp [block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
     Udivti3.next, state_simp_rules, hpc, BitVec.add_assoc]
 
 private theorem normalize_entry_gpr (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
@@ -83,7 +83,7 @@ private theorem normalize_entry_gpr (s : ArmState) (base : BitVec 64) (reg : Bit
 
 private theorem normalize_entry_pc (s : ArmState) (base : BitVec 64) :
     read_pc (block base [.p1464] s) = read_pc s + 4#64 := by
-  simp only [block, List.foldl_cons, List.foldl_nil, Op.effect, put, next, read_pc]
+  simp only [block_cons, block_nil, List.foldl_cons, List.foldl_nil, Op.effect, put, next, read_pc]
   arm_state_nf
 
 /-- The native CSEL pair chooses Small only for significant count one. -/

@@ -70,7 +70,7 @@ theorem spill_run (s : ArmState) (base : BitVec 64) (small b : Bool)
         cases small <;> cases b <;>
           simp only [Bool.false_eq_true, ↓reduceIte] at hb hpc <;>
           simp (config := {decide := true, instances := true})
-            [spillResult, spillTarget, spillOps, smallFlagOps, flagOps, block, Op.effect,
+            [spillResult, spillTarget, spillOps, smallFlagOps, flagOps, block_cons, block_nil, Op.effect,
              put, next, widthSaved, state_simp_rules, BitVec.ofNat_eq_ofNat,
              BitVec.add_assoc, BitVec.sub_add_cancel, width_read_spill_w, hpc, hb, hrestore]
       · by_cases h31 : reg = 31#5
@@ -78,41 +78,41 @@ theorem spill_run (s : ArmState) (base : BitVec 64) (small b : Bool)
           cases small <;> cases b <;>
             simp only [Bool.false_eq_true, ↓reduceIte] at hb hpc <;>
             simp (config := {decide := true, instances := true})
-              [spillResult, spillTarget, spillOps, smallFlagOps, flagOps, block, Op.effect,
+              [spillResult, spillTarget, spillOps, smallFlagOps, flagOps, block_cons, block_nil, Op.effect,
                put, next, widthSaved, state_simp_rules, BitVec.ofNat_eq_ofNat,
                BitVec.add_assoc, BitVec.sub_add_cancel, width_read_spill_w, hpc, hb, hrestore]
         · cases small <;> cases b <;>
             simp only [Bool.false_eq_true, ↓reduceIte] at hb hpc <;>
             simp (config := {decide := true, instances := true})
-              [spillResult, spillTarget, spillOps, smallFlagOps, flagOps, block, Op.effect,
+              [spillResult, spillTarget, spillOps, smallFlagOps, flagOps, block_cons, block_nil, Op.effect,
                put, next, widthSaved, state_simp_rules, BitVec.ofNat_eq_ofNat,
                BitVec.add_assoc, BitVec.sub_add_cancel, width_read_spill_w, hpc, hb,
                hrestore, h9, h31]
     | SFP reg =>
       cases small <;> cases b <;>
-        simp [spillResult, spillOps, smallFlagOps, flagOps, block, Op.effect,
+        simp [spillResult, spillOps, smallFlagOps, flagOps, block_cons, block_nil, Op.effect,
           put, next, widthSaved, state_simp_rules]
     | PC =>
       cases small <;> cases b <;>
         simp only [Bool.false_eq_true, ↓reduceIte] at hb hpc <;>
         simp (config := {decide := true, instances := true})
-          [spillResult, spillTarget, spillOps, smallFlagOps, flagOps, block, Op.effect,
+          [spillResult, spillTarget, spillOps, smallFlagOps, flagOps, block_cons, block_nil, Op.effect,
            put, next, widthSaved, state_simp_rules, BitVec.ofNat_eq_ofNat,
            BitVec.add_assoc, BitVec.sub_add_cancel, width_read_spill_w, hpc, hb, hrestore]
     | FLAG flag =>
       cases small <;> cases b <;>
-        simp [spillResult, spillOps, smallFlagOps, flagOps, block, Op.effect,
+        simp [spillResult, spillOps, smallFlagOps, flagOps, block_cons, block_nil, Op.effect,
           put, next, widthSaved, state_simp_rules]
     | ERR =>
       cases small <;> cases b <;>
-        simp [spillResult, spillOps, smallFlagOps, flagOps, block, Op.effect,
+        simp [spillResult, spillOps, smallFlagOps, flagOps, block_cons, block_nil, Op.effect,
           put, next, widthSaved, state_simp_rules]
   · cases small <;> cases b <;>
-      simp [spillResult, spillOps, smallFlagOps, flagOps, block, Op.effect,
+      simp [spillResult, spillOps, smallFlagOps, flagOps, block_cons, block_nil, Op.effect,
         put, next, widthSaved, state_simp_rules]
   · intro n address
     cases small <;> cases b <;>
-      simp [spillResult, spillOps, smallFlagOps, flagOps, block, Op.effect,
+      simp [spillResult, spillOps, smallFlagOps, flagOps, block_cons, block_nil, Op.effect,
         put, next, widthSaved, state_simp_rules, width_read_spill_w]
 
 theorem spill_frame (s : ArmState) (base : BitVec 64) (small b : Bool)

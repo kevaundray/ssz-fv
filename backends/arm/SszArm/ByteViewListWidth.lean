@@ -35,7 +35,7 @@ theorem entry_runs (s : ArmState) (base : BitVec 64) (hc : CodeAt s base)
   all_goals
     dsimp only [t, ops]
     by_cases hz : r (.GPR 3#5) s = 0#64 <;>
-      simp [entryOps, hz, block, Op.effect, Vector.widthLoaded,
+      simp [entryOps, hz, block_cons, block_nil, Op.effect, Vector.widthLoaded,
         put, next, Udivti3.compare, Udivti3.next, state_simp_rules, BitVec.ofNat_eq_ofNat]
 
 def Post (s : ArmState) (base : BitVec 64) (capacity : Nat) (t : ArmState) : Prop :=
@@ -78,16 +78,16 @@ theorem large_runs (s : ArmState) (base pointer : BitVec 64) (words : List (BitV
     (by simpa [Follows, Op.row] using htp)
   have hvf : WidthFrame s v := hf.trans (readonly_frame base [.p716] t (by decide))
   have hv8 : r (.GPR 8#5) v = pointer := by
-    simpa [v, block, Op.effect, put, next, state_simp_rules] using h8.trans hptr
+    simpa [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using h8.trans hptr
   have hv9 : r (.GPR 9#5) v = BitVec.ofNat 64 words.length := by
-    simpa [v, block, Op.effect, put, next, state_simp_rules] using h9.trans hcount
+    simpa [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using h9.trans hcount
   have hv10 : r (.GPR 10#5) v = if r (.GPR 3#5) s = 0#64 then 0#64 else 1#64 := by
-    simpa [v, block, Op.effect, put, next, state_simp_rules] using h10
+    simpa [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using h10
   have hv11 : r (.GPR 11#5) v = BitVec.ofNat 64 words.length - 1#64 := by
-    simp [v, block, Op.effect, put, next, state_simp_rules, h9, hcount]
+    simp [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h9, hcount]
   have hvp : read_pc v = base + 720#64 := by
     have hpc' : r .PC t = base + 716#64 := htp
-    simp [v, block, Op.effect, put, next, state_simp_rules, hpc', BitVec.add_assoc]
+    simp [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc', BitVec.add_assoc]
   obtain ⟨count, q, hq, hqf, hq8, hq9, hq10, hqp, hq11⟩ := scan base pointer words words.length v
     (Nat.le_refl _) (by simpa only [CodeAt, hvf.program] using hc) (hvf.error.trans he)
     (hvf.aligned ha) hvp hv8 hv11 (hvf.byteSource _ _ hs) (hvf.byteWords _ _ hs hm)

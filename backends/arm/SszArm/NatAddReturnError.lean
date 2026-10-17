@@ -41,7 +41,7 @@ def errorResult (path : ErrorPath) (base : BitVec 64) (s : ArmState) : ArmState 
 
 macro "natadd_error_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
-    [errorResult, ErrorPath.ops, block, List.foldl_cons, List.foldl_nil,
+    [errorResult, ErrorPath.ops, block_cons, block_nil, List.foldl_cons, List.foldl_nil,
      Op.effect, put, next, state_simp_rules, ArmState.mem_w_eq_mem,
      BitVec.add_assoc, BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat,
      Nat.reduceAdd, BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel])
@@ -69,11 +69,11 @@ theorem error_returned (path : ErrorPath) (s : ArmState) (base : BitVec 64)
     have h10 : reg ≠ 10#5 := by bv_omega
     have h31 : reg ≠ 31#5 := by bv_omega
     cases path <;>
-      simp [errorResult, ErrorPath.ops, block, Op.effect, put, next,
+      simp [errorResult, ErrorPath.ops, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, h8, h9, h10, h31]
   · intro reg low high
     cases path <;>
-      simp [errorResult, ErrorPath.ops, block, Op.effect, put, next, state_simp_rules]
+      simp [errorResult, ErrorPath.ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 /-- No arena byte is added on either resource-error return path. -/
 theorem error_frame (path : ErrorPath) (s : ArmState) (base : BitVec 64)

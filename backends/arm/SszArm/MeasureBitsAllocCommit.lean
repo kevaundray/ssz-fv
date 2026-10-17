@@ -35,17 +35,17 @@ theorem commit_run (site : Site) (s : ArmState) (base : BitVec 64)
   refine ⟨?_, ?_, ?_⟩
   · intro field
     cases site <;> cases field <;>
-      simp [commitOps, block, effect, put, next, commit, storeWords,
+      simp [commitOps, block_cons, block_nil, effect, put, next, commit, storeWords,
         commitResult, committedMemory, allocatedPointer, Site.entry, Site.baseReg,
         Site.usedReg, Site.workReg, Site.pointerReg, Site.countReg, Site.lowReg,
         Site.highReg, state_simp_rules, NatExact.r_gpr_w, NatExact.gpr_w_pc,
         pc', BitVec.add_assoc]
   · cases site <;>
-      simp [commitOps, block, effect, put, next, commit, storeWords,
+      simp [commitOps, block_cons, block_nil, effect, put, next, commit, storeWords,
         commitResult, committedMemory, state_simp_rules]
   · intro bytes address
     cases site <;>
-      simp [commitOps, block, effect, put, next, commit, storeWords,
+      simp [commitOps, block_cons, block_nil, effect, put, next, commit, storeWords,
         commitResult, committedMemory, allocatedPointer, Site.baseReg, Site.usedReg,
         Site.workReg, Site.pointerReg, Site.countReg, Site.lowReg, Site.highReg,
         state_simp_rules, NatCompare.read_spill_w] <;>

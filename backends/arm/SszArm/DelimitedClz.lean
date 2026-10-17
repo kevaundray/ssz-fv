@@ -23,11 +23,11 @@ private theorem clz_iteration_frame (s : ArmState) (base : BitVec 64) :
   · intro reg hr
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
     simp (disch := simp_all)
-      [block, clzIterationOps, Op.effect, put, next, state_simp_rules]
+      [block_cons, block_nil, clzIterationOps, Op.effect, put, next, state_simp_rules]
   · intro reg
-    simp [block, clzIterationOps, Op.effect, put, next, state_simp_rules]
+    simp [block_cons, block_nil, clzIterationOps, Op.effect, put, next, state_simp_rules]
   · intro a ha
-    simp [block, clzIterationOps, Op.effect, put, next, state_simp_rules]
+    simp [block_cons, block_nil, clzIterationOps, Op.effect, put, next, state_simp_rules]
 
 /-- The actual SUB/LSR/CBNZ loop, with arbitrary initial counter bits. The two
 shift premises describe the mathematical loop bound; clz_byte_facts discharges
@@ -56,23 +56,23 @@ theorem clz_loop (base : BitVec 64) :
     have hu : run 3 s = u := clzIteration_run s base hc he ha (by simpa using hp)
     have hf : WidthFrame s u := clz_iteration_frame s base
     have memory : u.mem = s.mem := by
-      simp [u, block, clzIterationOps, Op.effect, put, next, state_simp_rules]
+      simp [u, block_cons, block_nil, clzIterationOps, Op.effect, put, next, state_simp_rules]
     have shift :
         (((r (.GPR 9#5) s).setWidth 32).setWidth 64 >>> 1).setWidth 32 =
           (r (.GPR 9#5) s).setWidth 32 >>> 1 := by
       rw [← BitVec.setWidth_ushiftRight (by decide : 32 ≤ 64),
         BitVec.setWidth_setWidth_of_le _ (by decide : 32 ≤ 64), BitVec.setWidth_eq]
     have h9 : (r (.GPR 9#5) u).setWidth 32 = (r (.GPR 9#5) s).setWidth 32 >>> 1 := by
-      simp [u, block, clzIterationOps, Op.effect, put, next, state_simp_rules, shift]
+      simp [u, block_cons, block_nil, clzIterationOps, Op.effect, put, next, state_simp_rules, shift]
     have h10 : (r (.GPR 10#5) u).setWidth 32 = (r (.GPR 10#5) s).setWidth 32 - 1#32 := by
-      simp [u, block, clzIterationOps, Op.effect, put, next, state_simp_rules]
+      simp [u, block_cons, block_nil, clzIterationOps, Op.effect, put, next, state_simp_rules]
     have hp' : read_pc u = if n = 0 then base + 116#64 else base + 104#64 := by
       by_cases zero : n = 0
       · subst n
         simp only [Nat.zero_add] at hz
-        simp [u, block, clzIterationOps, Op.effect, put, next, state_simp_rules, shift, hz]
+        simp [u, block_cons, block_nil, clzIterationOps, Op.effect, put, next, state_simp_rules, shift, hz]
       · have nz := hn 1 (by omega)
-        simp [u, block, clzIterationOps, Op.effect, put, next, state_simp_rules, shift, zero, nz]
+        simp [u, block_cons, block_nil, clzIterationOps, Op.effect, put, next, state_simp_rules, shift, zero, nz]
     have hn' : ∀ i < n, (r (.GPR 9#5) u).setWidth 32 >>> i ≠ 0#32 := by
       intro i hi
       rw [h9, shift_add]

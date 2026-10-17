@@ -40,7 +40,7 @@ def returned (s : ArmState) : ArmState :=
 theorem return_effect (kind : Exit) (base : BitVec 64) (s : ArmState) :
     block base kind.ops s = returned s := by
   cases kind <;>
-    simp [Exit.ops, block, Op.effect, next, put, returned, sp, state_simp_rules,
+    simp [Exit.ops, block_cons, block_nil, Op.effect, next, put, returned, sp, state_simp_rules,
       BitVec.add_assoc]
   all_goals
     apply state_eq_iff_components_eq.mpr

@@ -97,7 +97,7 @@ theorem trim_round (s : ArmState) (base pointer : BitVec 64)
       simp_all (config := {decide := true, instances := true})
         [trimRoundState, u, v, trimGuard, trimKind, trimTail, trimCountReg,
           trimRememberReg, trimHead, loadResult, LoadKind.start, LoadKind.dst,
-          LoadKind.tmp, block, Op.effect, put, next, saved, state_simp_rules,
+          LoadKind.tmp, block_cons, block_nil, Op.effect, put, next, saved, state_simp_rules,
           BitVec.add_assoc]
     all_goals bv_omega
 

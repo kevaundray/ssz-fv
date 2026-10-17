@@ -61,7 +61,7 @@ theorem guard_registers (kind : CheckKind) (s : ArmState)
     r (.GPR reg) (block base kind.ops s) = r (.GPR reg) s := by
   cases kind <;> simp only [CheckKind.clobbers, List.mem_cons, List.not_mem_nil,
     or_false, not_or] at hr <;>
-    simp (disch := simp_all) [CheckKind.ops, block, Op.effect, put, next,
+    simp (disch := simp_all) [CheckKind.ops, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem guard_frame (kind : CheckKind) (s : ArmState)
@@ -71,12 +71,12 @@ theorem guard_frame (kind : CheckKind) (s : ArmState)
     apply guard_registers kind s base reg
     cases kind <;> simp_all [CheckKind.clobbers]
   · intro reg
-    cases kind <;> simp [CheckKind.ops, block, Op.effect, put, next,
+    cases kind <;> simp [CheckKind.ops, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem guard_memory (kind : CheckKind) (s : ArmState)
     (base : BitVec 64) : (block base kind.ops s).mem = s.mem := by
-  cases kind <;> simp [CheckKind.ops, block, Op.effect, put, next,
+  cases kind <;> simp [CheckKind.ops, block_cons, block_nil, Op.effect, put, next,
     Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem guard_run (kind : CheckKind) (s : ArmState)
@@ -133,13 +133,13 @@ theorem address_exit (s : ArmState) (base : BitVec 64) :
     r (.GPR 9#5) t = pointer ∧ r (.GPR 8#5) t = used ∧
       r (.GPR 10#5) t = used + pointer ∧
       read_pc t = if 2^64 ≤ used.toNat + pointer.toNat then base + 220#64 else base + 104#64 := by
-  simp [block, CheckKind.ops, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, CheckKind.ops, Op.effect, put, next, state_simp_rules,
     Udivti3.adc_carry, Udivti3.radix]
 
 theorem round_exit (s : ArmState) (base : BitVec 64) :
     read_pc (block base CheckKind.round.ops s) =
       if 2^64 < (r (.GPR 10#5) s).toNat + 8 then base + 220#64 else base + 112#64 := by
-  simp [block, CheckKind.ops, Op.effect, put, next, state_simp_rules, cmn_hi_zero]
+  simp [block_cons, block_nil, CheckKind.ops, Op.effect, put, next, state_simp_rules, cmn_hi_zero]
 
 theorem align_exit (s : ArmState) (base : BitVec 64) :
     let aligned := (r (.GPR 10#5) s + 7#64) &&& 18446744073709551608#64
@@ -149,13 +149,13 @@ theorem align_exit (s : ArmState) (base : BitVec 64) :
       r (.GPR 10#5) t = padding + r (.GPR 8#5) s ∧
       read_pc t = if 2^64 ≤ padding.toNat + (r (.GPR 8#5) s).toNat
         then base + 220#64 else base + 132#64 := by
-  simp [block, CheckKind.ops, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, CheckKind.ops, Op.effect, put, next, state_simp_rules,
     Udivti3.adc_carry, Udivti3.radix]
 
 theorem finish_exit (s : ArmState) (base : BitVec 64) :
     read_pc (block base CheckKind.finish.ops s) =
       if 2^64 < (r (.GPR 10#5) s).toNat + 17 then base + 220#64 else base + 140#64 := by
-  simp [block, CheckKind.ops, Op.effect, put, next, state_simp_rules, cmn_hi_zero]
+  simp [block_cons, block_nil, CheckKind.ops, Op.effect, put, next, state_simp_rules, cmn_hi_zero]
 
 theorem capacity_exit (s : ArmState) (base : BitVec 64) :
     let capacity := read_mem_bytes 8 (r (.GPR 4#5) s + 8#64) s
@@ -164,7 +164,7 @@ theorem capacity_exit (s : ArmState) (base : BitVec 64) :
     r (.GPR 8#5) t = capacity ∧ r (.GPR 11#5) t = finish ∧
       read_pc t = if capacity.toNat < finish.toNat
         then base + 220#64 else base + 156#64 := by
-  simp [block, CheckKind.ops, Op.effect, put, next, Udivti3.compare,
+  simp [block_cons, block_nil, CheckKind.ops, Op.effect, put, next, Udivti3.compare,
     Udivti3.next, state_simp_rules, Udivti3.cmp_high]
 
 end SszArm.NatFromU128

@@ -65,7 +65,7 @@ theorem Lower.effect (kind : Lower) (base : BitVec 64) (s : ArmState)
   change r .PC s = _ at pc
   cases kind <;>
     simp only [Lower.entry] at pc <;>
-    simp [Lower.ops, block, Op.effect, next, put, Lower.state, Lower.memory,
+    simp [Lower.ops, block_cons, block_nil, Op.effect, next, put, Lower.state, Lower.memory,
       Lower.displacement, Lower.low, Lower.finish, scratch, sp, result,
       state_simp_rules, BitVec.add_assoc, BitVec.sub_eq_add_neg, pc]
   all_goals

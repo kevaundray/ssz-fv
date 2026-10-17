@@ -85,11 +85,11 @@ theorem compare_finish (s : ArmState) (base : BitVec 64) (expected : NatOperand)
     scan_pure_frame base ops s (by decide), ?_⟩
   by_cases accepted : NatNarrow.runExact expected (r (.GPR 2#5) s) = true
   · have z := zero.mpr accepted
-    simp [Ready, t, ops, block, Op.effect, put, next, state_simp_rules,
+    simp [Ready, t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
       hpc, z, accepted, BitVec.add_assoc]
   · have z : (r (.GPR 8#5) s ^^^ r (.GPR 2#5) s) ||| r (.GPR 9#5) s ≠ 0#64 :=
       fun h => accepted (zero.mp h)
-    simp [Ready, t, ops, block, Op.effect, put, next, state_simp_rules,
+    simp [Ready, t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
       hpc, z, accepted, BitVec.add_assoc]
 
 /-- Loads are bounded by physical length, never by significant length. -/
@@ -111,16 +111,16 @@ theorem borrowed_compare (s : ArmState) (base pointer : BitVec 64)
   have hpc : r .PC s = base + 84#64 := hp
   have low : r (.GPR 8#5) u = words[0]?.getD 0 := by
     by_cases short : words.length < 2 <;>
-      simp [u, ops, short, block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+      simp [u, ops, short, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
         state_simp_rules, h9, first]
   have high : r (.GPR 9#5) u = words[1]?.getD 0 := by
     by_cases short : words.length < 2
     · have absent : words[1]? = none := List.getElem?_eq_none (by omega)
-      simp [u, ops, short, block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+      simp [u, ops, short, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
         state_simp_rules, absent]
     · have second : read_mem_bytes 8 (pointer + 8#64) s = words[1]?.getD 0 := by
         simpa [List.getElem?_eq_getElem (show 1 < words.length by omega)] using stored ⟨1, by omega⟩
-      simp [u, ops, short, block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+      simp [u, ops, short, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
         state_simp_rules, h9, second]
   have carry : (AddWithCarry (BitVec.ofNat 64 words.length) (~~~2#64) 1#1).2.c = 1#1 ↔
       2 ≤ words.length := by
@@ -144,9 +144,9 @@ theorem borrowed_compare (s : ArmState) (base pointer : BitVec 64)
   have up : read_pc u = base + 112#64 := by
     by_cases short : words.length < 2
     · have below : ¬ 2 ≤ words.length := by omega
-      simp [u, ops, short, block, Op.effect, put, next, Udivti3.compare,
+      simp [u, ops, short, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
         Udivti3.next, state_simp_rules, hpc, h8, BitVec.add_assoc, carry, below]
-    · simp [u, ops, short, block, Op.effect, put, next, Udivti3.compare,
+    · simp [u, ops, short, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
         Udivti3.next, state_simp_rules, hpc, h8, BitVec.add_assoc, carry]
   obtain ⟨fuel, t, execution, tf, ready⟩ := compare_finish u base (.large pointer words)
     (frame_code uf hc) (uf.error.trans he) (uf.aligned ha) up fits low high
@@ -178,11 +178,11 @@ theorem empty_compare (s : ArmState) (base pointer : BitVec 64)
   by_cases equal : r (.GPR 2#5) s = 0#64
   · have accepted : NatNarrow.runExact (.large pointer []) 0#64 = true := by
       simpa only [equal] using zero.mpr equal
-    simp [Ready, t, ops, equal, accepted, block, Op.effect, put, next,
+    simp [Ready, t, ops, equal, accepted, block_cons, block_nil, Op.effect, put, next,
       state_simp_rules, hpc, h8, BitVec.add_assoc]
   · have rejected : NatNarrow.runExact (.large pointer []) (r (.GPR 2#5) s) ≠ true :=
       fun h => equal (zero.mp h)
-    simp [Ready, t, ops, equal, rejected, block, Op.effect, put, next,
+    simp [Ready, t, ops, equal, rejected, block_cons, block_nil, Op.effect, put, next,
       state_simp_rules, hpc, h8, BitVec.add_assoc]
 
 theorem scanned_compare (s : ArmState) (base pointer : BitVec 64)
@@ -211,11 +211,11 @@ theorem scanned_compare (s : ArmState) (base pointer : BitVec 64)
       simpa [ops, Follows, Op.row, zero] using hp
     have uf := scan_pure_frame base ops s (by decide)
     have up : read_pc u = base + 84#64 := by
-      simp [u, ops, block, Op.effect, h8, lengthNonzero, state_simp_rules]
+      simp [u, ops, block_cons, block_nil, Op.effect, h8, lengthNonzero, state_simp_rules]
     obtain ⟨fuel, t, execution, tf, ready⟩ := borrowed_compare u base pointer words
       (frame_owned owned uf) (frame_code uf hc) (uf.error.trans he) (uf.aligned ha)
-      up (by simpa [u, ops, block, Op.effect, state_simp_rules] using h8)
-      (by simpa [u, ops, block, Op.effect, state_simp_rules] using h9) nonempty
+      up (by simpa [u, ops, block_cons, block_nil, Op.effect, state_simp_rules] using h8)
+      (by simpa [u, ops, block_cons, block_nil, Op.effect, state_simp_rules] using h9) nonempty
       (by change sigWords words ≤ 2; omega)
     exact ⟨ops.length + fuel, t, by rw [run_plus, block_run base ops s hc he ha follows, execution],
       uf.trans tf, ready⟩
@@ -245,14 +245,14 @@ theorem scanned_compare (s : ArmState) (base pointer : BitVec 64)
       by_cases fits : sigWords words ≤ 2 <;> cases op <;> simp_all [ops, scanPureOps])
     by_cases fits : sigWords words ≤ 2
     · have up : read_pc u = base + 84#64 := by
-        simp [u, ops, fits, block, Op.effect, put, next, Udivti3.compare,
+        simp [u, ops, fits, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
           Udivti3.next, state_simp_rules, hpc, remembered, count, BitVec.add_assoc,
           carry] <;> omega
       obtain ⟨fuel, t, execution, tf, ready⟩ := borrowed_compare u base pointer words
         (frame_owned owned uf) (frame_code uf hc) (uf.error.trans he) (uf.aligned ha)
-        up (by simpa [u, ops, fits, block, Op.effect, put, next, Udivti3.compare,
+        up (by simpa [u, ops, fits, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
           Udivti3.next, state_simp_rules] using h8)
-        (by simpa [u, ops, fits, block, Op.effect, put, next, Udivti3.compare,
+        (by simpa [u, ops, fits, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
           Udivti3.next, state_simp_rules] using h9) nonempty fits
       exact ⟨ops.length + fuel, t,
         by rw [run_plus, block_run base ops s hc he ha follows, execution], uf.trans tf, ready⟩
@@ -261,7 +261,7 @@ theorem scanned_compare (s : ArmState) (base pointer : BitVec 64)
         simp [NatNarrow.runExact, NatNarrow.toU128, NatOperand.wordCount,
           NatOperand.words, fits]
       simp only [Ready, rejected, Bool.false_eq_true, ↓reduceIte]
-      simp [u, ops, fits, block, Op.effect, state_simp_rules]
+      simp [u, ops, fits, block_cons, block_nil, Op.effect, state_simp_rules]
 
 theorem entry_ready (s : ArmState) (base : BitVec 64) (expected : NatOperand)
     (owned : Owned s expected) (hc : CodeAt s base) (he : read_err s = .None)
@@ -277,7 +277,7 @@ theorem entry_ready (s : ArmState) (base : BitVec 64) (expected : NatOperand)
       simp [ops, Follows, Op.row, Op.effect, next, state_simp_rules, hpc, BitVec.add_assoc]
     have uf := scan_pure_frame base ops s (by decide)
     have up : read_pc u = base + 112#64 := by
-      simp [u, ops, block, Op.effect, next, state_simp_rules, reads.1, NatOperand.pointer]
+      simp [u, ops, block_cons, block_nil, Op.effect, next, state_simp_rules, reads.1, NatOperand.pointer]
     obtain ⟨fuel, t, execution, tf, ready⟩ := compare_finish u base (.small scalar)
       (frame_code uf hc) (uf.error.trans he) (uf.aligned ha) up
       (by
@@ -285,9 +285,9 @@ theorem entry_ready (s : ArmState) (base : BitVec 64) (expected : NatOperand)
         change sigWords [scalar] ≤ 2
         simpa only [List.length_cons, List.length_nil] using
           (Nat.le_trans h (show [scalar].length ≤ 2 by simp)))
-      (by simp [u, ops, block, Op.effect, next, state_simp_rules, reads.2,
+      (by simp [u, ops, block_cons, block_nil, Op.effect, next, state_simp_rules, reads.2,
         NatOperand.words, NatOperand.payload])
-      (by simp [u, ops, block, Op.effect, next, state_simp_rules, reads.1,
+      (by simp [u, ops, block_cons, block_nil, Op.effect, next, state_simp_rules, reads.1,
         NatOperand.words, NatOperand.pointer])
     exact ⟨ops.length + fuel, t, by rw [run_plus, block_run base ops s hc he ha follows, execution],
       uf.trans tf, ready⟩
@@ -301,14 +301,14 @@ theorem entry_ready (s : ArmState) (base : BitVec 64) (expected : NatOperand)
         hpc, reads.1, NatOperand.pointer, nonzero, BitVec.add_assoc]
     have uf := scan_pure_frame base ops s (by decide)
     have u8 : r (.GPR 8#5) u = BitVec.ofNat 64 words.length := by
-      simp [u, ops, block, Op.effect, put, next, state_simp_rules, reads.2, NatOperand.payload]
+      simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, reads.2, NatOperand.payload]
     have u9 : r (.GPR 9#5) u = pointer := by
-      simp [u, ops, block, Op.effect, put, next, state_simp_rules, reads.1, NatOperand.pointer]
+      simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, reads.1, NatOperand.pointer]
     have up : read_pc u = base + 12#64 := by
-      simp [u, ops, block, Op.effect, put, next, state_simp_rules, hpc,
+      simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc,
         reads.1, NatOperand.pointer, nonzero, BitVec.add_assoc]
     have u11 : r (.GPR 11#5) u = BitVec.ofNat 64 words.length - 1#64 := by
-      simp [u, ops, block, Op.effect, put, next, state_simp_rules, reads.2, NatOperand.payload]
+      simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, reads.2, NatOperand.payload]
     obtain ⟨fuel, v, execution, vf, kept, vp, v10⟩ := significant_scan base pointer words
       words.length u (Nat.le_refl _) (frame_code uf hc) (uf.error.trans he) (uf.aligned ha)
       up u9 u11 (uf.source _ _ owned.large_source) (uf.words _ _ owned.large_source owned.large_words)

@@ -26,7 +26,7 @@ theorem small_correct (s : ArmState) (base word : BitVec 64)
   have c1 : r (.GPR 1#5) c = 0#64 := classified.pointer
   have c2 : r (.GPR 2#5) c = word := classified.payload
   have prepared : Udivti3.numerator (fastPrepared .small c base) = word.toNat := by
-    simp [fastPrepared, FastSite.setup, block, Op.effect, put, next,
+    simp [fastPrepared, FastSite.setup, block_cons, block_nil, Op.effect, put, next,
       Udivti3.numerator, Udivti3.join, state_simp_rules, c1, c2]
   have quotient : Udivti3.numerator t = word.toNat / (r (.GPR 3#5) s).toNat := by
     simpa only [t, prepared, classified.divisor] using fast_quotient .small c base cd
@@ -45,7 +45,7 @@ theorem small_correct (s : ArmState) (base word : BitVec 64)
     rw [fastResult, fast_finish_register]
     change r (.GPR 22#5) (callResult CallSite.small (fastPrepared .small c base) base) = word
     rw [call_gpr _ _ _ 22#5 (by decide) (by decide)]
-    simp [fastPrepared, FastSite.setup, block, Op.effect, put, next, state_simp_rules, c2]
+    simp [fastPrepared, FastSite.setup, block_cons, block_nil, Op.effect, put, next, state_simp_rules, c2]
   have divisor : r (.GPR 20#5) t = r (.GPR 3#5) s :=
     (fast_gpr .small c base 20#5 (by decide) (by decide) (by decide)).trans classified.divisor
   have out : r (.GPR 19#5) t = r (.GPR 0#5) s :=

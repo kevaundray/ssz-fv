@@ -57,7 +57,7 @@ macro "natadd_return_side" : tactic => `(tactic|
 
 macro "natadd_status_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
-    [statusResult, StatusPath.ops, block, List.foldl_cons, List.foldl_nil,
+    [statusResult, StatusPath.ops, block_cons, block_nil, List.foldl_cons, List.foldl_nil,
      Op.effect, put, next, state_simp_rules, ArmState.mem_w_eq_mem,
      BitVec.add_assoc, BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat,
      Nat.reduceAdd, BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel])
@@ -93,11 +93,11 @@ theorem status_returned (path : StatusPath) (s : ArmState) (base : BitVec 64)
     have h10 : reg ≠ 10#5 := by bv_omega
     have h31 : reg ≠ 31#5 := by bv_omega
     cases path <;>
-      simp [statusResult, StatusPath.ops, block, Op.effect, put, next,
+      simp [statusResult, StatusPath.ops, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, h9, h10, h31]
   · intro reg low high
     cases path <;>
-      simp [statusResult, StatusPath.ops, block, Op.effect, put, next, state_simp_rules]
+      simp [statusResult, StatusPath.ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem status_frame (path : StatusPath) (s : ArmState) (base : BitVec 64)
     (owned : ReturnOwned s) : MemoryFrame (statusWrites s) s (statusResult path base s) := by

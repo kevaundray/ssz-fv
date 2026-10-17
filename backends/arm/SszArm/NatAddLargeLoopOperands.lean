@@ -101,10 +101,10 @@ theorem right_run (s : ArmState) (base : BitVec 64) (kind : GateKind)
     have tf := pure_frame base [.p1860, .p1864] g writes (by decide)
     refine ⟨(gateOps kind within small).length + 2, t, ?_, gf.trans tf, ?_, ?_, ?_⟩
     · rw [run_plus, grun, trun]
-    · simp [t, block, Op.effect, put, next, state_simp_rules]
-    · simpa [t, block, Op.effect, put, next, state_simp_rules] using zero.symm
+    · simp [t, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
+    · simpa [t, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using zero.symm
     · intro reg hr
-      simpa [t, block, Op.effect, put, next, state_simp_rules, hr]
+      simpa [t, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hr]
         using greg reg hr
 
 /-- Complete actual operand-selection slice, from PC1692 to the first ADDS at

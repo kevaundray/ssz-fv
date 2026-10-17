@@ -66,11 +66,11 @@ private theorem fast_classification (s : ArmState) (base pointer : BitVec 64)
   change (AddWithCarry (BitVec.ofNat 64 words.length) 18446744073709551613#64 1#1).2.c = 1#1 ↔
     2 ≤ words.length at hcarry
   refine ⟨t, block_run base ops s hc he ha hf, hframe, ?_, ?_⟩
-  · simp [t, ops, block, Op.effect, put, next, state_simp_rules, h1, hword]
+  · simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h1, hword]
   · by_cases hl : words.length < 2
-    · simp [t, ops, block, Op.effect, put, next, state_simp_rules, h2, hcarry,
+    · simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h2, hcarry,
         hl, show ¬ 2 ≤ words.length by omega]
-    · simp [t, ops, block, Op.effect, put, next, state_simp_rules, h2, hcarry,
+    · simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h2, hcarry,
         hl, show 2 ≤ words.length by omega]
 
 /-- All physical Large representations, including empty and redundant-zero

@@ -16,11 +16,11 @@ def restoreOps : List ReturnBlock.Op := [.p1044, .p1048, .p1052, .p1056, .p1060,
   simp [restored, restoreOps, ReturnBlock.block]
 
 @[simp] theorem restored_memory (s : ArmState) : (restored s).mem = s.mem := by
-  simp [restored, restoreOps, ReturnBlock.block, ReturnBlock.Op.effect, restore, put, next, state_simp_rules]
+  simp [restored, restoreOps, ReturnBlock.block_cons, ReturnBlock.block_nil, ReturnBlock.Op.effect, restore, put, next, state_simp_rules]
 
 @[simp] theorem restored_vector (s : ArmState) (reg : BitVec 5) :
     r (.SFP reg) (restored s) = r (.SFP reg) s := by
-  simp [restored, restoreOps, ReturnBlock.block, ReturnBlock.Op.effect, restore, put, next, state_simp_rules]
+  simp [restored, restoreOps, ReturnBlock.block_cons, ReturnBlock.block_nil, ReturnBlock.Op.effect, restore, put, next, state_simp_rules]
 
 theorem restored_run (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
@@ -61,11 +61,11 @@ theorem restored_returns (entry s : ArmState) (ready : RestoreReady entry s)
   have h20 := ready.saved 20#5 144 (by decide)
   have h19 := ready.saved 19#5 152 (by decide)
   constructor
-  · simp [restored, restoreOps, ReturnBlock.block, ReturnBlock.Op.effect, restore, put, next,
+  · simp [restored, restoreOps, ReturnBlock.block_cons, ReturnBlock.block_nil, ReturnBlock.Op.effect, restore, put, next,
       state_simp_rules, BitVec.add_assoc, ready.stack, h30]
   · exact (restored_error s).trans error
   · exact (restored_program s).trans program
-  · simp [restored, restoreOps, ReturnBlock.block, ReturnBlock.Op.effect, restore, put, next,
+  · simp [restored, restoreOps, ReturnBlock.block_cons, ReturnBlock.block_nil, ReturnBlock.Op.effect, restore, put, next,
       state_simp_rules, ready.stack, Args.bodySP, Args.ofEntry, BitVec.sub_add_cancel]
   · intro reg low high
     have members : reg = 18#5 ∨ reg = 19#5 ∨ reg = 20#5 ∨ reg = 21#5 ∨ reg = 22#5 ∨
@@ -73,7 +73,7 @@ theorem restored_returns (entry s : ArmState) (ready : RestoreReady entry s)
         reg = 28#5 ∨ reg = 29#5 ∨ reg = 30#5 := by bv_omega
     rcases members with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     all_goals
-      simp [restored, restoreOps, ReturnBlock.block, ReturnBlock.Op.effect, restore, put, next,
+      simp [restored, restoreOps, ReturnBlock.block_cons, ReturnBlock.block_nil, ReturnBlock.Op.effect, restore, put, next,
         state_simp_rules, BitVec.add_assoc, ready.stack, h30, h27, h26, h25, h24, h23, h22, h21, h20, h19,
         ready.untouched 18#5 (by decide), ready.untouched 28#5 (by decide), ready.untouched 29#5 (by decide)]
   · intro reg low high

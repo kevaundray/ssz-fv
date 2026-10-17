@@ -21,16 +21,16 @@ theorem zero_dispatch_run (s : ArmState) (base : BitVec 64)
   · apply block_run base [.p0, .p4, .p8] s code error aligned
     simp [Follows, Op.row, Op.effect, put, next, Udivti3.compare, Udivti3.next,
       state_simp_rules, hpc, factor, nonone, BitVec.add_assoc]
-  · simp [zeroDispatch, block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+  · simp [zeroDispatch, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
       state_simp_rules, factor, nonone]
 
 @[simp] theorem zero_dispatch_register (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.GPR reg) (zeroDispatch s base) = r (.GPR reg) s := by
-  simp [zeroDispatch, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
+  simp [zeroDispatch, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
 
 @[simp] theorem zero_dispatch_memory (s : ArmState) (base : BitVec 64) :
     (zeroDispatch s base).mem = s.mem := by
-  simp [zeroDispatch, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
+  simp [zeroDispatch, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem zero_correct (s : ArmState) (base : BitVec 64) (operand : SszNative.NatOperand)
     (owned : Owned s operand 0#64) (code : CodeAt s base)
@@ -97,7 +97,7 @@ theorem zero_correct (s : ArmState) (base : BitVec 64) (operand : SszNative.NatO
         exact (body.2.1.registers reg low high).trans (zero_dispatch_register _ _ _)
       · intro reg low high
         rw [body.2.1.vectors reg low high]
-        simp [u, zeroDispatch, block, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
+        simp [u, zeroDispatch, block_cons, block_nil, Op.effect, Udivti3.compare, Udivti3.next, state_simp_rules]
     · have result := body.2.2.1
       simp only [model, SszNative.NatArithmetic.unchanged, output, t] at result ⊢
       arm_word_nf at result ⊢

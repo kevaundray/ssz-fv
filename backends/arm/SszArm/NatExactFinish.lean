@@ -140,7 +140,7 @@ StateField. All load facts below concern only the two fixed spill words. -/
 macro "exact_cut_normalize" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
     [Cut.ops, Cut.image, actualImage, textImage, zerosImage, resultImage, spillTwo,
-     block, List.foldl_cons, List.foldl_nil, Op.effect, put, next, store_w, gpr_w_pc,
+     block_cons, block_nil, List.foldl_cons, List.foldl_nil, Op.effect, put, next, store_w, gpr_w_pc,
      state_simp_rules, ArmState.mem_w_eq_mem, BitVec.add_assoc,
      BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat, Nat.reduceAdd,
      BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel])
@@ -333,13 +333,13 @@ theorem success_run (s : ArmState) (base : BitVec 64)
 theorem success_returned (s : ArmState) (base : BitVec 64) (he : read_err s = .None) :
     Returned s (successResult s base) := by
   constructor
-  · simp [successResult, block, Op.effect, next, state_simp_rules]
-  · simpa [successResult, block, Op.effect, next, state_simp_rules] using he
-  · simp [successResult, block, Op.effect, next, state_simp_rules]
+  · simp [successResult, block_cons, block_nil, Op.effect, next, state_simp_rules]
+  · simpa [successResult, block_cons, block_nil, Op.effect, next, state_simp_rules] using he
+  · simp [successResult, block_cons, block_nil, Op.effect, next, state_simp_rules]
   · intro reg low high
-    simp [successResult, block, Op.effect, next, state_simp_rules]
+    simp [successResult, block_cons, block_nil, Op.effect, next, state_simp_rules]
   · intro reg low high
-    simp [successResult, block, Op.effect, next, state_simp_rules]
+    simp [successResult, block_cons, block_nil, Op.effect, next, state_simp_rules]
 
 theorem success_frame (s : ArmState) (base : BitVec 64) (expected : SszNative.NatOperand)
     (owned : Owned s expected)
@@ -348,7 +348,7 @@ theorem success_frame (s : ArmState) (base : BitVec 64) (expected : SszNative.Na
   have output := owned.outputBound
   intro a outside
   have out := outside ((r (.GPR 0#5) s).toNat + 64, 4) (by simp [writesFor, accepted])
-  simp only [successResult, block, List.foldl_cons, List.foldl_nil, Op.effect, next,
+  simp only [successResult, block_cons, block_nil, List.foldl_cons, List.foldl_nil, Op.effect, next,
     state_simp_rules, ArmState.mem_w_eq_mem]
   apply write_mem_bytes_frame <;> bv_omega
 
@@ -359,7 +359,7 @@ theorem success_image (s : ArmState) (base : BitVec 64) (expected : SszNative.Na
       (r (.GPR 0#5) s).toNat expected (r (.GPR 2#5) s) := by
   have output := owned.outputBound
   simp only [SszNative.NatNarrow.ExactResultAt, accepted, ↓reduceIte, widthLoad,
-    BitVec.ofNat_add, BitVec.ofNat_toNat, successResult, block, List.foldl_cons,
+    BitVec.ofNat_add, BitVec.ofNat_toNat, successResult, block_cons, block_nil, List.foldl_cons,
     List.foldl_nil, Op.effect, next, state_simp_rules, h8]
   exact_reads
 

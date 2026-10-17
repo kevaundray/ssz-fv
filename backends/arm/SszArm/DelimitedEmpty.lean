@@ -17,7 +17,7 @@ structure EmptyOwned (s : ArmState) : Prop where
 
 macro "empty_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
-    [block, emptyOps, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
+    [block_cons, block_nil, emptyOps, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
      state_simp_rules, ArmState.mem_w_eq_mem, BitVec.add_assoc,
      BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat, Nat.reduceAdd,
      BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel,
@@ -47,18 +47,18 @@ theorem empty_body_result (s : ArmState) (base : BitVec 64) (owned : EmptyOwned 
 theorem empty_body_returned (s : ArmState) (base : BitVec 64)
     (he : read_err s = .None) : Returned s (block base emptyOps s) := by
   constructor
-  · simp [block, emptyOps, Op.effect, put, next, state_simp_rules]
+  · simp [block_cons, block_nil, emptyOps, Op.effect, put, next, state_simp_rules]
   · exact (block_error _ _ _).trans he
-  · simp [block, emptyOps, Op.effect, put, next, state_simp_rules, BitVec.sub_add_cancel]
+  · simp [block_cons, block_nil, emptyOps, Op.effect, put, next, state_simp_rules, BitVec.sub_add_cancel]
   · intro reg low high
     have ne8 : reg ≠ 8#5 := by bv_omega
     have ne9 : reg ≠ 9#5 := by bv_omega
     have ne10 : reg ≠ 10#5 := by bv_omega
     have ne31 : reg ≠ 31#5 := by bv_omega
-    simp [block, emptyOps, Op.effect, put, next, state_simp_rules, ne8, ne9, ne10, ne31]
+    simp [block_cons, block_nil, emptyOps, Op.effect, put, next, state_simp_rules, ne8, ne9, ne10, ne31]
   · intro reg low high
     have ne : reg ≠ 0#5 := by bv_omega
-    simp [block, emptyOps, Op.effect, put, next, state_simp_rules, ne]
+    simp [block_cons, block_nil, emptyOps, Op.effect, put, next, state_simp_rules, ne]
 
 theorem empty_body_frame (s : ArmState) (base : BitVec 64)
     (owned : EmptyOwned s) (empty : r (.GPR 3#5) s = 0#64) :

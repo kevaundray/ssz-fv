@@ -39,13 +39,13 @@ theorem scan_large_round (s : ArmState) (base : BitVec 64)
       Udivti3.cmp_carry, BitVec.add_assoc, Nat.not_le.mpr hx])
   have huf : Frame s u := readonly_frame base pre s (by decide)
   have hup : read_pc u = base + 380#64 := by
-    simp [u, pre, block, Op.effect, put, next, Udivti3.compare,
+    simp [u, pre, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
       Udivti3.next, state_simp_rules, hlast, h9, hcn, hc1, Udivti3.cmp_carry,
       Nat.not_le.mpr hx]
   have huload : read_mem_bytes 8 (r (.GPR LoadKind.left.ptr) u +
       (r (.GPR LoadKind.left.index) u <<< 3)) (saved u LoadKind.left.tmp) = xs[n]?.getD 0 := by
     have hl := limb_load u (r (.GPR 0#5) s) xs n 10#5 hx (huf.source _ _ hsx) (huf.words _ _ hsx hmx)
-    simpa [u, pre, block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+    simpa [u, pre, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
       state_simp_rules, h9, LoadKind.ptr, LoadKind.index, LoadKind.tmp] using hl
   let v := loadResult u base .left (xs[n]?.getD 0)
   have hv : run 8 u = v := load_run u base _ .left (huf.code hc)
@@ -60,14 +60,14 @@ theorem scan_large_round (s : ArmState) (base : BitVec 64)
         state_simp_rules, BitVec.add_assoc])
   have hwf : Frame s w := hvf.trans (readonly_frame base mid v (by decide))
   have hw9 : r (.GPR 9#5) w = BitVec.ofNat 64 n := by
-    simp [w, mid, v, u, pre, loadResult, LoadKind.dst, saved, block, Op.effect,
+    simp [w, mid, v, u, pre, loadResult, LoadKind.dst, saved, block_cons, block_nil, Op.effect,
       put, next, Udivti3.compare, Udivti3.next, state_simp_rules, h9]
   have hw3 : r (.GPR 3#5) v = r (.GPR 3#5) s := hvf.registers _ (by decide)
   have hv9 : r (.GPR 9#5) v = BitVec.ofNat 64 n := by
-    simp [v, u, pre, loadResult, LoadKind.dst, saved, block, Op.effect,
+    simp [v, u, pre, loadResult, LoadKind.dst, saved, block_cons, block_nil, Op.effect,
       put, next, Udivti3.compare, Udivti3.next, state_simp_rules, h9]
   have hwp : read_pc w = base + 320#64 := by
-    simp [w, mid, block, Op.effect, put, next, Udivti3.compare,
+    simp [w, mid, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
       Udivti3.next, state_simp_rules, hv9, hw3, hcn, hc3, Udivti3.cmp_carry,
       Nat.not_le.mpr hy]
   have hwload : read_mem_bytes 8 (r (.GPR LoadKind.right.ptr) w +
@@ -91,7 +91,7 @@ theorem scan_large_round (s : ArmState) (base : BitVec 64)
       run_plus, hu, hv, hw, hz, ht]
   all_goals
     simp [t, post, z, w, mid, v, u, pre, loadResult, LoadKind.dst, saved,
-      block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+      block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
       state_simp_rules, h9, Udivti3.cmp_zero]
 
 end SszArm.NatCompare

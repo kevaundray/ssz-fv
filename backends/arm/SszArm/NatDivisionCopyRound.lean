@@ -48,17 +48,17 @@ theorem copy_round_run (s : ArmState) (base pointer destination : BitVec 64)
   have hge : read_err g = .None := (block_error base copyGuardOps s).trans he
   have hga : CheckSPAlignment g := block_aligned base copyGuardOps s ha
   have hgp : read_pc g = base + 372#64 := by
-    simp [g, copyGuardOps, block, Op.effect, put, next, state_simp_rules, h9, h2, hcarry]
+    simp [g, copyGuardOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h9, h2, hcarry]
   have hgs : NatCompare.Source g pointer words := by
-    simpa [NatCompare.Source, ByteView.Source, g, copyGuardOps, block, Op.effect,
+    simpa [NatCompare.Source, ByteView.Source, g, copyGuardOps, block_cons, block_nil, Op.effect,
       put, next, state_simp_rules] using hs
   have hgm : NatCompare.Words g pointer words := by
-    simpa [NatCompare.Words, WidthWords, g, copyGuardOps, block, Op.effect,
+    simpa [NatCompare.Words, WidthWords, g, copyGuardOps, block_cons, block_nil, Op.effect,
       put, next, state_simp_rules] using hm
   have hload : read_mem_bytes 8 (ScanLoad.copy.address g)
       (NatCompare.saved g 11#5) = words[i]?.getD 0#64 := by
     have hadd : ScanLoad.copy.address g = pointer + (BitVec.ofNat 64 i <<< 3) := by
-      simp [g, ScanLoad.address, copyGuardOps, block, Op.effect, put, next,
+      simp [g, ScanLoad.address, copyGuardOps, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, h1, h9]
     rw [hadd]
     exact NatCompare.limb_load g pointer words i 11#5 (by omega) hgs hgm
@@ -78,11 +78,11 @@ theorem copy_round_run (s : ArmState) (base pointer destination : BitVec 64)
     have hlpc : r .PC l = base + 404#64 := hlp
     simp [a, Op.effect, put, next, state_simp_rules, hlpc, BitVec.add_assoc]
   have hasp : r (.GPR 31#5) a = r (.GPR 31#5) s := by
-    simp [a, l, g, scanLoadResult, copyGuardOps, block, Op.effect, put, next,
+    simp [a, l, g, scanLoadResult, copyGuardOps, block_cons, block_nil, Op.effect, put, next,
       NatCompare.saved, state_simp_rules]
   have haaddr : r (.GPR 24#5) a + (r (.GPR 9#5) a <<< 3) =
       destination + BitVec.ofNat 64 (8 * i) := by
-    simp [a, l, g, scanLoadResult, copyGuardOps, block, Op.effect, put, next,
+    simp [a, l, g, scanLoadResult, copyGuardOps, block_cons, block_nil, Op.effect, put, next,
       NatCompare.saved, state_simp_rules, h24, h9]
     bv_omega
   have hdaddr : (destination + BitVec.ofNat 64 (8 * i)).toNat = destination.toNat + 8 * i := by
@@ -119,7 +119,7 @@ theorem copy_round_memory (s : ArmState) (base destination word : BitVec 64) (i 
     (copyRoundResult s base word).mem = (copyRoundMemory s destination i word).mem := by
   have hshift : BitVec.ofNat 64 i <<< 3 = BitVec.ofNat 64 (8 * i) := by bv_omega
   simp [copyRoundResult, copyStoreResult, copyTailOps, copyGuardOps,
-    scanLoadResult, copyRoundMemory, block, Op.effect, put, next,
+    scanLoadResult, copyRoundMemory, block_cons, block_nil, Op.effect, put, next,
     NatCompare.saved, state_simp_rules, NatCompare.spill_mem_w,
     h9, h24, hshift, BitVec.ofNat_add]
   apply mem_write_mem_bytes_of_mem_eq
@@ -136,7 +136,7 @@ theorem copy_round_registers (s : ArmState) (base word : BitVec 64) (i count : N
       if i + 1 = count then base + 520#64 else base + 452#64 := by
   have heq : BitVec.ofNat 64 count = BitVec.ofNat 64 i + 1#64 ↔ i + 1 = count := by bv_omega
   simp [copyRoundResult, copyStoreResult, copyTailOps, copyGuardOps,
-    scanLoadResult, block, Op.effect, put, next, NatCompare.saved,
+    scanLoadResult, block_cons, block_nil, Op.effect, put, next, NatCompare.saved,
     state_simp_rules, h9, h8, Udivti3.cmp_zero, heq, BitVec.ofNat_add]
 
 end SszArm.NatDivision

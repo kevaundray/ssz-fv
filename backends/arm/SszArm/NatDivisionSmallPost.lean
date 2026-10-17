@@ -31,7 +31,7 @@ theorem output_local_frame {original s t : ArmState} {operand : SszNative.NatOpe
 theorem small_head_registers (s : ArmState) (base : BitVec 64)
     (reg : BitVec 5) (h9 : reg ≠ 9#5) (h10 : reg ≠ 10#5) :
     r (.GPR reg) (block base smallHeadOps s) = r (.GPR reg) s := by
-  simp [block, smallHeadOps, Op.effect, put, next, state_simp_rules, h9, h10]
+  simp [block_cons, block_nil, smallHeadOps, Op.effect, put, next, state_simp_rules, h9, h10]
 
 theorem small_head_saved (original s : ArmState) (base : BitVec 64)
     (saved : Saved original s) : Saved original (block base smallHeadOps s) := by
@@ -45,7 +45,7 @@ theorem small_head_saved (original s : ArmState) (base : BitVec 64)
   · intro reg low high
     exact (small_head_registers s base reg (by bv_omega) (by bv_omega)).trans (saved.high reg low high)
   · intro reg low high
-    simpa [block, smallHeadOps, Op.effect, put, next, state_simp_rules] using saved.vectors reg low high
+    simpa [block_cons, block_nil, smallHeadOps, Op.effect, put, next, state_simp_rules] using saved.vectors reg low high
 
 /-- A zero high quotient word takes the allocation-free tail. The theorem
 executes all 27 instructions from that branch through the original caller RET. -/

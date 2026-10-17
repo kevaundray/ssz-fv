@@ -49,10 +49,10 @@ private theorem scan_round_frame (s : ArmState) (base : BitVec 64) :
   · exact block_error _ _ _
   · intro reg hr
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
-    simp (disch := simp_all) [block, scanRoundOps, Op.effect, put, next, state_simp_rules]
+    simp (disch := simp_all) [block_cons, block_nil, scanRoundOps, Op.effect, put, next, state_simp_rules]
   · intro reg
-    simp [block, scanRoundOps, Op.effect, put, next, state_simp_rules]
-  · simp [block, scanRoundOps, Op.effect, put, next, state_simp_rules]
+    simp [block_cons, block_nil, scanRoundOps, Op.effect, put, next, state_simp_rules]
+  · simp [block_cons, block_nil, scanRoundOps, Op.effect, put, next, state_simp_rules]
 
 private theorem scan_test_frame (s : ArmState) (base : BitVec 64) :
     ScanFrame s (Op.p184.effect base s) := by
@@ -94,9 +94,9 @@ theorem zero_scan (base : BitVec 64) (bytes : List (BitVec 8)) :
         state_simp_rules, hpc, nonzero, BitVec.add_assoc]
     have frame : ScanFrame s u := scan_round_frame s base
     have pointer : r (.GPR 2#5) u = r (.GPR 2#5) s + 1#64 := by
-      simp [u, block, scanRoundOps, Op.effect, put, next, state_simp_rules]
+      simp [u, block_cons, block_nil, scanRoundOps, Op.effect, put, next, state_simp_rules]
     have count : r (.GPR 3#5) u = BitVec.ofNat 64 bytes.length := by
-      simp [u, block, scanRoundOps, Op.effect, put, next, state_simp_rules, length] <;>
+      simp [u, block_cons, block_nil, scanRoundOps, Op.effect, put, next, state_simp_rules, length] <;>
         bv_omega
     have inputTail : ScanBytes u (r (.GPR 2#5) u) bytes := by
       rw [pointer]
@@ -104,7 +104,7 @@ theorem zero_scan (base : BitVec 64) (bytes : List (BitVec 8)) :
     have load : read_mem_bytes 1 (r (.GPR 2#5) s) s = byte := input.1
     have byteZero : byte.setWidth 32 = 0#32 ↔ byte = 0#8 := by bv_omega
     have pc : read_pc u = if byte = 0#8 then base + 184#64 else base + 616#64 := by
-      simp [u, block, scanRoundOps, Op.effect, put, next, state_simp_rules, load, byteZero]
+      simp [u, block_cons, block_nil, scanRoundOps, Op.effect, put, next, state_simp_rules, load, byteZero]
     by_cases zero : byte = 0#8
     · obtain ⟨fuel, t, ht, hf, hpc⟩ := ih u
         (by simpa only [CodeAt, frame.program] using hc) (frame.error.trans he)

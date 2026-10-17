@@ -127,7 +127,7 @@ private theorem restore_upper_read (site : HighSite) (s : ArmState) (base : BitV
     read_mem_bytes size address (block base (restoreUpper site) s) =
       read_mem_bytes size address s := by
   cases site <;>
-    simp only [restoreUpper, block, List.foldl_cons, List.foldl_nil,
+    simp only [restoreUpper, block_cons, block_nil, List.foldl_cons, List.foldl_nil,
       Op.effect, restore_put_read]
 
 private theorem restore_middle_read (site : HighSite) (s : ArmState) (base : BitVec 64)
@@ -135,7 +135,7 @@ private theorem restore_middle_read (site : HighSite) (s : ArmState) (base : Bit
     read_mem_bytes size address (block base (restoreMiddle site) s) =
       read_mem_bytes size address s := by
   cases site <;>
-    simp only [restoreMiddle, block, List.foldl_cons, List.foldl_nil,
+    simp only [restoreMiddle, block_cons, block_nil, List.foldl_cons, List.foldl_nil,
       Op.effect, restore_put_read]
 
 private theorem restore_upper_register (site : HighSite) (s : ArmState) (base : BitVec 64)

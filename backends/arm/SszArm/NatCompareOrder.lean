@@ -67,7 +67,7 @@ theorem order_pc (base : BitVec 64) (s : ArmState) (ord : Ordering) :
 theorem order_byte (base : BitVec 64) (s : ArmState) (ord : Ordering) :
     (r (.GPR 0#5) (block base (orderOps ord) s)).setWidth 8 = orderingByte ord := by
   cases ord <;>
-    simp [orderOps, block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+    simp [orderOps, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
       state_simp_rules, orderingByte]
 
 theorem order_follows_lt (s : ArmState) (base : BitVec 64)
@@ -129,8 +129,8 @@ theorem return_equal (s : ArmState) (base : BitVec 64)
   refine ⟨3, block base ops s, block_run base ops s hc he ha ?_,
     readonly_frame base ops s (by decide), ?_, ?_⟩
   · simp [ops, Follows, Op.row, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
-  · simp [ops, block, Op.effect, put, next, state_simp_rules, r, w,
+  · simp [ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, r, w,
       read_base_pc, write_base_pc, read_base_gpr, write_base_gpr, read_store, write_store]
-  · simp [ops, block, Op.effect, put, next, state_simp_rules, orderingByte]
+  · simp [ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, orderingByte]
 
 end SszArm.NatCompare

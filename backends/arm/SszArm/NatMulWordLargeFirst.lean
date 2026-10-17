@@ -41,7 +41,7 @@ theorem first_store_run (s : ArmState) (base : BitVec 64)
 
 theorem first_store_register (s : ArmState) (base : BitVec 64) (reg : BitVec 5) :
     r (.GPR reg) (block base firstStoreOps s) = r (.GPR reg) s := by
-  simp only [firstStoreOps, block, List.foldl_cons, List.foldl_nil,
+  simp only [firstStoreOps, block_cons, block_nil, List.foldl_cons, List.foldl_nil,
     Op.effect, next, NatCompare.r_gpr_of_w_pc, r_of_write_mem_bytes]
 
 theorem first_run (s : ArmState) (base : BitVec 64)
@@ -65,7 +65,7 @@ theorem first_memory (s : ArmState) (base : BitVec 64)
       (write_mem_bytes 8 (r (.GPR 10#5) s) (r (.GPR 11#5) s) (HighSite.first.spilled s)).mem := by
   have address := high_completed_registers .first s base stack 10#5 (by decide)
   have value := high_completed_registers .first s base stack 11#5 (by decide)
-  simp only [firstCompleted, firstStoreOps, block, List.foldl_cons, List.foldl_nil,
+  simp only [firstCompleted, firstStoreOps, block_cons, block_nil, List.foldl_cons, List.foldl_nil,
     Op.effect, next, ArmState.mem_w_eq_mem, address, value]
   exact mem_write_mem_bytes_of_mem_eq (high_completed_memory .first s base) _ _ _
 
@@ -77,7 +77,7 @@ theorem first_contract (s : ArmState) (base : BitVec 64)
     FirstPost s (firstCompleted s base) base := by
   have hm := first_memory s base stack
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · simp [firstCompleted, firstStoreOps, block, Op.effect, next, state_simp_rules]
+  · simp [firstCompleted, firstStoreOps, block_cons, block_nil, Op.effect, next, state_simp_rules]
   · simp only [firstCompleted, block_program, highCompleted, block_program]
   · simp only [firstCompleted, block_error, highCompleted, block_error]
   · intro reg different

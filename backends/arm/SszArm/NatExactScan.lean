@@ -37,24 +37,24 @@ theorem scan_load_run (s : ArmState) (base limb : BitVec 64)
       by_cases hd : reg = 12#5 <;> by_cases ht : reg = 10#5 <;>
         by_cases hsp : reg = 31#5 <;> (try subst reg) <;>
         simp_all (config := {decide := true, instances := true})
-          [scanLoadResult, scanLoadOps, block, Op.effect, put, next, NatCompare.saved,
+          [scanLoadResult, scanLoadOps, block_cons, block_nil, Op.effect, put, next, NatCompare.saved,
             state_simp_rules, NatCompare.read_spill_w, BitVec.sub_add_cancel,
             BitVec.add_assoc]
     | PC =>
       simp_all (config := {decide := true, instances := true})
-        [scanLoadResult, scanLoadOps, block, Op.effect, put, next, NatCompare.saved,
+        [scanLoadResult, scanLoadOps, block_cons, block_nil, Op.effect, put, next, NatCompare.saved,
           state_simp_rules, NatCompare.read_spill_w, BitVec.sub_add_cancel,
           BitVec.add_assoc]
-    | SFP reg => simp [scanLoadResult, scanLoadOps, block, Op.effect,
+    | SFP reg => simp [scanLoadResult, scanLoadOps, block_cons, block_nil, Op.effect,
         put, next, NatCompare.saved, state_simp_rules]
-    | FLAG flag => simp [scanLoadResult, scanLoadOps, block, Op.effect,
+    | FLAG flag => simp [scanLoadResult, scanLoadOps, block_cons, block_nil, Op.effect,
         put, next, NatCompare.saved, state_simp_rules]
-    | ERR => simp [scanLoadResult, scanLoadOps, block, Op.effect,
+    | ERR => simp [scanLoadResult, scanLoadOps, block_cons, block_nil, Op.effect,
         put, next, NatCompare.saved, state_simp_rules]
-  · simp [scanLoadResult, scanLoadOps, block, Op.effect, put, next,
+  · simp [scanLoadResult, scanLoadOps, block_cons, block_nil, Op.effect, put, next,
       NatCompare.saved, state_simp_rules]
   · intro n addr
-    simp [scanLoadResult, scanLoadOps, block, Op.effect, put, next,
+    simp [scanLoadResult, scanLoadOps, block_cons, block_nil, Op.effect, put, next,
       NatCompare.saved, state_simp_rules, NatCompare.read_spill_w]
 
 theorem scan_load_frame (s : ArmState) (base limb : BitVec 64)
@@ -100,12 +100,12 @@ theorem significant_scan_round (s : ArmState) (base pointer : BitVec 64)
   have hu : run 2 s = u := block_run base scanGuardOps s hc he ha hfollow
   have huf : NatNarrow.Frame s u := scan_pure_frame base _ s (by decide)
   have hup : read_pc u = base + 20#64 := by
-    simp [u, scanGuardOps, block, Op.effect, put, next,
+    simp [u, scanGuardOps, block_cons, block_nil, Op.effect, put, next,
       state_simp_rules, hindex, hnonzero]
   have hui : r (.GPR 11#5) u = BitVec.ofNat 64 n := by
-    simpa [u, scanGuardOps, block, Op.effect, put, next, state_simp_rules] using hindex
+    simpa [u, scanGuardOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using hindex
   have huptr : r (.GPR 9#5) u = pointer := by
-    simpa [u, scanGuardOps, block, Op.effect, put, next, state_simp_rules] using hptr
+    simpa [u, scanGuardOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using hptr
   have hus := huf.source pointer words hs
   have hum := huf.words pointer words hs hm
   have hread : read_mem_bytes 8 (r (.GPR 9#5) u + (r (.GPR 11#5) u <<< 3))
@@ -128,9 +128,9 @@ theorem significant_scan_round (s : ArmState) (base pointer : BitVec 64)
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
     rcases hr with rfl | rfl <;>
       simp [scanRoundResult, scanTailOps, scanLoadResult, scanGuardOps,
-        block, Op.effect, put, next, NatCompare.saved, state_simp_rules]
+        block_cons, block_nil, Op.effect, put, next, NatCompare.saved, state_simp_rules]
   all_goals simp [scanRoundResult, scanTailOps, scanLoadResult, scanGuardOps,
-    block, Op.effect, put, next, NatCompare.saved, state_simp_rules, hindex, apply_ite]
+    block_cons, block_nil, Op.effect, put, next, NatCompare.saved, state_simp_rules, hindex, apply_ite]
 
 /-- The actual descending loop terminates for any physically stored limb list,
 including empty slices and arbitrary redundant high zero suffixes. -/
@@ -161,8 +161,8 @@ theorem significant_scan (base pointer : BitVec 64) (words : List (BitVec 64)) :
     · intro reg hr
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
       rcases hr with rfl | rfl <;>
-        simp [t, scanGuardOps, block, Op.effect, put, next, state_simp_rules]
-    · simp [t, scanGuardOps, significantCount, block, Op.effect, put, next,
+        simp [t, scanGuardOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
+    · simp [t, scanGuardOps, significantCount, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, hindex]
     · simp [significantCount]
   | succ n ih =>

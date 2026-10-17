@@ -70,9 +70,9 @@ theorem zero_left_correct (s : ArmState) (base : BitVec 64)
       have second : NatCompare.Frame u v := scan_frame base ops u (by decide)
       have outV : r (.GPR 0#5) v = r (.GPR 0#5) u := scan_zero base ops u (by decide)
       have pcV : read_pc v = base + 300#64 := by
-        simp [v, ops, block, Op.effect, put, next, state_simp_rules, rightPtr]
+        simp [v, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, rightPtr]
       have countV : r (.GPR 8#5) v = 0#64 := by
-        simpa [v, ops, block, Op.effect, put, next, state_simp_rules] using countU
+        simpa [v, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using countU
       apply Post.prepend ownedU second outV ops.length executed
       exact zero_left_large_right v base rightPointer rightWords (.large pointer words)
         (ownedU.transport second outV) (scan_code second (scan_code frame hc))
@@ -118,10 +118,10 @@ theorem zero_right_counted_left (s : ArmState) (base pointer : BitVec 64)
     have frame : NatCompare.Frame s t := scan_frame base ops s (by decide)
     have out : r (.GPR 0#5) t = r (.GPR 0#5) s := scan_zero base ops s (by decide)
     have pc : read_pc t = base + 584#64 := by
-      simp [t, ops, block, Op.effect, put, next, state_simp_rules,
+      simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
         hpc, r3, r4, countNonzero, ptr, BitVec.add_assoc]
     have index : r (.GPR 9#5) t = BitVec.ofNat 64 words.length - 1#64 := by
-      simp [t, ops, block, Op.effect, put, next, state_simp_rules,
+      simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
         owned.leftPayload, SszNative.NatOperand.payload]
     apply Post.prepend owned frame out ops.length ran
     exact zero_borrow_post false t base pointer words (.large pointer words) (.small 0#64)
@@ -143,9 +143,9 @@ theorem zero_right_counted_left (s : ArmState) (base pointer : BitVec 64)
     have frame : NatCompare.Frame s t := scan_frame base ops s (by decide)
     have out : r (.GPR 0#5) t = r (.GPR 0#5) s := scan_zero base ops s (by decide)
     have pc : read_pc t = base + 300#64 := by
-      simp [t, ops, block, Op.effect, put, next, state_simp_rules, ptr]
+      simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, ptr]
     have retained : r (.GPR 8#5) t = BitVec.ofNat 64 (sigWords words) := by
-      simpa [t, ops, block, Op.effect, put, next, state_simp_rules] using count
+      simpa [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using count
     apply Post.prepend owned frame out ops.length ran
     exact zero_right_large_right t base rightPointer rightWords (.large pointer words)
       (owned.transport frame out) (scan_code frame hc) (frame.error.trans he)

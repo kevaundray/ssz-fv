@@ -55,7 +55,7 @@ theorem guard_registers (site : Site) (kind : CheckKind) (s : ArmState)
   cases site <;> cases kind <;>
     simp only [CheckKind.clobbers, Site.baseReg, Site.usedReg, Site.workReg, Site.tempReg,
       List.mem_cons, List.not_mem_nil, or_false, not_or] at keep <;>
-    simp (disch := simp_all) [CheckKind.ops, block, effect, put, next,
+    simp (disch := simp_all) [CheckKind.ops, block_cons, block_nil, effect, put, next,
       Site.baseReg, Site.usedReg, Site.workReg, Site.tempReg,
       Udivti3.compare, Udivti3.next, state_simp_rules]
 
@@ -69,10 +69,10 @@ theorem guard_frame (site : Site) (kind : CheckKind) (s : ArmState)
     cases kind <;> simp_all [CheckKind.clobbers]
   · intro reg
     cases site <;> cases kind <;>
-      simp [CheckKind.ops, block, effect, put, next,
+      simp [CheckKind.ops, block_cons, block_nil, effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules]
   · cases site <;> cases kind <;>
-      simp [CheckKind.ops, block, effect, put, next,
+      simp [CheckKind.ops, block_cons, block_nil, effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem guard_run (site : Site) (kind : CheckKind) (s : ArmState)

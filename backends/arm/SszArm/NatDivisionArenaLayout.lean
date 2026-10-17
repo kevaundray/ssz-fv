@@ -38,21 +38,21 @@ theorem arena_layout_limit_effect (s : ArmState) (base : BitVec 64) :
   refine ⟨?_, ?_, ?_, ?_⟩
   · by_cases bound : 2^61 ≤ (r (.GPR 8#5) s).toNat
     · have nonzero := shift.mpr bound
-      simp [arenaLayoutLimitOps, block, Op.effect, put, next, state_simp_rules, nonzero, bound]
+      simp [arenaLayoutLimitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, nonzero, bound]
     · have zero : r (.GPR 8#5) s >>> 61 = 0#64 := by
         by_cases zero : r (.GPR 8#5) s >>> 61 = 0#64
         · exact zero
         · exact False.elim (bound (shift.mp zero))
-      simp [arenaLayoutLimitOps, block, Op.effect, put, next, state_simp_rules, zero, bound]
-  · simp [arenaLayoutLimitOps, block, Op.effect, put, next, state_simp_rules]
-  · simp [arenaLayoutLimitOps, block, Op.effect, put, next, state_simp_rules]
+      simp [arenaLayoutLimitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, zero, bound]
+  · simp [arenaLayoutLimitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
+  · simp [arenaLayoutLimitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · refine ⟨block_program _ _ _, block_error _ _ _, ?_, ?_⟩
     · intro reg hr
       simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
-      simp (disch := simp_all) [arenaLayoutLimitOps, block, Op.effect, put, next,
+      simp (disch := simp_all) [arenaLayoutLimitOps, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules]
     · intro reg
-      simp [arenaLayoutLimitOps, block, Op.effect, put, next, state_simp_rules]
+      simp [arenaLayoutLimitOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem arena_layout_run (s : ArmState) (base : BitVec 64)
     (hc : CodeAt s base) (he : read_err s = .None) (ha : CheckSPAlignment s)
@@ -89,7 +89,7 @@ theorem arena_layout_effect (s : ArmState) (base : BitVec 64)
   all_goals try
     solve
     | (unfold arenaLayoutOps; split <;>
-        simp_all [arenaLayoutBytes, arenaLayoutSpill, block, Op.effect, put, next,
+        simp_all [arenaLayoutBytes, arenaLayoutSpill, block_cons, block_nil, Op.effect, put, next,
           state_simp_rules, NatCompare.read_spill_w, NatCompare.spill_mem_w,
           BitVec.sub_add_cancel, BitVec.add_assoc])
   refine ⟨block_program _ _ _, block_error _ _ _, ?_, ?_⟩
@@ -98,12 +98,12 @@ theorem arena_layout_effect (s : ArmState) (base : BitVec 64)
     by_cases hsp : reg = 31#5
     · subst reg
       unfold arenaLayoutOps
-      split <;> simp [block, Op.effect, put, next, state_simp_rules, BitVec.sub_add_cancel]
+      split <;> simp [block_cons, block_nil, Op.effect, put, next, state_simp_rules, BitVec.sub_add_cancel]
     · unfold arenaLayoutOps
-      split <;> simp_all [block, Op.effect, put, next, state_simp_rules]
+      split <;> simp_all [block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · intro reg
     unfold arenaLayoutOps
-    split <;> simp [block, Op.effect, put, next, state_simp_rules]
+    split <;> simp [block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem arena_layout_memory (s : ArmState) (base : BitVec 64)
     (hs : 16 ≤ (r (.GPR 31#5) s).toNat) :

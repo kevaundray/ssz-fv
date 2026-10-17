@@ -67,10 +67,10 @@ theorem capacity_run (s : ArmState) (base capacity : BitVec 64) (number : Nat)
       state_simp_rules, pc, BitVec.add_assoc]
   refine ⟨t, Serialize.block_run base ops s code error aligned follows,
     readonly_frame base ops s (by decide), readonly_memory base ops s (by decide), ?_, ?_⟩
-  · simp [t, ops, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+  · simp [t, ops, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
       Emit.Dispatch.compare64, Emit.Dispatch.next, state_simp_rules, cap, payload, carry,
       destination, bound]
-  · simpa [t, ops, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+  · simpa [t, ops, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
       Emit.Dispatch.compare64, Emit.Dispatch.next, state_simp_rules] using payload
 
 /-- PC152 through the actual host-size and output-capacity guards, for every
@@ -104,9 +104,9 @@ theorem program_correct (s : ArmState) (base : BitVec 64) (operand : NatOperand)
       Serialize.block_run base [.p152] s code error aligned ⟨pc, trivial⟩
     have entryFrame : Frame s u := readonly_frame base _ s (by decide)
     have pcU : read_pc u = base + 424#64 := by
-      simp [u, Serialize.block, Serialize.Op.effect, state_simp_rules, address]
+      simp [u, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, state_simp_rules, address]
     have valueU : r (.GPR 5#5) u = BitVec.ofNat 64 data.toNat := by
-      simpa [u, Serialize.block, Serialize.Op.effect, state_simp_rules] using valueS
+      simpa [u, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, state_simp_rules] using valueS
     obtain ⟨t, runCap, capFrame, capMemory, pcT, valueT⟩ := capacity_run u base capacity data.toNat
       (entryFrame.code code) (entryFrame.error.trans error) (entryFrame.aligned aligned)
       pcU ((entryFrame.registers _ (by decide)).trans cap) valueU data.isLt
@@ -144,11 +144,11 @@ theorem program_correct (s : ArmState) (base : BitVec 64) (operand : NatOperand)
       · have memory := readonly_memory base ops s (by decide)
         intro a outside
         exact congrFun memory a
-      · simp [t, ops, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+      · simp [t, ops, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
           state_simp_rules, countS, destination, NatOperand.value, NatOperand.words,
           SszNative.Limbs.value]
       · intro fits
-        simp [t, ops, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+        simp [t, ops, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
           state_simp_rules, countS, NatOperand.value, NatOperand.words, SszNative.Limbs.value]
     | cons first rest =>
       let words := first :: rest
@@ -161,13 +161,13 @@ theorem program_correct (s : ArmState) (base : BitVec 64) (operand : NatOperand)
       have runEntry : run 2 s = u := Serialize.block_run base ops s code error aligned follows
       have entryFrame : Frame s u := readonly_frame base ops s (by decide)
       have pcU : read_pc u = base + 160#64 := by
-        simp [u, ops, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+        simp [u, ops, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
           state_simp_rules, addressS, nonnull, BitVec.add_assoc]
       have countU : r (.GPR 5#5) u = BitVec.ofNat 64 words.length := by
-        simpa [u, ops, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+        simpa [u, ops, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
           state_simp_rules, words] using countS
       have indexU : r (.GPR 10#5) u = BitVec.ofNat 64 words.length - 1#64 := by
-        simp [u, ops, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+        simp [u, ops, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
           state_simp_rules, countS, words]
       obtain ⟨fuel, v, runScan, scanFrame, pcV, valueV⟩ := large_ready u base address words
         (entryFrame.code code) (entryFrame.error.trans error) (entryFrame.aligned aligned)

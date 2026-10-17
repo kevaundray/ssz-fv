@@ -22,17 +22,17 @@ def savedMemory (s : ArmState) : ArmState :=
 
 @[simp] theorem prologue_sp (base : BitVec 64) (s : ArmState) :
     r (.GPR 31#5) (prologue base s) = (Args.ofEntry s).bodySP := by
-  simp [prologue, prologueOps, block, Op.effect, put, next,
+  simp [prologue, prologueOps, block_cons, block_nil, Op.effect, put, next,
     Args.ofEntry, Args.bodySP, state_simp_rules]
 
 @[simp] theorem prologue_register (base : BitVec 64) (s : ArmState)
     (reg : BitVec 5) (different : reg ≠ 31#5) :
     r (.GPR reg) (prologue base s) = r (.GPR reg) s := by
-  simp [prologue, prologueOps, block, Op.effect, put, next, different, state_simp_rules]
+  simp [prologue, prologueOps, block_cons, block_nil, Op.effect, put, next, different, state_simp_rules]
 
 @[simp] theorem prologue_pc (base : BitVec 64) (s : ArmState) :
     read_pc (prologue base s) = read_pc s + 16#64 := by
-  simp [prologue, prologueOps, block, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
+  simp [prologue, prologueOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
 
 @[simp] theorem prologue_program (base : BitVec 64) (s : ArmState) :
     (prologue base s).program = s.program := by
@@ -44,7 +44,7 @@ def savedMemory (s : ArmState) : ArmState :=
 
 @[simp] theorem prologue_memory (base : BitVec 64) (s : ArmState) :
     (prologue base s).mem = (savedMemory s).mem := by
-  simp [prologue, prologueOps, block, Op.effect, put, next,
+  simp [prologue, prologueOps, block_cons, block_nil, Op.effect, put, next,
     savedMemory, Args.ofEntry, Args.bodySP, state_simp_rules]
   simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
 
@@ -118,26 +118,26 @@ structure Registers (t : ArmState) (args : Args) : Prop where
 
 @[simp] theorem measurementEntry_memory (base : BitVec 64) (s : ArmState) :
     (measurementEntry base s).mem = (prologue base s).mem := by
-  simp [measurementEntry, callOps, block, Op.effect, put, next, state_simp_rules]
+  simp [measurementEntry, callOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 @[simp] theorem measurementEntry_pc (base : BitVec 64) (s : ArmState) :
     read_pc (measurementEntry base s) = base + measureOffset := by
-  simp [measurementEntry, callOps, block, Op.effect, put, next, state_simp_rules]
+  simp [measurementEntry, callOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 @[simp] theorem measurementEntry_lr (base : BitVec 64) (s : ArmState) :
     r (.GPR 30#5) (measurementEntry base s) = base + 52#64 := by
-  simp [measurementEntry, callOps, block, Op.effect, put, next, state_simp_rules]
+  simp [measurementEntry, callOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 @[simp] theorem measurementEntry_args (base : BitVec 64) (s : ArmState) :
     Measure.Args.ofEntry (measurementEntry base s) = (Args.ofEntry s).measure := by
-  simp [measurementEntry, callOps, block, Op.effect, put, next,
+  simp [measurementEntry, callOps, block_cons, block_nil, Op.effect, put, next,
     Measure.Args.ofEntry, Args.ofEntry, Args.measure, Args.plan,
     state_simp_rules, prologue_register, prologue_sp]
 
 @[simp] theorem measurementEntry_registers (base : BitVec 64) (s : ArmState) :
     Registers (measurementEntry base s) (Args.ofEntry s) := by
   constructor <;>
-    simp [measurementEntry, callOps, block, Op.effect, put, next,
+    simp [measurementEntry, callOps, block_cons, block_nil, Op.effect, put, next,
       Args.ofEntry, state_simp_rules, prologue_register, prologue_sp]
 
 theorem measurementEntry_untouched (base : BitVec 64) (s : ArmState) (reg : BitVec 5)
@@ -150,7 +150,7 @@ theorem measurementEntry_untouched (base : BitVec 64) (s : ArmState) (reg : BitV
   have different30 : reg ≠ 30#5 := by bv_omega
   have different31 : reg ≠ 31#5 := by bv_omega
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at outside
-  simp [measurementEntry, callOps, block, Op.effect, put, next, state_simp_rules,
+  simp [measurementEntry, callOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
     different0, different3, different4, different30, different31,
     outside.1, outside.2.1, outside.2.2.1, outside.2.2.2.1, outside.2.2.2.2]
 

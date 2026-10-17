@@ -19,14 +19,14 @@ theorem copy_round_frame (s : ArmState) (base destination word : BitVec 64) (i c
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · simp [copyRoundResult, copyStoreResult, scanLoadResult, NatCompare.saved, state_simp_rules]
   · simp [copyRoundResult, copyStoreResult, copyTailOps, copyGuardOps,
-      scanLoadResult, block, Op.effect, put, next, NatCompare.saved, state_simp_rules]
+      scanLoadResult, block_cons, block_nil, Op.effect, put, next, NatCompare.saved, state_simp_rules]
   · intro reg hr
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
     simp (disch := simp_all) [copyRoundResult, copyStoreResult, copyTailOps,
-      copyGuardOps, scanLoadResult, block, Op.effect, put, next, NatCompare.saved, state_simp_rules]
+      copyGuardOps, scanLoadResult, block_cons, block_nil, Op.effect, put, next, NatCompare.saved, state_simp_rules]
   · intro reg
     simp [copyRoundResult, copyStoreResult, copyTailOps, copyGuardOps,
-      scanLoadResult, block, Op.effect, put, next, NatCompare.saved, state_simp_rules]
+      scanLoadResult, block_cons, block_nil, Op.effect, put, next, NatCompare.saved, state_simp_rules]
   · intro a hslot hout
     rw [copy_round_memory s base destination word i h9 h24]
     unfold copyRoundMemory

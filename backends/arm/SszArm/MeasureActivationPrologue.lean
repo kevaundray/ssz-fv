@@ -26,16 +26,16 @@ def savedMemory (s : ArmState) : ArmState :=
 
 @[simp] theorem prologue_sp (s : ArmState) :
     r (.GPR 31#5) (prologue s) = (Args.ofEntry s).bodySP := by
-  simp [prologue, prologueOps, Activation.block, Op.effect, put, next, save,
+  simp [prologue, prologueOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next, save,
     Args.ofEntry, Args.bodySP, state_simp_rules]
 
 @[simp] theorem prologue_register (s : ArmState) (reg : BitVec 5) (different : reg ≠ 31#5) :
     r (.GPR reg) (prologue s) = r (.GPR reg) s := by
-  simp [prologue, prologueOps, Activation.block, Op.effect, put, next, save,
+  simp [prologue, prologueOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next, save,
     different, state_simp_rules]
 
 @[simp] theorem prologue_pc (s : ArmState) : read_pc (prologue s) = read_pc s + 24#64 := by
-  simp [prologue, prologueOps, Activation.block, Op.effect, put, next, save,
+  simp [prologue, prologueOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next, save,
     state_simp_rules, BitVec.add_assoc]
 
 @[simp] theorem prologue_program (s : ArmState) : (prologue s).program = s.program := by
@@ -45,13 +45,13 @@ def savedMemory (s : ArmState) : ArmState :=
   simp [prologue, prologueOps, Activation.block]
 
 @[simp] theorem prologue_memory (s : ArmState) : (prologue s).mem = (savedMemory s).mem := by
-  simp [prologue, prologueOps, Activation.block, Op.effect, put, next, save,
+  simp [prologue, prologueOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next, save,
     savedMemory, Args.ofEntry, Args.bodySP, state_simp_rules]
   simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
 
 @[simp] theorem prologue_vector (s : ArmState) (reg : BitVec 5) :
     r (.SFP reg) (prologue s) = r (.SFP reg) s := by
-  simp [prologue, prologueOps, Activation.block, Op.effect, put, next, save, state_simp_rules]
+  simp [prologue, prologueOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next, save, state_simp_rules]
 
 theorem bodySP_aligned (s : ArmState) (aligned : CheckSPAlignment s) :
     Aligned (Args.ofEntry s).bodySP 4 := by

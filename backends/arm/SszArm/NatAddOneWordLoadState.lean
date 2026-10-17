@@ -82,14 +82,14 @@ theorem one_word_load_block (s : ArmState) (base a b : BitVec 64)
       simp only [saved] at keep4
       simpa (config := {decide := true})
         [oneWordLoadOps, oneWordLoadResult, oneWordSaved, smallLeft, smallRight,
-          block, Op.effect, put, next, saved, load_store_field, load_gpr_pc,
+          block_cons, block_nil, Op.effect, put, next, saved, load_store_field, load_gpr_pc,
           state_simp_rules, read_spill_w, BitVec.add_assoc, BitVec.sub_add_cancel,
           restore, tag, keep2, keep4] using
         congrArg (w .PC (base + 980#64)) restored
     · simp only [oneWordSaved, smallLeft, smallRight, ↓reduceIte, saved] at right tag
       simpa (config := {decide := true})
         [oneWordLoadOps, oneWordLoadResult, oneWordSaved, smallLeft, smallRight,
-          block, Op.effect, put, next, saved, load_store_field, load_gpr_pc,
+          block_cons, block_nil, Op.effect, put, next, saved, load_store_field, load_gpr_pc,
           state_simp_rules, read_spill_w, BitVec.add_assoc, BitVec.sub_add_cancel,
           restore, right, tag, keep2] using
         congrArg (fun t => w .PC (base + 980#64) (w (.GPR 4#5) b t)) restored
@@ -103,13 +103,13 @@ theorem one_word_load_block (s : ArmState) (base a b : BitVec 64)
         rw [←value, w_irrelevant]
       simp (config := {decide := true})
         [oneWordLoadOps, oneWordLoadResult, oneWordSaved, smallLeft, smallRight,
-          block, Op.effect, put, next, state_simp_rules,
+          block_cons, block_nil, Op.effect, put, next, state_simp_rules,
           load_gpr_pc, one_word_zero_payload, BitVec.add_assoc,
           left, tag, keep4]
     · simp only [oneWordSaved, smallLeft, smallRight, ↓reduceIte] at right tag
       simp (config := {decide := true})
         [oneWordLoadOps, oneWordLoadResult, oneWordSaved, smallLeft, smallRight,
-          block, Op.effect, put, next, state_simp_rules,
+          block_cons, block_nil, Op.effect, put, next, state_simp_rules,
           load_gpr_pc, one_word_zero_payload, BitVec.add_assoc, left, right, tag]
 
 end SszArm.NatAdd

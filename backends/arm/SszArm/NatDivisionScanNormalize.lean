@@ -37,7 +37,7 @@ theorem normalization_exit (s : ArmState) (base pointer : BitVec 64)
       simp [ops, Follows, Op.row, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
     refine ⟨3, t, block_run base ops s hc he ha hf,
       scan_pure_frame base ops s (by decide), ?_, ?_, ?_, ?_⟩
-    all_goals simp [t, ops, block, Op.effect, put, next, state_simp_rules,
+    all_goals simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
       hpc, BitVec.add_assoc, normalized_zero pointer words hz,
       SszNative.NatOperand.pointer, SszNative.NatOperand.payload]
   · have hpc : r .PC s = base + 1088#64 := by
@@ -62,7 +62,7 @@ theorem normalization_exit (s : ArmState) (base pointer : BitVec 64)
           hpc, hcount, hone, BitVec.add_assoc]
       refine ⟨7, t, block_run base ops s hc he ha hf,
         scan_pure_frame base ops s (by decide), ?_, ?_, ?_, ?_⟩
-      all_goals simp [t, ops, block, Op.effect, put, next, state_simp_rules,
+      all_goals simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
         hpc, hcount, hone, h24, hword, BitVec.add_assoc,
         SszNative.NatOperand.fromWords_pointer, SszNative.NatOperand.fromWords_payload]
     · have hgt : 1 < sigWords words := by omega
@@ -74,7 +74,7 @@ theorem normalization_exit (s : ArmState) (base pointer : BitVec 64)
           hpc, hcount, hadd, hne, BitVec.add_assoc]
       refine ⟨4, t, block_run base ops s hc he ha hf,
         scan_pure_frame base ops s (by decide), ?_, ?_, ?_, ?_⟩
-      all_goals simp [t, ops, block, Op.effect, put, next, state_simp_rules,
+      all_goals simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
         hpc, hcount, hadd, hne, h24, BitVec.add_assoc,
         SszNative.NatOperand.fromWords_pointer, SszNative.NatOperand.fromWords_payload,
         show ¬ sigWords words ≤ 1 by omega]
@@ -129,7 +129,7 @@ theorem quotient_normalization_store (s : ArmState) (base : BitVec 64)
     simp [Follows, Op.row, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
   rw [show 2 = ([Op.p1120, .p1124] : List Op).length by rfl,
     block_run base [.p1120, .p1124] s hc he ha hf]
-  simp [block, Op.effect, next, state_simp_rules]
+  simp [block_cons, block_nil, Op.effect, next, state_simp_rules]
 
 /-- Full pc1032..1124 normalization, exposing the sole output store separately
 from the scan's protected-memory frame. -/

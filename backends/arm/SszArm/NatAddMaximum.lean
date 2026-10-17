@@ -71,7 +71,7 @@ theorem maximum_select (s : ArmState) (base : BitVec 64) (leftCount rightCount :
       state_simp_rules, hpc, BitVec.add_assoc]
   refine ⟨block_run base _ s hc he ha follow, scan_frame base _ s (by decide),
     scan_zero base _ s (by decide), ?_, ?_, ?_, ?_⟩
-  all_goals simp [block, Op.effect, put, next, Udivti3.compare, Udivti3.next,
+  all_goals simp [block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next,
     state_simp_rules, leftReg, rightReg, selected, nowrap]
 
 end SszArm.NatAdd

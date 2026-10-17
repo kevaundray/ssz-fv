@@ -28,7 +28,7 @@ theorem small_head_data (s : ArmState) (base : BitVec 64) :
     let t := block base smallHeadOps s
     read_pc t = base + 768#64 ∧ r (.GPR 9#5) t = 0#64 ∧
       r (.GPR 10#5) t = r (.GPR 0#5) s ∧ t.mem = s.mem := by
-  simp [block, smallHeadOps, Op.effect, put, next, state_simp_rules]
+  simp [block_cons, block_nil, smallHeadOps, Op.effect, put, next, state_simp_rules]
 
 theorem fast_output_run (s : ArmState) (base : BitVec 64)
     (hc : CodeAt s base) (he : read_err s = .None) (ha : CheckSPAlignment s)
@@ -50,7 +50,7 @@ theorem payload_run (s : ArmState) (base : BitVec 64)
 
 macro "division_output_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
-    [block, fastOutputOps, payloadOps, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
+    [block_cons, block_nil, fastOutputOps, payloadOps, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
      state_simp_rules, ArmState.mem_w_eq_mem, BitVec.add_assoc,
      BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat, Nat.reduceAdd,
      BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel])

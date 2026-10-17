@@ -37,27 +37,27 @@ private theorem adds_effect (s : ArmState) (base left right : BitVec 64) (carry 
         by_cases h17' : reg = 17#5 <;> (try subst reg) <;>
         by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
         simp_all (config := {decide := true})
-          [addsOps, addsResult, carryWord, block, Op.effect, put, next,
+          [addsOps, addsResult, carryWord, block_cons, block_nil, Op.effect, put, next,
             state_simp_rules, BitVec.add_assoc]
     | PC =>
       by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
-        simp_all [addsOps, addsResult, block, Op.effect, put, next,
+        simp_all [addsOps, addsResult, block_cons, block_nil, Op.effect, put, next,
           state_simp_rules, BitVec.add_assoc]
     | SFP reg =>
       by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
-        simp_all [addsOps, addsResult, block, Op.effect, put, next, state_simp_rules]
+        simp_all [addsOps, addsResult, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     | FLAG flag =>
       cases flag <;>
         by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
-          simp_all [addsOps, addsResult, block, Op.effect, put, next, state_simp_rules]
+          simp_all [addsOps, addsResult, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     | ERR =>
       by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
-        simp_all [addsOps, addsResult, block, Op.effect, put, next, state_simp_rules]
+        simp_all [addsOps, addsResult, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
-      simp_all [addsOps, addsResult, block, Op.effect, put, next, state_simp_rules]
+      simp_all [addsOps, addsResult, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · intro n addr
     by_cases first : (AddWithCarry (BitVec.ofNat 64 carry) right 0#1).2.c = 1#1 <;>
-      simp_all [addsOps, addsResult, block, Op.effect, put, next, state_simp_rules]
+      simp_all [addsOps, addsResult, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 /-- Execute both real ADDS instructions and the intervening carry branch. -/
 theorem adds_run (s : ArmState) (base left right : BitVec 64) (carry : Nat)
@@ -128,19 +128,19 @@ theorem tail_run (s : ArmState) (base : BitVec 64) (index remaining carry : Nat)
       constructor <;> intro h <;> bv_omega
     by_cases overflow : r (.FLAG .C) s = 1#1 <;>
       by_cases last : remaining = 1 <;>
-      simp [tailOps, overflow, block, Op.effect, put, next, state_simp_rules,
+      simp [tailOps, overflow, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
         h14, Udivti3.cmp_one_zero, eqone, last]
   · by_cases overflow : r (.FLAG .C) s = 1#1 <;>
-      simpa [tailOps, overflow, block, Op.effect, put, next, state_simp_rules] using hcarry
+      simpa [tailOps, overflow, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using hcarry
   · by_cases overflow : r (.FLAG .C) s = 1#1 <;>
-      simp [tailOps, overflow, block, Op.effect, put, next, state_simp_rules, h14]
+      simp [tailOps, overflow, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h14]
     all_goals bv_omega
   · by_cases overflow : r (.FLAG .C) s = 1#1 <;>
-      simp [tailOps, overflow, block, Op.effect, put, next, state_simp_rules,
+      simp [tailOps, overflow, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
         h15, BitVec.ofNat_add]
   · by_cases overflow : r (.FLAG .C) s = 1#1 <;>
-      simp [tailOps, overflow, block, Op.effect, put, next, state_simp_rules]
+      simp [tailOps, overflow, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · by_cases overflow : r (.FLAG .C) s = 1#1 <;>
-      simp [tailOps, overflow, block, Op.effect, put, next, state_simp_rules]
+      simp [tailOps, overflow, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 end SszArm.NatAdd.LargeLoop

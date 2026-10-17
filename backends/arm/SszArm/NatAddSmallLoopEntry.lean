@@ -51,10 +51,10 @@ theorem entry_run (s : ArmState) (base pointer sp output small : BitVec 64)
   have vInv : Invariant v base 1 count
       (LimbAdd.step small (right.head?.getD 0#64) 0).2 := by
     constructor
-    · simp [v, block, Op.effect, put, next, state_simp_rules, Nat.ne_of_gt positive]
-    · simpa [v, block, Op.effect, put, next, state_simp_rules] using h12
-    · simp [v, block, Op.effect, put, next, state_simp_rules, h8]
-    · simp [v, block, Op.effect, put, next, state_simp_rules]
+    · simp [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules, Nat.ne_of_gt positive]
+    · simpa [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using h12
+    · simp [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h8]
+    · simp [v, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     · exact LimbAdd.step_carry_le _ _ 0 (by omega)
   obtain ⟨fuel, t, runLoop, loopFrame, finalInv, suffix⟩ :=
     loop_run count base pointer sp output right (count + 1) v 1

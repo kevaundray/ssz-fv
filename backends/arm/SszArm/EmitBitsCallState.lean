@@ -51,7 +51,7 @@ def Path.copySite : Path → CopySite
   have h2 : reg ≠ 2#5 := by simp_all
   have h22 : reg ≠ 22#5 := by simp_all
   have h25 : reg ≠ 25#5 := by simp_all
-  cases path <;> simp [ready, block, Path.setupOps, Op.effect, Activation.put,
+  cases path <;> simp [ready, block_cons, block_nil, Path.setupOps, Op.effect, Activation.put,
     Activation.next, state_simp_rules, h0, h1, h2, h22, h25]
 
 @[simp] theorem prepared_register (path : Path) (s : ArmState) (reg : BitVec 5)

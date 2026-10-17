@@ -28,7 +28,7 @@ theorem store_effect (path : Path) (s : ArmState)
   simp only [storeMemory, storeAddress, NatCompare.saved, r_of_write_mem_bytes] at restore restored
   cases path <;>
     simpa (config := {decide := true})
-      [Tail.block, Path.storeOps, Tail.Op.effect, storeAddress, byteStored, storeMemory,
+      [Tail.block_cons, Tail.block_nil, Path.storeOps, Tail.Op.effect, storeAddress, byteStored, storeMemory,
        NatCompare.saved, Activation.put, Activation.next, Dispatch.next,
        NatAdd.load_store_field, NatAdd.load_gpr_pc, state_simp_rules,
        BitVec.add_assoc, BitVec.sub_add_cancel, restore] using

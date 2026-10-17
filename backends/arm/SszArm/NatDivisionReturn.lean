@@ -24,7 +24,7 @@ structure ReturnSpace (s : ArmState) : Prop where
 
 macro "division_return_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
-    [block, returnOps, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
+    [block_cons, block_nil, returnOps, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
      state_simp_rules, ArmState.mem_w_eq_mem, BitVec.add_assoc,
      BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat, Nat.reduceAdd,
      BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel])
@@ -120,7 +120,7 @@ theorem return_restores (original s : ArmState) (base : BitVec 64)
         try simp only [h19, h20, h21, h22, h23, h24, h30]
     all_goals exact saved.high _ (by decide) (by decide)
   · intro reg low high
-    simpa [block, returnOps, Op.effect, put, next, state_simp_rules] using
+    simpa [block_cons, block_nil, returnOps, Op.effect, put, next, state_simp_rules] using
       saved.vectors reg low high
 
 end SszArm.NatDivision

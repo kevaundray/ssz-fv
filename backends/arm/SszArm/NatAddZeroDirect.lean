@@ -16,15 +16,15 @@ theorem zero_left_small_frame (s : ArmState) (base word : BitVec 64)
     by_cases h3 : reg = 3#5
     · subst reg
       by_cases zero : word = 0#64 <;>
-        simp [zeroLeftSmallOps, zero, block, Op.effect, put, next, state_simp_rules, pointer]
+        simp [zeroLeftSmallOps, zero, block_cons, block_nil, Op.effect, put, next, state_simp_rules, pointer]
     · by_cases zero : word = 0#64 <;>
-        simp [zeroLeftSmallOps, zero, block, Op.effect, put, next, state_simp_rules, h3]
+        simp [zeroLeftSmallOps, zero, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h3]
   · intro reg
     by_cases zero : word = 0#64 <;>
-      simp [zeroLeftSmallOps, zero, block, Op.effect, put, next, state_simp_rules]
+      simp [zeroLeftSmallOps, zero, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · intro a outside
     by_cases zero : word = 0#64 <;>
-      simp [zeroLeftSmallOps, zero, block, Op.effect, put, next, state_simp_rules]
+      simp [zeroLeftSmallOps, zero, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 /-- The zero-left Large branch reaches either the explicit zero descriptor or
 the original immediate right descriptor, including the redundant MOV X3,#0. -/
@@ -47,12 +47,12 @@ theorem zero_left_large_small (s : ArmState) (base pointer word : BitVec 64)
   have frame : NatCompare.Frame s t := zero_left_small_frame s base word ptr
   have out : r (.GPR 0#5) t = r (.GPR 0#5) s := by
     by_cases empty : word = 0#64 <;>
-      simp [t, ops, zeroLeftSmallOps, empty, block, Op.effect, put, next, state_simp_rules]
+      simp [t, ops, zeroLeftSmallOps, empty, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   have ownedT := owned.transport frame out
   let path : StatusPath := if word = 0#64 then .zeroRight else .right
   have pc : read_pc t = base + BitVec.ofNat 64 (valueStart path) := by
     by_cases empty : word = 0#64 <;>
-      simp [t, ops, path, zeroLeftSmallOps, valueStart, empty, block, Op.effect, put, next,
+      simp [t, ops, path, zeroLeftSmallOps, valueStart, empty, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, hpc, ptr, payload, count, BitVec.add_assoc]
   apply Post.prepend owned frame out ops.length execution
   apply zero_small_post path t base word (.large pointer words) (.small word) ownedT
@@ -83,7 +83,7 @@ theorem zero_left_small_small (s : ArmState) (base word : BitVec 64)
   have out : r (.GPR 0#5) t = r (.GPR 0#5) s := scan_zero base ops s (by decide)
   have ownedT := owned.transport frame out
   have pc : read_pc t = base + 492#64 := by
-    simp [t, ops, block, Op.effect, put, next, state_simp_rules, hpc, r1, r2, r3, BitVec.add_assoc]
+    simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, r1, r2, r3, BitVec.add_assoc]
   apply Post.prepend owned frame out ops.length execution
   apply zero_small_post .right t base word (.small 0#64) (.small word) ownedT
     (scan_code frame hc) (frame.error.trans he) (frame.aligned ha) pc
@@ -102,12 +102,12 @@ theorem zero_right_small_frame (s : ArmState) (base : BitVec 64)
   · intro reg outside
     by_cases h1 : reg = 1#5
     · subst reg
-      simp [zeroRightSmallOps, block, Op.effect, put, next, state_simp_rules, pointer]
-    · simp [zeroRightSmallOps, block, Op.effect, put, next, state_simp_rules, h1]
+      simp [zeroRightSmallOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, pointer]
+    · simp [zeroRightSmallOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h1]
   · intro reg
-    simp [zeroRightSmallOps, block, Op.effect, put, next, state_simp_rules]
+    simp [zeroRightSmallOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · intro a outside
-    simp [zeroRightSmallOps, block, Op.effect, put, next, state_simp_rules]
+    simp [zeroRightSmallOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 /-- Immediate zero on the right returns the nonzero immediate left through the
 real +540/+652 branch, without allocating or changing any arena word. -/
@@ -132,10 +132,10 @@ theorem zero_right_small_small (s : ArmState) (base word : BitVec 64)
       hpc, r1, r2, r3, r4, wordNonzero, BitVec.add_assoc])
   have frame : NatCompare.Frame s t := zero_right_small_frame s base r1
   have out : r (.GPR 0#5) t = r (.GPR 0#5) s := by
-    simp [t, zeroRightSmallOps, block, Op.effect, put, next, state_simp_rules]
+    simp [t, zeroRightSmallOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   have ownedT := owned.transport frame out
   have pc : read_pc t = base + 656#64 := by
-    simp [t, zeroRightSmallOps, block, Op.effect, put, next, state_simp_rules,
+    simp [t, zeroRightSmallOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
       hpc, r1, r2, r3, r4, wordNonzero, BitVec.add_assoc]
   apply Post.prepend owned frame out zeroRightSmallOps.length execution
   apply zero_small_post .left t base word (.small word) (.small 0#64) ownedT

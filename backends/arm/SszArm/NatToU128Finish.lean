@@ -71,7 +71,7 @@ macro "u128_finish_side" : tactic => `(tactic|
 
 macro "u128_finish_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
-    [finished, FinishPath.ops, block, List.foldl_cons, List.foldl_nil,
+    [finished, FinishPath.ops, block_cons, block_nil, List.foldl_cons, List.foldl_nil,
      Op.effect, put, next, state_simp_rules, ArmState.mem_w_eq_mem,
      BitVec.add_assoc, BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat,
      Nat.reduceAdd, BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel])
@@ -117,11 +117,11 @@ theorem finish_returned (path : FinishPath) (s : ArmState) (base : BitVec 64)
     have h11 : reg ≠ 11#5 := by bv_omega
     have h31 : reg ≠ 31#5 := by bv_omega
     cases path <;>
-      simp [finished, FinishPath.ops, block, Op.effect, put, next,
+      simp [finished, FinishPath.ops, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules, h2, h9, h10, h11, h31]
   · intro reg low high
     cases path <;>
-      simp [finished, FinishPath.ops, block, Op.effect, put, next, state_simp_rules]
+      simp [finished, FinishPath.ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem finish_frame (path : FinishPath) (s : ArmState) (base : BitVec 64)
     (space : FinishSpace s) : MemoryFrame (finishWrites path s) s (finished path base s) := by

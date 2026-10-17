@@ -118,6 +118,8 @@ Method: each defective variant of `NatAddLargeLoopSelect` (accepted **137 s** AR
 
 Running the same clean `NatAddLargeLoopSelect` with `set_option profiler true` attributed **125 s of the 127 s wall to `simp`** (cumulative), spread over eight calls of 13.7–18.6 s plus two 0.1 s calls. (Caveat: the profiler's `simp` bucket includes tactic-elaboration work; treat the non-simp remainder as "small relative to simp", not as independently measured exclusive costs.) A state-heavy module's check time is therefore roughly (number of state-touching broad-`simp` calls) × ~15 s on this machine, plus import load. Each heavy call re-expands large ARM state expressions from scratch — the same behavior the E1 pair isolated at 19.6 s vs 0.56 s. The x86 scalar-carry scalarLoop blocker (bg946) showed the identical pattern in miniature: an omega-arithmetic residual buried under state expansion until an explicit fuel rewrite (76AE) closed it at **1.3 s**.
 
+**Correction (2026-10-17):** the 85–190 MB oleans and most of the multi-minute times in items 3 and 3b were not an inherent cost of state observation. They came from one `simp` anti-pattern, described in [`simp [block]` over a large instruction `match`](#simp-block-over-a-large-instruction-match) below. After the fix, `NatAddLargeLoopSelect` checks in **4.7 s** CPU, `NatAddFront` in **2.7 s**, `NatAddSelect` in **2.8 s** and `NatAddOneWordState` in **4.0 s**, all with oleans under 1 MB.
+
 **Historical split outcomes these measurements corroborate** (from parent relay logs): ARM monolith OneWord **744 s** 8M-heartbeat timeout → pure-state module **298 s** + actual execution **659 ms**; FirstWord **760 s** timeout → pure-state **109 s** + actual **693 ms**; RightTrim 8M timeout → state **42 s** + actual **60 s**; OneWordLoadState **77 s** + actual **705 ms**; OneWordLoad **753 s** fail at state-enum × instruction-path simp → helper **77 s** + actual **705 ms**. x86 CarryPair **694 s** timeout → CPS helpers **0.7–3.8 s** each + composition **1.1 s**. ARM division LoopIteration ~**863 s** 12M-heartbeat failure → opaque finish-state summaries **1.1 s**. These are per-module incremental timings, not whole-DAG speedups.
 
 **Failed-check costs in the same runs** (bg937/bg948/bg953): SmallLoopFrame **154 s** fail (repaired to 20 s after opaque cuts, one residual remaining); BorrowTrim **374 s** fail (whnf 8M heartbeat); LargeLoopRead **303 s** fail; LargePost **366 s** fail (126 isDefEq/13 whnf at 8M heartbeats); Maximum 66 s fail; Dispatch 1.1 s fail. Accepted peers: Front **274 s**, Select **186 s**, LargeLoopSelect **137 s**, BorrowTrimState **78 s**, Maximum **79 s**, LargeLoopRead **126 s**.
@@ -407,6 +409,73 @@ The fixed-size milestone's complete strict roots passed **1,345 x86 jobs / 942 A
 **Direct shipped SHA wrappers now have independent runtime coverage on both ISAs:** thirteen lengths around padding/block boundaries (0 through 257), every selected empty/half/end/one-byte split, overlapping read-only slices, unaligned state/output, output/state guard bytes, and unchanged input all matched Python `hashlib`. Both native runs completed in **0.99 seconds** total. Temporary object copies exposed the three private SHA symbols; all three instruction sections were byte-identical before and after that symbol-table change. No native source or assembly was changed, and this is runtime evidence rather than wrapper ISA refinement.
 
 **The new SHA image checker preserves actual addresses and all intervening bytes:** both complete image certificates now pass (**398 x86 / 576 ARM instructions**, **38.36 seconds** total), including real helpers, IV/round-table literals and addresses, and rejected gap-byte, instruction-metadata, panic-frontier, callee-offset, and table mutations. `make binding` includes `scripts/check-sha-binding.py`. Table equality uses opaque 32-element suffixes and composed take/drop identities, not larger kernel limits; concatenations must be explicitly right-associated when composing these certificates. The shared x86 image generator now accepts a nonzero origin; both existing multiplication bindings still pass (**457 / 855 instructions**, **42.26 seconds** total). All 398 x86 SHA instruction ASTs also passed a separate strict parser/typecheck smoke in **1.35 seconds**. These certificates establish code/data binding, not completed wrapper execution refinement.
+
+### `simp [block]` over a large instruction `match`
+
+Most of the slow ARM modules (2–30 minutes each, 90–190 MB oleans) were caused by one `simp` anti-pattern, not by the size of the state proofs.
+
+**Pattern.** Each ARM program family is an `inductive Op` with one constructor per instruction (603 for addition, 458 for scalar multiplication), and `Op.effect` is an N-arm `match`. 52 families defined their straight-line block as a fold:
+
+```lean
+def block (base : BitVec 64) (ops : List Op) (s : ArmState) : ArmState :=
+  ops.foldl (fun t op => op.effect base t) s
+```
+
+Their proofs then call `simp [block, Op.effect, put, next, state_simp_rules]`. Unfolding `block` exposes the fold's step function, where `op` is a bound variable rather than a constructor, so `Op.effect` there is a stuck `match`. To unfold it, `simp` realizes `Op.effect.match_1.splitter` and N match-equation lemmas. Each of those lemmas quantifies over all N alternatives, so together they are O(N²) terms. `simp` creates them as private declarations in *every* module that does this, tries all N equations against the stuck match, and then simplifies all N arms. The seven families whose `block` uses structural recursion (`| op :: ops, s => block ops (op.effect s)`) never had the problem. `simp [Follows, Op.row]` has a smaller version of the same cost: `Op.row`'s equations are an N-arm match too, and each module regenerates them unless one of its imports already did.
+
+**How to spot it:**
+
+- A proof-only module's `.olean` is tens of MB; it should be well under 1 MB.
+- `set_option trace.profiler true` reports `[Meta.realizeConst] … Op.effect.match_1.splitter` (or `Op.row.match_1.splitter`) taking seconds.
+- The `.olean` (read with `Lean.readModuleData`) contains hundreds of `_private.<Module>.0.<…>.match_1.eq_<k>` constants.
+
+**Fix:** applied to the 21 fold families built by the default `SszArm` target. The other 31 fold families are only in modules that `SszArm` does not import (several of which do not compile at HEAD), so they were left unchanged.
+
+- Next to each fold-based `block`, add one-instruction step lemmas. In simp argument lists that also unfold the effect, pass `block_cons, block_nil` instead of `block` (828 lists). Now `simp` only sees `Op.effect base .pK s` with a constructor argument, which the existing `Op.effect.eq_K` handles:
+
+  ```lean
+  @[simp] theorem block_nil (base : BitVec 64) (s : ArmState) : block base [] s = s := (rfl)
+
+  @[simp] theorem block_cons (base : BitVec 64) (op : Op) (ops : List Op) (s : ArmState) :
+      block base (op :: ops) s = block base ops (op.effect base s) := (rfl)
+  ```
+
+- Prove these lemmas with `(rfl)`, not `rfl`. A `:= rfl` proof marks the lemma `@[defeq]`. `simp` then records each step as an implicit definitional equality, and the kernel has to re-derive it by unfolding `block` and the N-arm `Op.effect`. A probe holding the first two `NatAddReturnStatus` theorems took 195 s of CPU with `:= rfl`, almost all of it kernel checking of `status_returned`. With explicit steps it took 37 s. With `:= rfl`, `NatCompareScanRound` also hit `(kernel) deep recursion`, and `NatDivisionCopyRound` went from 38 s to 964 s.
+- Keep `block` where a proof needs the fold form, such as `List.foldl_append` over `xs ++ ys` or a statement written with `foldl`. Lists that never unfold the effect are harmless and were left alone.
+- Because the lemmas are `@[simp]`, they also fire in plain `simp` calls in importing modules and can change those modules' normal forms. An unimported work-in-progress `NatMul` module broke this way, which is one reason the unimported families were left unchanged. One rewritten proof (`NatMulWordLoopHead.loop_head_pc`) now closes in its first `simp`, so its follow-up `simp only` was removed.
+- Generate large equation lemmas once, in the defining module. `attribute [local simp] Op.row` (addition, scalar multiplication) and `Op.effect` (scalar multiplication) make importers reuse the exported `Op.row.eq_*`/`Op.effect.eq_*` lemmas. Without it, eleven `NatMulWordWords*` modules each regenerated the 458-arm `Op.effect` equations (52 MB olean each). They now have oleans under 1 MB and take 2–5 s, down from 25–55 s before the whole fix.
+
+**General rule:** never let `simp` unfold a function whose body matches over a large instruction type at a non-constructor argument. Give it per-constructor or per-cons lemmas, or define the recursion structurally. Make sure such equation lemmas are generated once, upstream.
+
+**Measured:** official Lean 4.31.0, from-scratch `lake build` of `backends/arm` (1,066 modules), at most 8 concurrent Lean processes, on a shared machine at load 25–90. CPU is user + sys.
+
+| Whole build | Before | After |
+| --- | --- | --- |
+| Wall clock | 1:20:08 | 14:08 |
+| CPU | 25,554 s | 7,344 s |
+| `SszArm` oleans | 7.9 GB | 1.8 GB |
+| Modules with an olean ≥ 50 MB | 69 | 2 |
+| Modules taking ≥ 100 s CPU | 53 | 6 |
+
+| Module | CPU before | CPU after | Olean before → after |
+| --- | --- | --- | --- |
+| `NatAddReturnValues` | 1,783 s | 31 s | 111 → 7.1 MB |
+| `NatAddReturnStatus` | 1,565 s | 20 s | 189 → 2.8 MB |
+| `NatAddLargeLoopAdds` | 1,102 s | 8.7 s | 93 → 1.4 MB |
+| `NatAddArenaChecks` | 1,009 s | 6.3 s | 182 → 1.4 MB |
+| `NatAddReturnError` | 853 s | 87 s | 116 → 17 MB |
+| `NatAddFirstWordState` | 680 s | 33 s | 95 → 1.7 MB |
+| `NatAddArenaLayout` | 627 s | 5.7 s | 92 → 0.8 MB |
+| `NatAddOneWordState` | 565 s | 4.0 s | 91 → 0.5 MB |
+| `NatAddFront` | 553 s | 2.7 s | 91 → 0.3 MB |
+| `NatAddZeroBorrowState` | 538 s | 4.0 s | 92 → 0.8 MB |
+
+These are the slowest modules after the fix:
+
+- `ByteViewControlFlow`, 670 s: unchanged; it builds its own 220-node control-flow graph and is not this pattern.
+- `NatAddOps`, 288 s (was 193 s): it now generates the 603-arm `Op.row` equations once for all importers, and its olean is 205 MB.
+- `NatAddBlocks`, 256 s: `cases op` over all 603 instructions in `scan_frame`/`scan_zero`.
+- `UintLimbExec`, 206 s: unchanged.
 
 ## 2. What has helped
 

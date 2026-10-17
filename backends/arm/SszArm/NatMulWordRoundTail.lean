@@ -25,20 +25,20 @@ theorem round_tail_pc (s : ArmState) (base : BitVec 64) :
     read_pc (roundTail s base) =
       if r (.GPR 9#5) s = r (.GPR 16#5) s then base + 1464#64 else base + 812#64 := by
   by_cases carry : r (.FLAG .C) s = 1#1 <;>
-    simp [roundTail, roundTailOps, carry, block, Op.effect, put, next,
+    simp [roundTail, roundTailOps, carry, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules, Udivti3.cmp_zero]
 
 theorem round_tail_index (s : ArmState) (base : BitVec 64) :
     r (.GPR 13#5) (roundTail s base) = r (.GPR 16#5) s := by
   by_cases carry : r (.FLAG .C) s = 1#1 <;>
-    simp [roundTail, roundTailOps, carry, block, Op.effect, put, next,
+    simp [roundTail, roundTailOps, carry, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem round_tail_carry (s : ArmState) (base : BitVec 64) :
     r (.GPR 14#5) (roundTail s base) = r (.GPR 17#5) s +
       (if r (.FLAG .C) s = 1#1 then 1#64 else 0#64) := by
   by_cases carry : r (.FLAG .C) s = 1#1 <;>
-    simp [roundTail, roundTailOps, carry, block, Op.effect, put, next,
+    simp [roundTail, roundTailOps, carry, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem round_tail_registers (s : ArmState) (base : BitVec 64) (reg : BitVec 5)
@@ -60,7 +60,7 @@ theorem round_tail_registers (s : ArmState) (base : BitVec 64) (reg : BitVec 5)
 theorem round_tail_memory (s : ArmState) (base : BitVec 64) :
     (roundTail s base).mem = s.mem := by
   by_cases carry : r (.FLAG .C) s = 1#1 <;>
-    simp [roundTail, roundTailOps, carry, block, Op.effect, put, next,
+    simp [roundTail, roundTailOps, carry, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules]
 
 end SszArm.NatMulWord

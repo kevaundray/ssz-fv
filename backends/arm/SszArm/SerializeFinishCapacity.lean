@@ -123,7 +123,7 @@ theorem failure_tag_run (base : BitVec 64) (s : ArmState)
   change r .PC s = _ at pc
   have pcValue := pc
   simp only [r, read_base_pc] at pcValue
-  simp [block, Op.effect, next, put, failureTagged, result, state_simp_rules,
+  simp [block_cons, block_nil, Op.effect, next, put, failureTagged, result, state_simp_rules,
     pc, pcValue, BitVec.add_assoc, Memory.write_mem_bytes_eq_mem_write_bytes,
     r, w, read_base_gpr, read_base_pc, write_base_gpr, write_base_pc,
     read_store, write_store]

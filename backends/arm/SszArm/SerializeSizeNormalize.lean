@@ -36,9 +36,9 @@ theorem load_low (s : ArmState) (base pointer : BitVec 64) (words : List (BitVec
   refine ⟨t, Serialize.block_run base [.p420] s code error aligned ⟨pc, trivial⟩,
     readonly_frame base _ s (by decide), ?_, ?_⟩
   · change r .PC s = base + 420#64 at pc
-    simp [t, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+    simp [t, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
       state_simp_rules, pc, BitVec.add_assoc]
-  · simp [t, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+  · simp [t, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
       state_simp_rules, address, loaded]
 
 /-- All nonempty physical representations exit either at the host error or with
@@ -81,7 +81,7 @@ theorem large_ready (s : ArmState) (base pointer : BitVec 64) (words : List (Bit
     have runBefore : run 1 u = v := Serialize.block_run base [.p416] u
       (frame.code code) (frame.error.trans error) (frame.aligned aligned) ⟨zeroPC, trivial⟩
     apply finishLoad v 1 runBefore (readonly_frame base _ u (by decide))
-    · simp [v, Serialize.block, Serialize.Op.effect, state_simp_rules, countU, countNonzero]
+    · simp [v, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, state_simp_rules, countU, countNonzero]
     · omega
   · have positive : 0 < sigWords words := by omega
     have sigBound : sigWords words < 2^64 := by have := sigWords_le_length words; omega
@@ -101,14 +101,14 @@ theorem large_ready (s : ArmState) (base pointer : BitVec 64) (words : List (Bit
     have beforeFrame : Frame u v := readonly_frame base ops u (by decide)
     by_cases fits : sigWords words ≤ 1
     · apply finishLoad v 3 runBefore beforeFrame
-      · simp [v, ops, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+      · simp [v, ops, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
           Emit.Dispatch.compare64, Emit.Dispatch.next, state_simp_rules, top zero,
           increment, equal, show sigWords words = 1 by omega]
       · exact fits
     · have large : ¬ value words < 2^64 := mt (host_bound_iff words).mp fits
       refine ⟨fuel + 3, v, ?_, frame.trans beforeFrame, ?_, fun impossible => False.elim (large impossible)⟩
       · rw [run_plus, executed, runBefore]
-      · simp [v, ops, Serialize.block, Serialize.Op.effect, Serialize.put, Serialize.next,
+      · simp [v, ops, Serialize.block_cons, Serialize.block_nil, Serialize.Op.effect, Serialize.put, Serialize.next,
           Emit.Dispatch.compare64, Emit.Dispatch.next, state_simp_rules, top zero,
           increment, equal, show sigWords words ≠ 1 by omega, large]
 

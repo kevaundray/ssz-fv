@@ -170,7 +170,7 @@ theorem value_body_pc (path : StatusPath) (s : ArmState) (base : BitVec 64)
     r (.GPR 0#5) (valueBody path base s) = r (.GPR 0#5) s := by
   by_cases wide : path = .wide
   · subst path
-    simp [valueBody, valueOps, block, Op.effect, next, state_simp_rules]
+    simp [valueBody, valueOps, block_cons, block_nil, Op.effect, next, state_simp_rules]
   · rw [value_body_eq_add path s base wide]
     exact NatAdd.value_body_out (valueAddPath path) s base
 
@@ -178,7 +178,7 @@ theorem value_body_pc (path : StatusPath) (s : ArmState) (base : BitVec 64)
     r (.GPR 31#5) (valueBody path base s) = r (.GPR 31#5) s := by
   by_cases wide : path = .wide
   · subst path
-    simp [valueBody, valueOps, block, Op.effect, next, state_simp_rules]
+    simp [valueBody, valueOps, block_cons, block_nil, Op.effect, next, state_simp_rules]
   · rw [value_body_eq_add path s base wide]
     exact NatAdd.value_body_sp (valueAddPath path) s base
 

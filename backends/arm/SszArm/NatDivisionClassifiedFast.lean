@@ -34,7 +34,7 @@ theorem classified_large_fast (original s : ArmState) (base pointer : BitVec 64)
   · have nil : words = [] := List.eq_nil_of_length_eq_zero empty
     refine ⟨.zero, ?_, ?_⟩
     · simpa [FastSite.start, empty] using branch
-    · simp [fastPrepared, FastSite.setup, block, Op.effect, put, next,
+    · simp [fastPrepared, FastSite.setup, block_cons, block_nil, Op.effect, put, next,
         Udivti3.numerator, Udivti3.join, state_simp_rules,
         SszNative.NatOperand.value, SszNative.NatOperand.words,
         SszNative.Limbs.value, nil]
@@ -49,7 +49,7 @@ theorem classified_large_fast (original s : ArmState) (base pointer : BitVec 64)
       · simpa [FastSite.start, one] using branch.2
       · have prepared : Udivti3.numerator (fastPrepared .low s base) =
           Udivti3.join (words[0]?.getD 0#64) 0#64 := by
-          simp [fastPrepared, FastSite.setup, block, Op.effect, put, next,
+          simp [fastPrepared, FastSite.setup, block_cons, block_nil, Op.effect, put, next,
             Udivti3.numerator, state_simp_rules, low]
         rw [prepared]
         simpa only [SszNative.NatOperand.words, high] using join
@@ -61,7 +61,7 @@ theorem classified_large_fast (original s : ArmState) (base pointer : BitVec 64)
       · simpa [FastSite.start, one] using branch.2
       · have prepared : Udivti3.numerator (fastPrepared .wide s base) =
           Udivti3.join (words[0]?.getD 0#64) (words[1]?.getD 0#64) := by
-          simp [fastPrepared, FastSite.setup, block, Op.effect, put, next,
+          simp [fastPrepared, FastSite.setup, block_cons, block_nil, Op.effect, put, next,
             Udivti3.numerator, state_simp_rules, low, h1, high]
         rw [prepared]
         exact join

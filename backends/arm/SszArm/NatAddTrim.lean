@@ -33,11 +33,11 @@ theorem left_round (s : ArmState) (base pointer : BitVec 64)
       h10, BitVec.add_assoc])
   have huf : NatCompare.Frame s u := scan_frame base _ s (by decide)
   have hup : read_pc u = base + 20#64 := by
-    simp [u, block, Op.effect, put, next, state_simp_rules, h10, nonzero]
+    simp [u, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h10, nonzero]
   have hu8 : r (.GPR 8#5) u = pointer - 8#64 := by
-    simpa [u, block, Op.effect, put, next, state_simp_rules] using h8
+    simpa [u, block_cons, block_nil, Op.effect, put, next, state_simp_rules] using h8
   have hu9 : r (.GPR 9#5) u = BitVec.ofNat 64 (n + 1) := by
-    simp [u, block, Op.effect, put, next, state_simp_rules, h10]
+    simp [u, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h10]
   have hus : Source u pointer words := huf.source _ _ hs
   have hum : Words u pointer words := huf.words _ _ hs hm
   have haddress : pointer - 8#64 + (BitVec.ofNat 64 (n + 1) <<< 3) =
@@ -89,7 +89,7 @@ theorem left_trim (base pointer : BitVec 64) (words : List (BitVec 64)) :
         hpc, h10, BitVec.add_assoc]
     refine ⟨3, t, block_run base ops s hc he ha follow,
       scan_frame base ops s (by decide), scan_zero base ops s (by decide), ?_, ?_, ?_⟩
-    all_goals simp [t, ops, block, Op.effect, put, next, state_simp_rules,
+    all_goals simp [t, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules,
       h10, significantCount, BitVec.add_assoc]
   | succ n ih =>
     intro s hn hc he ha hp h8 h10 hs hm

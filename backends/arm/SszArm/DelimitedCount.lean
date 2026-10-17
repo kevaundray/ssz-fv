@@ -18,7 +18,7 @@ def countSlot (s : ArmState) : ArmState :=
 
 theorem clz_start_memory (s : ArmState) (base : BitVec 64) :
     (block base clzStartOps s).mem = (countSlot s).mem := by
-  simp [block, clzStartOps, Op.effect, put, next, countSlot, countThreshold,
+  simp [block_cons, block_nil, clzStartOps, Op.effect, put, next, countSlot, countThreshold,
     state_simp_rules, BitVec.sub_eq_add_neg, BitVec.add_assoc]
   apply mem_write_mem_bytes_of_mem_eq
   simp only [ArmState.mem_w_eq_mem]
@@ -32,7 +32,7 @@ theorem clz_start_saved (s : ArmState) (base : BitVec 64)
       read_mem_bytes 8 (r (.GPR 31#5) t + 8#64) t = r (.GPR 10#5) s := by
   have memory := Memory.mem_eq_iff_read_mem_bytes_eq.mp (clz_start_memory s base)
   have sp : r (.GPR 31#5) (block base clzStartOps s) = r (.GPR 31#5) s - 16#64 := by
-    simp [block, clzStartOps, Op.effect, put, next, state_simp_rules]
+    simp [block_cons, block_nil, clzStartOps, Op.effect, put, next, state_simp_rules]
   dsimp only
   rw [sp, memory, memory]
   simp (disch := delimited_side) [countSlot, BitVec.sub_eq_add_neg, BitVec.add_assoc]
@@ -51,7 +51,7 @@ theorem clz_start_registers (s : ArmState) (base : BitVec 64) (byte : UInt8)
     change 0 < 25 + Ssz.highestBit byte
     omega)
   simp only [BitVec.ushiftRight_zero, clzInput] at zero
-  simp [block, clzStartOps, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, clzStartOps, Op.effect, put, next, state_simp_rules,
     input, clzInput, zero]
 
 private theorem highest_word (byte : UInt8) :
@@ -92,7 +92,7 @@ theorem count_exit (s : ArmState) (base : BitVec 64) (byte : UInt8) (length : Na
       BitVec.ofNat 64 (Ssz.highestBit byte) := by
     have cast7 : (7#32).setWidth 64 = 7#64 := by decide
     simpa only [BitVec.setWidth_xor, widened, cast7] using highest
-  simp [block, countOps, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, countOps, Op.effect, put, next, state_simp_rules,
     counter, threshold, inputLength, hprefix, highestWide, join, carry, BitVec.add_assoc, widened]
 
 end SszArm.Delimited

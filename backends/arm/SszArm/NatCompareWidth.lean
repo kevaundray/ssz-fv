@@ -37,7 +37,7 @@ theorem left_width (s : ArmState) (base : BitVec 64) (xs : List (BitVec 64))
     · dsimp only [ops, leftSmallOps]; split <;> decide
     all_goals
       by_cases hzero : r (.GPR 1#5) s = 0#64 <;>
-        simp [t, ops, leftSmallOps, block, Op.effect, put, next,
+        simp [t, ops, leftSmallOps, block_cons, block_nil, Op.effect, put, next,
           Udivti3.compare, Udivti3.next, state_simp_rules, hpc, hz, hzero,
           BitVec.add_assoc, sigWords, significantCount, hxs, rightEntry]
   · obtain ⟨hcount, hs, hm⟩ := hi.large hz
@@ -48,11 +48,11 @@ theorem left_width (s : ArmState) (base : BitVec 64) (xs : List (BitVec 64))
         hpc, hz, BitVec.add_assoc])
     have huf : Frame s u := readonly_frame base ops s (by decide)
     have hup : read_pc u = base + 12#64 := by
-      simp [u, ops, block, Op.effect, put, next, state_simp_rules, hpc, hz, BitVec.add_assoc]
+      simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hpc, hz, BitVec.add_assoc]
     have hu8 : r (.GPR 8#5) u = r (.GPR 0#5) s - 8#64 := by
-      simp [u, ops, block, Op.effect, put, next, state_simp_rules]
+      simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     have hu9 : r (.GPR 9#5) u = BitVec.ofNat 64 xs.length := by
-      simp [u, ops, block, Op.effect, put, next, state_simp_rules, ← hcount]
+      simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, ← hcount]
     obtain ⟨fuel, t, ht, htf, ht0, htp, ht9⟩ := trim base (r (.GPR 0#5) s) xs false
       xs.length u (Nat.le_refl _) (huf.code hc) (huf.error.trans he) (huf.aligned ha)
       hup hu8 hu9 (huf.source _ _ hs) (huf.words _ _ hs hm)
@@ -102,7 +102,7 @@ theorem right_width (s : ArmState) (base : BitVec 64) (ys : List (BitVec 64))
     · dsimp only [ops, rightSmallOps, rightGuard]; split <;> split <;> decide
     all_goals
       by_cases hl : r (.GPR 0#5) s = 0#64 <;> by_cases hzero : r (.GPR 3#5) s = 0#64 <;>
-        simp [t, ops, rightSmallOps, rightGuard, rightEntry, block, Op.effect,
+        simp [t, ops, rightSmallOps, rightGuard, rightEntry, block_cons, block_nil, Op.effect,
           put, next, Udivti3.compare, Udivti3.next, state_simp_rules,
           hpc, hz, hl, hzero, BitVec.add_assoc, sigWords, significantCount,
           hys, rightKind, LengthKind.start]
@@ -116,17 +116,17 @@ theorem right_width (s : ArmState) (base : BitVec 64) (ys : List (BitVec 64))
     have huf : Frame s u := readonly_frame base ops s (by dsimp only [ops, rightGuard]; split <;> decide)
     have hup : read_pc u = base + 76#64 := by
       by_cases hl : r (.GPR 0#5) s = 0#64 <;>
-        simp [u, ops, rightGuard, rightEntry, block, Op.effect, put, next,
+        simp [u, ops, rightGuard, rightEntry, block_cons, block_nil, Op.effect, put, next,
           state_simp_rules, hpc, hz, hl, BitVec.add_assoc]
     have hu8 : r (.GPR 8#5) u = r (.GPR 2#5) s - 8#64 := by
       by_cases hl : r (.GPR 0#5) s = 0#64 <;>
-        simp [u, ops, rightGuard, block, Op.effect, put, next, state_simp_rules, hl]
+        simp [u, ops, rightGuard, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hl]
     have hu10 : r (.GPR 10#5) u = BitVec.ofNat 64 ys.length := by
       by_cases hl : r (.GPR 0#5) s = 0#64 <;>
-        simp [u, ops, rightGuard, block, Op.effect, put, next, state_simp_rules, hl, ← hcount]
+        simp [u, ops, rightGuard, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hl, ← hcount]
     have hu9 : r (.GPR 9#5) u = r (.GPR 9#5) s := by
       by_cases hl : r (.GPR 0#5) s = 0#64 <;>
-        simp [u, ops, rightGuard, block, Op.effect, put, next, state_simp_rules, hl]
+        simp [u, ops, rightGuard, block_cons, block_nil, Op.effect, put, next, state_simp_rules, hl]
     obtain ⟨fuel, t, ht, htf, ht0, htp, htregs⟩ := trim base (r (.GPR 2#5) s) ys true
       ys.length u (Nat.le_refl _) (huf.code hc) (huf.error.trans he) (huf.aligned ha)
       hup hu8 hu10 (huf.source _ _ hs) (huf.words _ _ hs hm)

@@ -38,7 +38,7 @@ theorem dispatched_pc (s : ArmState) (base : BitVec 64) (desc : Desc)
   cases desc <;> try cases kind
   all_goals
     simp (config := {decide := true, instances := true})
-      [dispatched, block, dispatchOps, Op.effect, countEntry,
+      [dispatched, block_cons, block_nil, dispatchOps, Op.effect, countEntry,
        Activation.put, Activation.next, Dispatch.next, Dispatch.compare64,
        Dispatch.branch, state_simp_rules, bitvec_rules, minimal_theory,
        pc, tag, descriptorTag, BitVec.add_assoc]
@@ -50,17 +50,17 @@ theorem dispatched_pc (s : ArmState) (base : BitVec 64) (desc : Desc)
   simp [dispatched, block, dispatchOps]
 
 @[simp] theorem dispatched_memory (s : ArmState) : (dispatched s).mem = s.mem := by
-  simp [dispatched, block, dispatchOps, Op.effect, Activation.put, Activation.next,
+  simp [dispatched, block_cons, block_nil, dispatchOps, Op.effect, Activation.put, Activation.next,
     Dispatch.next, Dispatch.compare64, Dispatch.branch, state_simp_rules]
 
 @[simp] theorem dispatched_register (s : ArmState) (reg : BitVec 5) (other : reg ≠ 9#5) :
     r (.GPR reg) (dispatched s) = r (.GPR reg) s := by
-  simp [dispatched, block, dispatchOps, Op.effect, Activation.put, Activation.next,
+  simp [dispatched, block_cons, block_nil, dispatchOps, Op.effect, Activation.put, Activation.next,
     Dispatch.next, Dispatch.compare64, Dispatch.branch, state_simp_rules, other]
 
 @[simp] theorem dispatched_vector (s : ArmState) (reg : BitVec 5) :
     r (.SFP reg) (dispatched s) = r (.SFP reg) s := by
-  simp [dispatched, block, dispatchOps, Op.effect, Activation.put, Activation.next,
+  simp [dispatched, block_cons, block_nil, dispatchOps, Op.effect, Activation.put, Activation.next,
     Dispatch.next, Dispatch.compare64, Dispatch.branch, state_simp_rules]
 
 theorem shifted_frame (path : Path) (s : ArmState) (args : Args) (size : Nat)

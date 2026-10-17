@@ -38,12 +38,12 @@ theorem length_zero (base : BitVec 64) (s : ArmState) (kind : LengthKind) (ord :
 theorem length_count (base : BitVec 64) (s : ArmState) (kind : LengthKind) (ord : Ordering) :
     r (.GPR 9#5) (block base (kind.ops ord) s) = r (.GPR 9#5) s := by
   cases kind <;> cases ord <;>
-    simp [LengthKind.ops, block, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
+    simp [LengthKind.ops, block_cons, block_nil, Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem length_word (base : BitVec 64) (s : ArmState) (kind : LengthKind) (ord : Ordering) :
     r (.GPR 8#5) (block base (kind.ops ord) s) = orderingWord ord := by
   cases kind <;> cases ord <;>
-    simp [LengthKind.ops, orderingWord, block, Op.effect, put, next,
+    simp [LengthKind.ops, orderingWord, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, state_simp_rules]
 
 theorem length_trace_lt (s : ArmState) (base b : BitVec 64) (kind : LengthKind)
@@ -61,7 +61,7 @@ theorem length_trace_lt (s : ArmState) (base b : BitVec 64) (kind : LengthKind)
   cases kind <;> cases hb
   all_goals try (exact False.elim (Nat.not_lt_zero _ hlt))
   all_goals
-    simp [LengthKind.ops, LengthKind.start, Follows, block, Op.row, Op.effect,
+    simp [LengthKind.ops, LengthKind.start, Follows, block_cons, block_nil, Op.row, Op.effect,
       put, next, Udivti3.compare, Udivti3.next, state_simp_rules, hpc, hc, hz,
       BitVec.add_assoc]
 
@@ -78,13 +78,13 @@ theorem length_trace_eq (s : ArmState) (base b : BitVec 64) (kind : LengthKind)
   | large =>
     cases hb
     simp only [heq] at hc hz
-    simp [LengthKind.ops, LengthKind.start, Follows, block, Op.row, Op.effect,
+    simp [LengthKind.ops, LengthKind.start, Follows, block_cons, block_nil, Op.row, Op.effect,
       put, next, Udivti3.compare, Udivti3.next, state_simp_rules, hpc, hc, hz,
       heq, BitVec.add_assoc]
   | small =>
     cases hb
     simp only [heq] at hc hz
-    simp [LengthKind.ops, LengthKind.start, Follows, block, Op.row, Op.effect,
+    simp [LengthKind.ops, LengthKind.start, Follows, block_cons, block_nil, Op.row, Op.effect,
       put, next, Udivti3.compare, Udivti3.next, state_simp_rules, hpc, hc, hz,
       heq, BitVec.add_assoc]
   | empty =>
@@ -94,7 +94,7 @@ theorem length_trace_eq (s : ArmState) (base b : BitVec 64) (kind : LengthKind)
     have hz0 : (AddWithCarry 0#64 18446744073709551615#64 1#1).2.z ≠ 0#1 := by
       rw [hz]
       decide
-    simp [LengthKind.ops, LengthKind.start, Follows, block, Op.row, Op.effect,
+    simp [LengthKind.ops, LengthKind.start, Follows, block_cons, block_nil, Op.row, Op.effect,
       put, next, Udivti3.compare, Udivti3.next, state_simp_rules, hpc, hz, hz0,
       heq, BitVec.add_assoc]
 
@@ -113,18 +113,18 @@ theorem length_trace_gt (s : ArmState) (base b : BitVec 64) (kind : LengthKind)
   cases kind with
   | large =>
     cases hb
-    simp [LengthKind.ops, LengthKind.start, Follows, block, Op.row, Op.effect,
+    simp [LengthKind.ops, LengthKind.start, Follows, block_cons, block_nil, Op.row, Op.effect,
       put, next, Udivti3.compare, Udivti3.next, state_simp_rules, hpc, hc, hz, hne,
       BitVec.add_assoc]
   | small =>
     cases hb
-    simp [LengthKind.ops, LengthKind.start, Follows, block, Op.row, Op.effect,
+    simp [LengthKind.ops, LengthKind.start, Follows, block_cons, block_nil, Op.row, Op.effect,
       put, next, Udivti3.compare, Udivti3.next, state_simp_rules, hpc, hc, hz, hne,
       BitVec.add_assoc]
   | empty =>
     cases hb
     change (AddWithCarry (r (.GPR 9#5) s) 18446744073709551615#64 1#1).2.z = 0#1 at hz
-    simp [LengthKind.ops, LengthKind.start, Follows, block, Op.row, Op.effect,
+    simp [LengthKind.ops, LengthKind.start, Follows, block_cons, block_nil, Op.row, Op.effect,
       put, next, Udivti3.compare, Udivti3.next, state_simp_rules, hpc, hz, hne,
       BitVec.add_assoc]
 
@@ -165,6 +165,6 @@ theorem length_return (s : ArmState) (base : BitVec 64)
     readonly_frame base ops s (by decide), ?_, ?_⟩
   · simp [ops, Follows, Op.row, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
   · exact block_return_pc base [.p256] s .p260 (by decide) (by decide)
-  · simp [ops, block, Op.effect, put, next, state_simp_rules, BitVec.setWidth_setWidth_of_le]
+  · simp [ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, BitVec.setWidth_setWidth_of_le]
 
 end SszArm.NatCompare

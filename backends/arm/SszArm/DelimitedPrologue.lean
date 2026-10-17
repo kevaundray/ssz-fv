@@ -11,7 +11,7 @@ set_option maxHeartbeats 8000000
 
 macro "prologue_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
-    [block, prologueOps, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
+    [block_cons, block_nil, prologueOps, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
      state_simp_rules, ArmState.mem_w_eq_mem, BitVec.add_assoc,
      BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat, Nat.reduceAdd,
      BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel])
@@ -44,7 +44,7 @@ theorem prologue_saved (s : ArmState) (base : BitVec 64)
       prologue_expand
       tail_reads
   · intro reg low high
-    simp [block, prologueOps, Op.effect, put, next, state_simp_rules]
+    simp [block_cons, block_nil, prologueOps, Op.effect, put, next, state_simp_rules]
 
 /-- The byte loaded by the prologue is observable in the final prologue memory,
 since no stores follow that load. This allows caller ownership to transfer the

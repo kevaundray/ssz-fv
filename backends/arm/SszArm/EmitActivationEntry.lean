@@ -18,25 +18,25 @@ def argumentOps : List Op := [.p24, .p28, .p32, .p36, .p40, .p44]
   simp [arguments, argumentOps, Activation.block]
 
 @[simp] theorem arguments_memory (s : ArmState) : (arguments s).mem = s.mem := by
-  simp [arguments, argumentOps, Activation.block, Op.effect, put, next, state_simp_rules]
+  simp [arguments, argumentOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next, state_simp_rules]
 
 @[simp] theorem arguments_pc (s : ArmState) : read_pc (arguments s) = read_pc s + 24#64 := by
-  simp [arguments, argumentOps, Activation.block, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
+  simp [arguments, argumentOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
 
 @[simp] theorem arguments_sp (s : ArmState) : r (.GPR 31#5) (arguments s) = r (.GPR 31#5) s := by
-  simp [arguments, argumentOps, Activation.block, Op.effect, put, next, state_simp_rules]
+  simp [arguments, argumentOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next, state_simp_rules]
 
 @[simp] theorem arguments_register (s : ArmState) (reg : BitVec 5)
     (untouched : reg ∉ [8#5, 9#5, 19#5, 20#5, 21#5, 22#5]) :
     r (.GPR reg) (arguments s) = r (.GPR reg) s := by
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at untouched
-  simp [arguments, argumentOps, Activation.block, Op.effect, put, next,
+  simp [arguments, argumentOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next,
     state_simp_rules, untouched.1, untouched.2.1, untouched.2.2.1,
     untouched.2.2.2.1, untouched.2.2.2.2.1, untouched.2.2.2.2.2]
 
 @[simp] theorem arguments_vector (s : ArmState) (reg : BitVec 5) :
     r (.SFP reg) (arguments s) = r (.SFP reg) s := by
-  simp [arguments, argumentOps, Activation.block, Op.effect, put, next, state_simp_rules]
+  simp [arguments, argumentOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem arguments_run (s : ArmState) (base : BitVec 64)
     (code : CodeAt s base) (error : read_err s = .None) (aligned : CheckSPAlignment s)
@@ -80,7 +80,7 @@ theorem entered_owned {s : ArmState} {desc : Desc} {value : Value} {size : Nat}
 theorem entered_bodyRegisters (s : ArmState) : BodyRegisters (entered s) (Args.ofEntry s) := by
   constructor
   all_goals
-    simp [entered, arguments, argumentOps, Activation.block, Op.effect, put, next,
+    simp [entered, arguments, argumentOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next,
       state_simp_rules, Args.ofEntry, prologue_register, prologue_sp]
 
 theorem entered_aligned (s : ArmState) (aligned : CheckSPAlignment s) : CheckSPAlignment (entered s) :=
@@ -119,9 +119,9 @@ theorem entered_tags {s : ArmState} {desc : Desc} {value : Value} {size : Nat}
   have prologueOwned := owned.of_frame
     ((prologue_frame s owned.stackLow).weaken (stackWrites_subset _ _))
   constructor
-  · simpa [entered, arguments, argumentOps, Activation.block, Op.effect, put, next,
+  · simpa [entered, arguments, argumentOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next,
       state_simp_rules, Args.ofEntry] using prologueOwned.descriptor.1
-  · simpa [entered, arguments, argumentOps, Activation.block, Op.effect, put, next,
+  · simpa [entered, arguments, argumentOps, Activation.block_cons, Activation.block_nil, Op.effect, put, next,
       state_simp_rules, Args.ofEntry] using congrArg (BitVec.setWidth 64) prologueOwned.value_at.1
 
 end SszArm.Emit

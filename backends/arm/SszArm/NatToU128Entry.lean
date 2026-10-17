@@ -40,11 +40,11 @@ theorem large_read_ready (s : ArmState) (base pointer : BitVec 64)
   have low : read_mem_bytes 8 pointer s = words[0]?.getD 0 := by
     simpa [List.getElem?_eq_getElem nonempty] using hm ⟨0, nonempty⟩
   have loaded : r (.GPR 8#5) t = words[0]?.getD 0 := by
-    simp [t, ops, block, Op.effect, put, next, Udivti3.compare,
+    simp [t, ops, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
       Udivti3.next, state_simp_rules, h1, low]
   by_cases one : words.length < 2
   · refine ⟨3, t, .one, ht, frame, ?_, ?_⟩
-    · simp [t, ops, block, FinishPath.start, Op.effect, put, next,
+    · simp [t, ops, block_cons, block_nil, FinishPath.start, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules, h2, carry,
         show ¬ 2 ≤ words.length by omega]
     · change SszNative.NatNarrow.toU128 (.large pointer words) =
@@ -63,7 +63,7 @@ theorem large_read_ready (s : ArmState) (base pointer : BitVec 64)
       rw [frame.registers 1#5 (by decide), h1]
       simpa [List.getElem?_eq_getElem (by omega : 1 < words.length)] using observed
     refine ⟨3, t, .two, ht, frame, ?_, ?_⟩
-    · simp [t, ops, block, FinishPath.start, Op.effect, put, next,
+    · simp [t, ops, block_cons, block_nil, FinishPath.start, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules, h2, carry, two]
     · change SszNative.NatNarrow.toU128 (.large pointer words) =
         some (read_mem_bytes 8 (r (.GPR 1#5) t + 8#64) t ++ r (.GPR 8#5) t)
@@ -107,10 +107,10 @@ theorem large_entry_scan (s : ArmState) (base pointer : BitVec 64)
   have hu : run 2 s = u := block_run base ops s hc he ha follow
   have frame : NatNarrow.Frame s u := scan_pure_frame base ops s (by decide)
   have hup : read_pc u = base + 8#64 := by
-    simp [u, ops, block, Op.effect, put, next, state_simp_rules, h1, nz, BitVec.add_assoc]
+    simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h1, nz, BitVec.add_assoc]
   have hu1 : r (.GPR 1#5) u = pointer := (frame.registers _ (by decide)).trans h1
   have hu9 : r (.GPR 9#5) u = BitVec.ofNat 64 words.length - 1#64 := by
-    simp [u, ops, block, Op.effect, put, next, state_simp_rules, h2]
+    simp [u, ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules, h2]
   obtain ⟨fuel, t, ht, htf, hkeep, htp, ht8⟩ := significant_scan base pointer words words.length u
     (Nat.le_refl _) (frame_code frame hc) (frame.error.trans he) (frame.aligned ha)
     hup hu1 hu9 (frame.source _ _ owned.large_source)
@@ -136,7 +136,7 @@ theorem entry_ready (s : ArmState) (base : BitVec 64) (operand : SszNative.NatOp
       (by simpa [Follows, Op.row] using hp)
     have frame : NatNarrow.Frame s t := scan_pure_frame base [.p0] s (by decide)
     refine ⟨1, t, .small, ht, frame, ?_, ?_⟩
-    · simp [t, block, FinishPath.start, Op.effect, state_simp_rules, h1]
+    · simp [t, block_cons, block_nil, FinishPath.start, Op.effect, state_simp_rules, h1]
     · change SszNative.NatNarrow.toU128 (.small scalar) = some ((r (.GPR 2#5) t).setWidth 128)
       apply (SszNative.NatNarrow.toU128_some_iff _ _).2
       rw [frame.registers 2#5 (by decide), h2,
@@ -174,14 +174,14 @@ theorem entry_ready (s : ArmState) (base : BitVec 64) (operand : SszNative.NatOp
       · have nil : words = [] := List.eq_nil_of_length_eq_zero empty
         refine ⟨fuel + 1, v, .small, ?_, frame.trans vf, ?_, ?_⟩
         · rw [run_plus, hu, hv]
-        · simp [v, block, FinishPath.start, Op.effect, state_simp_rules, h2, empty]
+        · simp [v, block_cons, block_nil, FinishPath.start, Op.effect, state_simp_rules, h2, empty]
         · change SszNative.NatNarrow.toU128 (.large pointer words) = some ((r (.GPR 2#5) v).setWidth 128)
           apply (SszNative.NatNarrow.toU128_some_iff _ _).2
           rw [vf.registers 2#5 (by decide), h2]
           simp [nil, SszNative.NatOperand.value, SszNative.NatOperand.words, value]
       · have countnz : BitVec.ofNat 64 words.length ≠ 0#64 := by bv_omega
         exact finishRead v 1 hv vf
-          (by simp [v, block, Op.effect, state_simp_rules, h2, countnz])
+          (by simp [v, block_cons, block_nil, Op.effect, state_simp_rules, h2, countnz])
           (by omega) (by omega)
     · have up : read_pc u = base + 60#64 := by simpa [zero] using hup
       have count := hu8 zero
@@ -204,13 +204,13 @@ theorem entry_ready (s : ArmState) (base : BitVec 64) (operand : SszNative.NatOp
         3 ≤ sigWords words at carry
       by_cases fits : sigWords words ≤ 2
       · exact finishRead v 3 hv vf
-          (by simp [v, ops, block, Op.effect, put, next, Udivti3.compare,
+          (by simp [v, ops, block_cons, block_nil, Op.effect, put, next, Udivti3.compare,
             Udivti3.next, state_simp_rules, count, increment, carry,
             show ¬ 3 ≤ sigWords words by omega])
           (by have := sigWords_le_length words; omega) fits
       · refine ⟨fuel + 3, v, .none, ?_, frame.trans vf, ?_, ?_⟩
         · rw [run_plus, hu, hv]
-        · simp [v, ops, block, FinishPath.start, Op.effect, put, next, Udivti3.compare,
+        · simp [v, ops, block_cons, block_nil, FinishPath.start, Op.effect, put, next, Udivti3.compare,
             Udivti3.next, state_simp_rules, count, increment, carry,
             show 3 ≤ sigWords words by omega]
         · simp [FinishPath.value, SszNative.NatNarrow.toU128,

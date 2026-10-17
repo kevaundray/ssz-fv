@@ -51,7 +51,7 @@ theorem one_word_fields (s : ArmState) (base : BitVec 64) (path : SumPath)
       r (.GPR 8#5) t = (if 2^64 ≤ a.toNat + b.toNat then 1#64 else 0#64) ∧
       read_pc t = base + (if 2^64 ≤ a.toNat + b.toNat then 1112#64 else 1004#64) := by
   by_cases overflow : 2^64 ≤ a.toNat + b.toNat <;> cases path <;>
-    simp [SumPath.ops, sumOverflow, overflow, block, Op.effect, put, next,
+    simp [SumPath.ops, sumOverflow, overflow, block_cons, block_nil, Op.effect, put, next,
       state_simp_rules, h2, h4, h8, sum_carry]
 
 /-- Carry flags and caller-saved work registers do not change the comparison
@@ -62,15 +62,15 @@ theorem one_word_frame (s : ArmState) (base : BitVec 64)
   cases path <;> cases overflow
   all_goals
     constructor
-    · simp [SumPath.ops, block, Op.effect, put, next, state_simp_rules]
-    · simp [SumPath.ops, block, Op.effect, put, next, state_simp_rules]
+    · simp [SumPath.ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
+    · simp [SumPath.ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     · intro reg hr
       simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
-      simp (disch := simp_all) [SumPath.ops, block, Op.effect, put, next,
+      simp (disch := simp_all) [SumPath.ops, block_cons, block_nil, Op.effect, put, next,
         state_simp_rules]
     · intro reg
-      simp [SumPath.ops, block, Op.effect, put, next, state_simp_rules]
+      simp [SumPath.ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     · intro address outside
-      simp [SumPath.ops, block, Op.effect, put, next, state_simp_rules]
+      simp [SumPath.ops, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 end SszArm.NatAdd

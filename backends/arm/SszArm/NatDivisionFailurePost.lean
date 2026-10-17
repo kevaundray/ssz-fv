@@ -67,7 +67,7 @@ theorem failure_post (original s : ArmState) (base : BitVec 64)
       simp only [List.mem_cons, List.not_mem_nil, or_false, not_or]
       bv_omega
     · intro reg low high
-      simp [failureResult, failureOps, block, Op.effect, put, next, state_simp_rules]
+      simp [failureResult, failureOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   have outAfter : r (.GPR 19#5) (failureResult base s) = r (.GPR 0#5) original :=
     (failure_registers s base 19#5 (by decide)).trans out
   have code : CodeAt (failureResult base s) base := by

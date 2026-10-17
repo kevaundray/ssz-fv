@@ -63,27 +63,27 @@ theorem scan_load_run (s : ArmState) (base word : BitVec 64) (kind : ScanLoad)
         by_cases h31 : reg = 31#5 <;> (try subst reg) <;> cases kind <;>
         simp_all (config := {decide := true, instances := true})
           [scanLoadResult, ScanLoad.start, ScanLoad.size, ScanLoad.ops,
-            ScanLoad.address, block, Op.effect, put, next, NatCompare.saved,
+            ScanLoad.address, block_cons, block_nil, Op.effect, put, next, NatCompare.saved,
             state_simp_rules, NatCompare.read_spill_w,
             BitVec.sub_add_cancel, BitVec.add_assoc]
     | PC =>
       cases kind <;> simp_all (config := {decide := true, instances := true})
         [scanLoadResult, ScanLoad.start, ScanLoad.size, ScanLoad.ops,
-          block, Op.effect, put, next, NatCompare.saved, state_simp_rules,
+          block_cons, block_nil, Op.effect, put, next, NatCompare.saved, state_simp_rules,
           NatCompare.read_spill_w, BitVec.sub_add_cancel, BitVec.add_assoc]
     | SFP reg =>
-      cases kind <;> simp [scanLoadResult, ScanLoad.ops, block, Op.effect,
+      cases kind <;> simp [scanLoadResult, ScanLoad.ops, block_cons, block_nil, Op.effect,
         put, next, NatCompare.saved, state_simp_rules]
     | FLAG flag =>
-      cases kind <;> simp [scanLoadResult, ScanLoad.ops, block, Op.effect,
+      cases kind <;> simp [scanLoadResult, ScanLoad.ops, block_cons, block_nil, Op.effect,
         put, next, NatCompare.saved, state_simp_rules]
     | ERR =>
-      cases kind <;> simp [scanLoadResult, ScanLoad.ops, block, Op.effect,
+      cases kind <;> simp [scanLoadResult, ScanLoad.ops, block_cons, block_nil, Op.effect,
         put, next, NatCompare.saved, state_simp_rules]
-  · cases kind <;> simp [scanLoadResult, ScanLoad.ops, block, Op.effect,
+  · cases kind <;> simp [scanLoadResult, ScanLoad.ops, block_cons, block_nil, Op.effect,
       put, next, NatCompare.saved, state_simp_rules]
   · intro n addr
-    cases kind <;> simp [scanLoadResult, ScanLoad.ops, block, Op.effect,
+    cases kind <;> simp [scanLoadResult, ScanLoad.ops, block_cons, block_nil, Op.effect,
       put, next, NatCompare.saved, state_simp_rules, NatCompare.read_spill_w]
 
 /-- Scans preserve all registers outside their six explicit work registers,

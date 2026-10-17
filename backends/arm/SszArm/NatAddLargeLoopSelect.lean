@@ -81,7 +81,7 @@ private theorem gate_effect (s : ArmState) (base : BitVec 64)
     (w .PC (base + if within && !small then 1572#64 else 1860#64)) restored
   simp only [saved] at restore
   cases kind <;> cases within <;> cases small <;>
-    simpa [gateOps, gateResult, bit, body, block, Op.effect, put, next,
+    simpa [gateOps, gateResult, bit, body, block_cons, block_nil, Op.effect, put, next,
       Udivti3.compare, Udivti3.next, saved, state_simp_rules,
       load_store_field, load_gpr_pc, gate_flag_pc, restore, h13,
       BitVec.sub_add_cancel, BitVec.add_assoc] using final

@@ -56,7 +56,7 @@ def valueWrites (s : ArmState) : List Span :=
 macro "natadd_values_expand" : tactic => `(tactic|
   simp (config := {decide := true, instances := true}) only
     [valueResult, statusResult, valueBody, valueOps, StatusPath.ops,
-     block, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
+     block_cons, block_nil, List.foldl_cons, List.foldl_nil, Op.effect, put, next,
      state_simp_rules, ArmState.mem_w_eq_mem, BitVec.add_assoc,
      BitVec.ofNat_eq_ofNat, BitVec.ofNat_add_ofNat, Nat.reduceAdd,
      BitVec.add_zero, BitVec.zero_add, BitVec.sub_add_cancel])
@@ -76,7 +76,7 @@ theorem value_body_pc (path : StatusPath) (s : ArmState) (base : BitVec 64)
     read_pc (valueBody path base s) = base + BitVec.ofNat 64 path.start := by
   have hpc : r .PC s = base + BitVec.ofNat 64 (valueStart path) := hp
   cases path <;>
-    simp [valueBody, valueOps, valueStart, StatusPath.start, block, Op.effect,
+    simp [valueBody, valueOps, valueStart, StatusPath.start, block_cons, block_nil, Op.effect,
       put, next, state_simp_rules, hpc, BitVec.add_assoc]
 
 @[simp] theorem value_body_out (path : StatusPath) (s : ArmState) (base : BitVec 64) :
@@ -117,11 +117,11 @@ theorem value_returned (path : StatusPath) (s : ArmState) (base : BitVec 64)
     have h31 : reg ≠ 31#5 := by bv_omega
     cases path <;>
       simp [valueResult, statusResult, valueBody, valueOps, StatusPath.ops,
-        block, Op.effect, put, next, state_simp_rules, h9, h10, h11, h31]
+        block_cons, block_nil, Op.effect, put, next, state_simp_rules, h9, h10, h11, h31]
   · intro reg low high
     cases path <;>
       simp [valueResult, statusResult, valueBody, valueOps, StatusPath.ops,
-        block, Op.effect, put, next, state_simp_rules]
+        block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem value_frame (path : StatusPath) (s : ArmState) (base : BitVec 64)
     (owned : ReturnOwned s) : MemoryFrame (valueWrites s) s (valueResult path base s) := by

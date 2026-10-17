@@ -20,10 +20,10 @@ theorem borrow_normal_frame (right one : Bool) (base : BitVec 64) (s : ArmState)
   · exact block_program base _ s
   · exact block_error base _ s
   · cases right <;> cases one <;>
-      simp [borrowNormalState, borrowNormalOps, block, Op.effect, put, next,
+      simp [borrowNormalState, borrowNormalOps, block_cons, block_nil, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules]
   · cases right <;> cases one <;>
-      simp [borrowNormalState, borrowNormalOps, block, Op.effect, put, next,
+      simp [borrowNormalState, borrowNormalOps, block_cons, block_nil, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules]
   · intro reg low high
     have h1 : reg ≠ 1#5 := by bv_omega
@@ -31,15 +31,15 @@ theorem borrow_normal_frame (right one : Bool) (base : BitVec 64) (s : ArmState)
     have h3 : reg ≠ 3#5 := by bv_omega
     have h4 : reg ≠ 4#5 := by bv_omega
     cases right <;> cases one <;>
-      simp [borrowNormalState, borrowNormalOps, block, Op.effect, put, next,
+      simp [borrowNormalState, borrowNormalOps, block_cons, block_nil, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules, h1, h2, h3, h4]
   · intro reg low high
     cases right <;> cases one <;>
-      simp [borrowNormalState, borrowNormalOps, block, Op.effect, put, next,
+      simp [borrowNormalState, borrowNormalOps, block_cons, block_nil, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules]
   · intro a outside
     cases right <;> cases one <;>
-      simp [borrowNormalState, borrowNormalOps, block, Op.effect, put, next,
+      simp [borrowNormalState, borrowNormalOps, block_cons, block_nil, Op.effect, put, next,
         Udivti3.compare, Udivti3.next, state_simp_rules]
 
 /-- The actual collapse/descriptor block observed without any image, execution,
@@ -67,7 +67,7 @@ theorem borrow_normal_observations (right : Bool) (s : ArmState)
   all_goals
     by_cases one : n = 1 <;>
       simp [borrowNormalState, borrowNormalOps, borrowValuePath, borrowPointer,
-        valueStart, valuePointer, valuePayload, Follows, Op.row, block, Op.effect,
+        valueStart, valuePointer, valuePayload, Follows, Op.row, block_cons, block_nil, Op.effect,
         put, next, Udivti3.compare, Udivti3.next, state_simp_rules, hp, ptr,
         count, increment, guard, eqone, one, low, BitVec.add_assoc]
 

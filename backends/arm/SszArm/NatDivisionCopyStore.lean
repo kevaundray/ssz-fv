@@ -52,25 +52,25 @@ theorem copy_store_run (s : ArmState) (base : BitVec 64)
       by_cases h11 : reg = 11#5 <;> by_cases h31 : reg = 31#5 <;>
         (try subst reg) <;>
         simp_all (config := {decide := true, instances := true})
-          [copyStoreResult, copyStoreOps, block, Op.effect, put, next,
+          [copyStoreResult, copyStoreOps, block_cons, block_nil, Op.effect, put, next,
             NatCompare.saved, state_simp_rules, NatCompare.read_spill_w,
             copy_read_spill_w, BitVec.sub_add_cancel, BitVec.add_assoc]
     | PC =>
-      simp [copyStoreResult, copyStoreOps, block, Op.effect, put, next,
+      simp [copyStoreResult, copyStoreOps, block_cons, block_nil, Op.effect, put, next,
         NatCompare.saved, state_simp_rules, hpc, BitVec.add_assoc]
     | SFP reg =>
-      simp [copyStoreResult, copyStoreOps, block, Op.effect, put, next,
+      simp [copyStoreResult, copyStoreOps, block_cons, block_nil, Op.effect, put, next,
         NatCompare.saved, state_simp_rules]
     | FLAG flag =>
-      simp [copyStoreResult, copyStoreOps, block, Op.effect, put, next,
+      simp [copyStoreResult, copyStoreOps, block_cons, block_nil, Op.effect, put, next,
         NatCompare.saved, state_simp_rules]
     | ERR =>
-      simp [copyStoreResult, copyStoreOps, block, Op.effect, put, next,
+      simp [copyStoreResult, copyStoreOps, block_cons, block_nil, Op.effect, put, next,
         NatCompare.saved, state_simp_rules]
-  · simp [copyStoreResult, copyStoreOps, block, Op.effect, put, next,
+  · simp [copyStoreResult, copyStoreOps, block_cons, block_nil, Op.effect, put, next,
       NatCompare.saved, state_simp_rules]
   · intro n addr
-    simp [copyStoreResult, copyStoreOps, block, Op.effect, put, next,
+    simp [copyStoreResult, copyStoreOps, block_cons, block_nil, Op.effect, put, next,
       NatCompare.saved, state_simp_rules, NatCompare.read_spill_w, copy_read_spill_w]
 
 end SszArm.NatDivision

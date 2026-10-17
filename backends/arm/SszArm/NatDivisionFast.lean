@@ -65,13 +65,13 @@ theorem fast_setup_pc (site : FastSite) (s : ArmState) (base : BitVec 64)
     read_pc (fastPrepared site s base) = base + BitVec.ofNat 64 site.call.offset := by
   have hpc : r .PC s = base + BitVec.ofNat 64 site.start := hp
   cases site <;>
-    simp [fastPrepared, block, FastSite.setup, FastSite.start, FastSite.call,
+    simp [fastPrepared, block_cons, block_nil, FastSite.setup, FastSite.start, FastSite.call,
       CallSite.offset, Op.effect, put, next, state_simp_rules, hpc, BitVec.add_assoc]
 
 theorem fast_setup_divisor (site : FastSite) (s : ArmState) (base : BitVec 64) :
     Udivti3.divisor (fastPrepared site s base) = (r (.GPR 20#5) s).toNat := by
   cases site <;>
-    simp [fastPrepared, block, FastSite.setup, Udivti3.divisor, Udivti3.join,
+    simp [fastPrepared, block_cons, block_nil, FastSite.setup, Udivti3.divisor, Udivti3.join,
       Op.effect, put, next, state_simp_rules]
 
 theorem fast_finish_run (site : FastSite) (s : ArmState) (base : BitVec 64)
@@ -116,7 +116,7 @@ theorem fast_pc (site : FastSite) (s : ArmState) (base : BitVec 64) :
     read_pc (fastResult site s base) =
       if r (.GPR 1#5) (fastDivided site s base) = 0#64 then base + 644#64 else base + 684#64 := by
   by_cases hz : r (.GPR 1#5) (fastDivided site s base) = 0#64 <;> cases site <;>
-    simp [fastResult, FastSite.finish, block, Op.effect, state_simp_rules, hz]
+    simp [fastResult, FastSite.finish, block_cons, block_nil, Op.effect, state_simp_rules, hz]
 
 theorem fast_quotient (site : FastSite) (s : ArmState) (base : BitVec 64)
     (hd : 0 < (r (.GPR 20#5) s).toNat) :
@@ -129,7 +129,7 @@ theorem fast_quotient (site : FastSite) (s : ArmState) (base : BitVec 64)
   have keep : Udivti3.numerator (fastResult site s base) =
       Udivti3.numerator (fastDivided site s base) := by
     by_cases hz : r (.GPR 1#5) (fastDivided site s base) = 0#64 <;> cases site <;>
-      simp [fastResult, FastSite.finish, block, Op.effect, Udivti3.numerator,
+      simp [fastResult, FastSite.finish, block_cons, block_nil, Op.effect, Udivti3.numerator,
         state_simp_rules, hz]
   exact keep.trans h
 
@@ -137,9 +137,9 @@ theorem fast_quotient (site : FastSite) (s : ArmState) (base : BitVec 64)
     (fastResult site s base).mem = s.mem := by
   have finish : (fastResult site s base).mem = (fastDivided site s base).mem := by
     by_cases hz : r (.GPR 1#5) (fastDivided site s base) = 0#64 <;> cases site <;>
-      simp [fastResult, FastSite.finish, block, Op.effect, state_simp_rules, hz]
+      simp [fastResult, FastSite.finish, block_cons, block_nil, Op.effect, state_simp_rules, hz]
   rw [finish, fastDivided, call_memory]
-  cases site <;> simp [fastPrepared, block, FastSite.setup, Op.effect, put, next, state_simp_rules]
+  cases site <;> simp [fastPrepared, block_cons, block_nil, FastSite.setup, Op.effect, put, next, state_simp_rules]
 
 @[simp] theorem fast_program (site : FastSite) (s : ArmState) (base : BitVec 64) :
     (fastResult site s base).program = s.program := by

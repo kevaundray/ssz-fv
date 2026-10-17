@@ -32,15 +32,15 @@ theorem arena_check_frame (kind : ArenaCheckKind) (s : ArmState) (base : BitVec 
       simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at notChanged
       cases kind <;> simp (disch := simp_all)
         [ArenaCheckKind.ops, arenaAddressOps, arenaRoundOps, arenaAlignOps,
-         arenaEndOps, arenaCapacityOps, block, Op.effect, put, next, state_simp_rules]
+         arenaEndOps, arenaCapacityOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     · intro reg
       cases kind <;> simp [ArenaCheckKind.ops, arenaAddressOps, arenaRoundOps, arenaAlignOps,
-        arenaEndOps, arenaCapacityOps, block, Op.effect, put, next, state_simp_rules]
+        arenaEndOps, arenaCapacityOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
     · intro a outside
       cases kind <;> simp [ArenaCheckKind.ops, arenaAddressOps, arenaRoundOps, arenaAlignOps,
-        arenaEndOps, arenaCapacityOps, block, Op.effect, put, next, state_simp_rules]
+        arenaEndOps, arenaCapacityOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
   · cases kind <;> simp [ArenaCheckKind.ops, arenaAddressOps, arenaRoundOps, arenaAlignOps,
-      arenaEndOps, arenaCapacityOps, block, Op.effect, put, next, state_simp_rules]
+      arenaEndOps, arenaCapacityOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 private theorem cmp_hi (a b : BitVec 64) :
     ((AddWithCarry a (~~~b) 1#1).2.c = 1#1 ∧
@@ -57,13 +57,13 @@ theorem arena_address_exit (s : ArmState) (base : BitVec 64) :
     r (.GPR 8#5) t = pointer ∧ r (.GPR 9#5) t = used ∧
       r (.GPR 10#5) t = used + pointer ∧
       read_pc t = if 2^64 ≤ used.toNat + pointer.toNat then base + 752#64 else base + 284#64 := by
-  simp [block, arenaAddressOps, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, arenaAddressOps, Op.effect, put, next, state_simp_rules,
     Udivti3.adc_carry, Udivti3.radix]
 
 theorem arena_round_exit (s : ArmState) (base : BitVec 64) :
     read_pc (block base arenaRoundOps s) =
       if 2^64 < (r (.GPR 10#5) s).toNat + 8 then base + 752#64 else base + 292#64 := by
-  simp [block, arenaRoundOps, Op.effect, put, next, state_simp_rules, cmn_hi]
+  simp [block_cons, block_nil, arenaRoundOps, Op.effect, put, next, state_simp_rules, cmn_hi]
 
 theorem arena_align_exit (s : ArmState) (base : BitVec 64) :
     let aligned := (r (.GPR 10#5) s + 7#64) &&& 18446744073709551608#64
@@ -73,13 +73,13 @@ theorem arena_align_exit (s : ArmState) (base : BitVec 64) :
       r (.GPR 9#5) t = padding + r (.GPR 9#5) s ∧
       read_pc t = if 2^64 ≤ padding.toNat + (r (.GPR 9#5) s).toNat
         then base + 752#64 else base + 312#64 := by
-  simp [block, arenaAlignOps, Op.effect, put, next, state_simp_rules,
+  simp [block_cons, block_nil, arenaAlignOps, Op.effect, put, next, state_simp_rules,
     Udivti3.adc_carry, Udivti3.radix]
 
 theorem arena_end_exit (s : ArmState) (base : BitVec 64) :
     read_pc (block base arenaEndOps s) =
       if 2^64 < (r (.GPR 9#5) s).toNat + 17 then base + 752#64 else base + 320#64 := by
-  simp [block, arenaEndOps, Op.effect, put, next, state_simp_rules, cmn_hi]
+  simp [block_cons, block_nil, arenaEndOps, Op.effect, put, next, state_simp_rules, cmn_hi]
 
 theorem arena_capacity_exit (s : ArmState) (base : BitVec 64) :
     let capacity := read_mem_bytes 8 (r (.GPR 4#5) s + 8#64) s
@@ -87,6 +87,6 @@ theorem arena_capacity_exit (s : ArmState) (base : BitVec 64) :
     let t := block base arenaCapacityOps s
     r (.GPR 11#5) t = capacity ∧ r (.GPR 10#5) t = finish ∧
       read_pc t = if capacity.toNat < finish.toNat then base + 752#64 else base + 336#64 := by
-  simp [block, arenaCapacityOps, Op.effect, put, next, state_simp_rules, cmp_hi]
+  simp [block_cons, block_nil, arenaCapacityOps, Op.effect, put, next, state_simp_rules, cmp_hi]
 
 end SszArm.Delimited

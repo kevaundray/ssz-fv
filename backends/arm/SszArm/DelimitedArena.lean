@@ -36,7 +36,7 @@ private theorem arena_guard_registers (kind : ArenaCheckKind) (s : ArmState)
   cases kind <;> simp only [ArenaCheckKind.clobbers, List.mem_cons, List.not_mem_nil,
     or_false, not_or] at hr <;>
     simp (disch := simp_all) [ArenaCheckKind.ops, arenaAddressOps, arenaRoundOps,
-      arenaAlignOps, arenaEndOps, arenaCapacityOps, block, Op.effect, put, next,
+      arenaAlignOps, arenaEndOps, arenaCapacityOps, block_cons, block_nil, Op.effect, put, next,
       state_simp_rules]
 
 private theorem arena_guard_frame (kind : ArenaCheckKind) (s : ArmState)

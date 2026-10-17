@@ -214,14 +214,14 @@ theorem address_exit (width : Width) (s : ArmState) (base : BitVec 64) :
       r (.GPR width.addressReg) t = used + pointer ∧
       read_pc t = if 2^64 ≤ used.toNat + pointer.toNat then base + 1264#64
         else base + Guard.round.entry width := by
-  cases width <;> simp [block, Guard.ops, Guard.entry, Width.usedReg, Width.addressReg,
+  cases width <;> simp [block_cons, block_nil, Guard.ops, Guard.entry, Width.usedReg, Width.addressReg,
     Op.effect, put, next, state_simp_rules, Udivti3.adc_carry, Udivti3.radix]
 
 theorem round_exit (width : Width) (s : ArmState) (base : BitVec 64) :
     read_pc (block base (Guard.round.ops width) s) =
       if 2^64 < (r (.GPR width.addressReg) s).toNat + 8 then base + 1264#64
         else base + Guard.align.entry width := by
-  cases width <;> simp [block, Guard.ops, Guard.entry, Width.addressReg,
+  cases width <;> simp [block_cons, block_nil, Guard.ops, Guard.entry, Width.addressReg,
     Op.effect, put, next, state_simp_rules, cmn_hi_zero]
 
 theorem align_exit (width : Width) (s : ArmState) (base : BitVec 64) :
@@ -232,7 +232,7 @@ theorem align_exit (width : Width) (s : ArmState) (base : BitVec 64) :
       r (.GPR width.startReg) t = padding + r (.GPR width.usedReg) s ∧
       read_pc t = if 2^64 ≤ padding.toNat + (r (.GPR width.usedReg) s).toNat
         then base + 1264#64 else base + Guard.finish.entry width := by
-  cases width <;> simp [block, Guard.ops, Guard.entry, Width.addressReg, Width.alignedReg,
+  cases width <;> simp [block_cons, block_nil, Guard.ops, Guard.entry, Width.addressReg, Width.alignedReg,
     Width.startReg, Width.usedReg, Op.effect, put, next, state_simp_rules,
     Udivti3.adc_carry, Udivti3.radix]
 
@@ -244,9 +244,9 @@ theorem finish_exit (width : Width) (s : ArmState) (base : BitVec 64) :
   cases width
   · have same : (2^64 < (r (.GPR 11#5) s).toNat + 17) ↔
         (2^64 ≤ (r (.GPR 11#5) s).toNat + 16) := by omega
-    simp [block, Guard.ops, Guard.entry, Width.endValue, Width.startReg, Width.bytes,
+    simp [block_cons, block_nil, Guard.ops, Guard.entry, Width.endValue, Width.startReg, Width.bytes,
       Op.effect, put, next, state_simp_rules, cmn_hi_zero, same]
-  · simp [block, Guard.ops, Guard.entry, Width.endValue, Width.startReg, Width.bytes,
+  · simp [block_cons, block_nil, Guard.ops, Guard.entry, Width.endValue, Width.startReg, Width.bytes,
       Op.effect, put, next, state_simp_rules, Udivti3.adc_carry, Udivti3.radix]
 
 theorem capacity_exit (width : Width) (s : ArmState) (base : BitVec 64) :
@@ -255,7 +255,7 @@ theorem capacity_exit (width : Width) (s : ArmState) (base : BitVec 64) :
     r (.GPR width.finishReg) t = width.endValue s ∧
       read_pc t = if capacity.toNat < (width.endValue s).toNat
         then base + 1264#64 else base + width.success := by
-  cases width <;> simp [block, Guard.ops, Width.finishReg, Width.endValue, Width.success,
+  cases width <;> simp [block_cons, block_nil, Guard.ops, Width.finishReg, Width.endValue, Width.success,
     Op.effect, put, next, Udivti3.compare, Udivti3.next, state_simp_rules, Udivti3.cmp_high]
 
 theorem guard_bytes (width : Width) (guard : Guard) (s : ArmState)

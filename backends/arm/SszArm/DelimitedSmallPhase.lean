@@ -14,18 +14,18 @@ private theorem small_ready_register (s : ArmState) (base : BitVec 64)
     (limit : Option Nat) (reg : BitVec 5) (preserved : reg ∉ [8#5, 19#5, 20#5]) :
     r (.GPR reg) (block base (smallReadyOps limit) s) = r (.GPR reg) s := by
   cases limit <;>
-    simp (disch := simp_all) [smallReadyOps, smallOps, noLimitOps, block, Op.effect,
+    simp (disch := simp_all) [smallReadyOps, smallOps, noLimitOps, block_cons, block_nil, Op.effect,
       put, next, state_simp_rules]
 
 private theorem small_ready_memory (s : ArmState) (base : BitVec 64) (limit : Option Nat) :
     (block base (smallReadyOps limit) s).mem = s.mem := by
-  cases limit <;> simp [smallReadyOps, smallOps, noLimitOps, block, Op.effect,
+  cases limit <;> simp [smallReadyOps, smallOps, noLimitOps, block_cons, block_nil, Op.effect,
     put, next, state_simp_rules]
 
 private theorem small_ready_vector (s : ArmState) (base : BitVec 64)
     (limit : Option Nat) (reg : BitVec 5) :
     r (.SFP reg) (block base (smallReadyOps limit) s) = r (.SFP reg) s := by
-  cases limit <;> simp [smallReadyOps, smallOps, noLimitOps, block, Op.effect,
+  cases limit <;> simp [smallReadyOps, smallOps, noLimitOps, block_cons, block_nil, Op.effect,
     put, next, state_simp_rules]
 
 private theorem small_ready_fields (s : ArmState) (base : BitVec 64) (limit : Option Nat)

@@ -23,11 +23,11 @@ theorem stage_run (base : BitVec 64) (s : ArmState)
 
 @[simp] theorem staged_pc (base : BitVec 64) (s : ArmState) :
     read_pc (staged base s) = read_pc s + 20#64 := by
-  simp [staged, stageOps, block, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
+  simp [staged, stageOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules, BitVec.add_assoc]
 
 @[simp] theorem staged_memory (base : BitVec 64) (s : ArmState) :
     (staged base s).mem = (stageMemory s).mem := by
-  simp [staged, stageOps, block, Op.effect, put, next, stageMemory, sp, state_simp_rules]
+  simp [staged, stageOps, block_cons, block_nil, Op.effect, put, next, stageMemory, sp, state_simp_rules]
   simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
 
 @[simp] theorem staged_error (base : BitVec 64) (s : ArmState) :
@@ -38,14 +38,14 @@ theorem stage_run (base : BitVec 64) (s : ArmState)
     (unchanged : reg ∉ [5#5, 8#5, 9#5, 10#5, 11#5, 12#5]) :
     r (.GPR reg) (staged base s) = r (.GPR reg) s := by
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at unchanged
-  simp_all [staged, stageOps, block, Op.effect, put, next, state_simp_rules]
+  simp_all [staged, stageOps, block_cons, block_nil, Op.effect, put, next, state_simp_rules]
 
 theorem staged_fields (base : BitVec 64) (s : ArmState) :
     r (.GPR 8#5) (staged base s) = read_mem_bytes 8 (sp s + 40#64) s ∧
     r (.GPR 5#5) (staged base s) = read_mem_bytes 8 (sp s + 48#64) s ∧
     r (.GPR 10#5) (staged base s) = read_mem_bytes 8 (sp s + 56#64) s ∧
     (r (.GPR 9#5) (staged base s)).setWidth 32 = read_mem_bytes 4 (sp s + 88#64) s := by
-  simp [staged, stageOps, block, Op.effect, put, next, sp, state_simp_rules,
+  simp [staged, stageOps, block_cons, block_nil, Op.effect, put, next, sp, state_simp_rules,
     BitVec.setWidth_setWidth_of_le]
 
 /-- This branch is settled solely by the just-returned measurement status. -/
@@ -70,7 +70,7 @@ theorem branch_run (base : BitVec 64) (s : ArmState)
   have execution := block_run base (stageOps ++ [.p72]) s code error aligned follows
   change run 6 s = _ at execution
   rw [execution]
-  simp [branched, staged, stageOps, block, Op.effect, next, put, sp,
+  simp [branched, staged, stageOps, block_cons, block_nil, Op.effect, next, put, sp,
     state_simp_rules, BitVec.setWidth_setWidth_of_le]
 
 def successOps : List Op := [.p136, .p140, .p144, .p148]
@@ -88,7 +88,7 @@ theorem success_stage_run (base : BitVec 64) (s : ArmState)
   apply block_run base successOps (branched base s)
   · exact code.congr (by simp [branched, staged, state_simp_rules])
   · exact (branched_error base s).trans error
-  · simpa [branched, staged, stageOps, block, Op.effect, put, next,
+  · simpa [branched, staged, stageOps, block_cons, block_nil, Op.effect, put, next,
       CheckSPAlignment, read_gpr, state_simp_rules] using aligned
   · simp [Follows, successOps, branched, Op.row, Op.effect, next, put,
       state_simp_rules, status, BitVec.add_assoc]
@@ -96,14 +96,14 @@ theorem success_stage_run (base : BitVec 64) (s : ArmState)
 @[simp] theorem success_stage_pc (base : BitVec 64) (s : ArmState)
     (status : read_mem_bytes 4 (sp s + 88#64) s = 0#32) :
     read_pc (successStage base s) = base + 152#64 := by
-  simp [successStage, successOps, branched, block, Op.effect, next, put,
+  simp [successStage, successOps, branched, block_cons, block_nil, Op.effect, next, put,
     state_simp_rules, status, BitVec.add_assoc]
 
 theorem success_stage_fields (base : BitVec 64) (s : ArmState) :
     r (.GPR 8#5) (successStage base s) = read_mem_bytes 8 (sp s + 40#64) s ∧
     r (.GPR 5#5) (successStage base s) = read_mem_bytes 8 (sp s + 48#64) s ∧
     r (.GPR 10#5) (successStage base s) = read_mem_bytes 8 (sp s + 56#64) s := by
-  simpa [successStage, successOps, branched, block, Op.effect, next, put,
+  simpa [successStage, successOps, branched, block_cons, block_nil, Op.effect, next, put,
     state_simp_rules] using
       ⟨(staged_fields base s).1, (staged_fields base s).2.1, (staged_fields base s).2.2.1⟩
 
@@ -112,7 +112,7 @@ theorem success_stage_fields (base : BitVec 64) (s : ArmState) :
     r (.GPR reg) (successStage base s) = r (.GPR reg) s := by
   have keep := staged_register base s reg unchanged
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at unchanged
-  simpa [successStage, successOps, branched, block, Op.effect, next, put,
+  simpa [successStage, successOps, branched, block_cons, block_nil, Op.effect, next, put,
     state_simp_rules, unchanged.2.2.1, unchanged.2.2.2.2.1] using keep
 
 @[simp] theorem success_stage_program (base : BitVec 64) (s : ArmState) :
@@ -151,7 +151,7 @@ private theorem success_block_memory (base : BitVec 64) (s : ArmState) :
         (write_mem_bytes 8 (sp s + 56#64) (r (.GPR 10#5) s)
           (write_mem_bytes 16 (sp s + 40#64)
             (r (.GPR 5#5) s ++ r (.GPR 8#5) s) s))).mem := by
-  simp [successOps, block, Op.effect, next, put, sp, state_simp_rules]
+  simp [successOps, block_cons, block_nil, Op.effect, next, put, sp, state_simp_rules]
   simp only [Memory.write_mem_bytes_eq_mem_write_bytes, ArmState.mem_w_eq_mem]
 
 theorem success_stage_memory (base : BitVec 64) (s : ArmState)

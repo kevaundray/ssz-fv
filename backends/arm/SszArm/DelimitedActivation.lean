@@ -39,20 +39,20 @@ theorem epilogue_restores (entry s : ArmState) (base : BitVec 64)
   have h19 := saved.words 19#5 88 (by decide)
   simp only [BitVec.ofNat_eq_ofNat, BitVec.add_zero] at h29 h30 h28 h27 h26 h25 h24 h23 h22 h21 h20 h19
   constructor
-  · simpa [block, epilogueOps, Op.effect, put, next, state_simp_rules,
+  · simpa [block_cons, block_nil, epilogueOps, Op.effect, put, next, state_simp_rules,
       BitVec.add_assoc, h30]
   · exact (block_error _ _ _).trans error
-  · simp [block, epilogueOps, Op.effect, put, next, state_simp_rules,
+  · simp [block_cons, block_nil, epilogueOps, Op.effect, put, next, state_simp_rules,
       saved.sp, BitVec.sub_add_cancel]
   · intro reg low high
     have members : reg = 19#5 ∨ reg = 20#5 ∨ reg = 21#5 ∨ reg = 22#5 ∨
         reg = 23#5 ∨ reg = 24#5 ∨ reg = 25#5 ∨ reg = 26#5 ∨
         reg = 27#5 ∨ reg = 28#5 ∨ reg = 29#5 ∨ reg = 30#5 := by bv_omega
     rcases members with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-      simp [block, epilogueOps, Op.effect, put, next, state_simp_rules,
+      simp [block_cons, block_nil, epilogueOps, Op.effect, put, next, state_simp_rules,
         BitVec.add_assoc, h29, h30, h28, h27, h26, h25, h24, h23, h22, h21, h20, h19]
   · intro reg low high
-    simpa [block, epilogueOps, Op.effect, put, next, state_simp_rules] using
+    simpa [block_cons, block_nil, epilogueOps, Op.effect, put, next, state_simp_rules] using
       saved.vectors reg low high
 
 /-- Executing the real epilogue includes its final output tag store and RET. -/
